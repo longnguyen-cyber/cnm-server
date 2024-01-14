@@ -1,15 +1,8 @@
-/* eslint-disable prettier/prettier */
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { AuthService } from 'src/auth/auth.service';
 import { Token } from 'src/auth/iterface/auth.interface';
 import { HttpExceptionCustom } from 'src/common/common.exception';
 import { CommonService } from 'src/common/common.service';
-import { ResUserDto } from './dto/resUser.dto';
-import { ResUserWithTokenDto } from './dto/resUserWithToken.dto';
-import { TokenCreateDto } from './dto/tokenCreate.dto';
-import { UserCreateDto } from './dto/userCreate.dto';
-import { UserLoginDto } from './dto/userLogin.dto';
-import { UserUpdateDto } from './dto/userUpdate.dto';
 import { UserModel } from './model/user.model';
 import { TokenDecode } from './type/tokenDecode.interface';
 import { UserCheck } from './user.check';
@@ -24,10 +17,7 @@ export class UserService {
     private userCheck: UserCheck,
   ) {}
 
-  async login(
-    { email, password }: UserLoginDto,
-    req,
-  ): Promise<ResUserWithTokenDto> {
+  async login({ email, password }: any, req): Promise<any> {
     const user = await this.checkLoginData(email, password);
     delete user.password;
     const resUser = this.buildUserResponse({
@@ -44,7 +34,7 @@ export class UserService {
     };
   }
 
-  async getUserCurrent(token: Token): Promise<ResUserDto> {
+  async getUserCurrent(token: Token): Promise<any> {
     const user = await this.getUserByToken(token);
     return this.buildUserResponse(user);
   }
@@ -67,7 +57,7 @@ export class UserService {
     };
   }
 
-  async createUser(userCreateDto: UserCreateDto): Promise<ResUserDto | null> {
+  async createUser(userCreateDto: any): Promise<any | null> {
     const userClean = { ...userCreateDto };
     const { email } = userCreateDto;
     await this.checkUniqueUser(email);
@@ -87,10 +77,7 @@ export class UserService {
     return this.buildUserResponse(user);
   }
 
-  async updateUser(
-    userUpdateDto: UserUpdateDto,
-    token: Token,
-  ): Promise<ResUserDto> {
+  async updateUser(userUpdateDto: any, token: Token): Promise<any> {
     const userClean = { ...userUpdateDto };
     const { id, password } = await this.getUserByToken(token);
 
@@ -234,9 +221,9 @@ export class UserService {
   }
 
   private generateStructureUpdateUser(
-    userUpdateDto: UserUpdateDto,
+    userUpdateDto: any,
     passwordHashed: string,
-  ): UserUpdateDto {
+  ): any {
     const user = { ...userUpdateDto };
     delete user.passwordOld;
     user.password = passwordHashed;
@@ -245,7 +232,7 @@ export class UserService {
     );
   }
 
-  private buildUserResponse(user: UserModel): ResUserDto {
+  private buildUserResponse(user: UserModel): any {
     const { name, email, avatar, displayName, phone, status } = user;
     return {
       user: {
@@ -259,7 +246,7 @@ export class UserService {
     };
   }
 
-  private generateToken = (email: string): TokenCreateDto => {
+  private generateToken = (email: string): any => {
     const acessToken = this.authService.generateJWT(email);
     const refreshToken = this.authService.generateJWTRefresh(email);
 

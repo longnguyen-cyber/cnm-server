@@ -10,7 +10,7 @@ if (process.env.NODE_ENV || process.env.NODE_ENV === 'prod') {
   require('module-alias/register');
 }
 async function bootstrap() {
-  const APP_PORT = process.env.APP_PORT;
+  const APP_PORT = 8080;
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     cors: {
       origin: '*',

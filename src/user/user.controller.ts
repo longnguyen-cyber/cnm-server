@@ -20,22 +20,14 @@ import {
   ApiHeader,
   ApiTags,
 } from '@nestjs/swagger';
+import { Request } from 'express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import slugify from 'slugify';
 import { AuthGuard } from 'src/auth/guard/auth.guard';
 import { Token } from 'src/auth/iterface/auth.interface';
 import { CustomValidationPipe } from 'src/common/common.pipe';
 import { FileCreateDto } from 'src/thread/dto/fileCreate.dto';
-import { ResUserDto } from './dto/resUser.dto';
-import { UserCreateDto } from './dto/userCreate.dto';
-import { UserLoginDto } from './dto/userLogin.dto';
-import { UserRequestCreateDto } from './dto/userRequestCreate.dto';
-import { UserRequestLoginDto } from './dto/userRequestLogin.dto';
-import { UserRequestUpdateDto } from './dto/userRequestUpdate.dto';
-import { UserUpdateDto } from './dto/userUpdate.dto';
 import { UserService } from './user.service';
-import { Request } from 'express';
-import slugify from 'slugify';
 
 @ApiTags('users')
 @Controller('users')
@@ -43,8 +35,6 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post('register')
-  @ApiBody({ type: UserRequestCreateDto })
-  @ApiCreatedResponse({ type: ResUserDto })
   @UsePipes(new CustomValidationPipe())
   @UseInterceptors(
     FileInterceptor('avatar', {
@@ -61,9 +51,9 @@ export class UserController {
     }),
   )
   async createUsers(
-    @Body() userCreateDto: UserCreateDto,
+    @Body() userCreateDto: any,
     @UploadedFile() file?: Express.Multer.File,
-  ): Promise<ResUserDto> {
+  ): Promise<any> {
     const fileUpload: FileCreateDto = {
       ...file,
       path: file.path.replace('\\', '/'),
@@ -75,13 +65,11 @@ export class UserController {
   }
 
   @Post('login')
-  @ApiBody({ type: UserRequestLoginDto })
-  @ApiCreatedResponse({ type: ResUserDto })
   @UsePipes(new CustomValidationPipe())
   async login(
-    @Body() userLoginDto: UserLoginDto,
+    @Body() userLoginDto: any,
     @Req() request: Request,
-  ): Promise<ResUserDto> {
+  ): Promise<any> {
     const user = await this.userService.login(userLoginDto, request);
 
     return {
@@ -93,11 +81,10 @@ export class UserController {
   }
 
   @Get(':id')
-  @ApiCreatedResponse({ type: ResUserDto })
   async getUser(
     @Param('id') id: string,
     @Req() request: Request,
-  ): Promise<ResUserDto> {
+  ): Promise<any> {
     const data = await this.userService.getUser(id, request);
     return {
       success: true,
@@ -107,8 +94,7 @@ export class UserController {
     };
   }
   @Get()
-  @ApiCreatedResponse({ type: ResUserDto })
-  async getAllUser(@Req() request: Request): Promise<ResUserDto> {
+  async getAllUser(@Req() request: Request): Promise<any> {
     const data = await this.userService.getAllUser(request);
 
     // return {
@@ -126,13 +112,11 @@ export class UserController {
     name: 'Authorization',
     description: 'Authorization: Token jwt.token.here',
   })
-  @ApiBody({ type: UserRequestUpdateDto })
-  @ApiCreatedResponse({ type: ResUserDto })
   @UsePipes(new CustomValidationPipe())
   async updateCurrentUser(
     @Headers('Authorization') auth: Token,
-    @Body('user') userUpdateDto: UserUpdateDto,
-  ): Promise<ResUserDto> {
+    @Body('user') userUpdateDto: any,
+  ): Promise<any> {
     return await this.userService.updateUser(userUpdateDto, auth);
   }
 }
