@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package auth;
+
+service UsersService {
+    rpc Register(UserCreateDto) returns (User) {}
+    rpc Login(UserLoginDto) returns (User) {}
+    rpc GetUser(FindOneUserDto) returns (User) {}
+    rpc GetAllUsers(Empty) returns (Users) {}
+    rpc UpdateUser(UpdateUserDto) returns (User) {}
+}
+
+message UserCreateDto {
+    string name = 1;
+    string password = 2;
+    string displayName = 3;
+    string status = 4;
+    string phone = 5;
+    string email = 6;
+    string avatar = 7;
+    bool isOwner = 8;
+}
+
+message User{
+    string name = 1;
+    string displayName = 3;
+    string status = 4;
+    string phone = 5;
+    string email = 6;
+    string avatar = 7;
+}
+
+message UserLoginDto{
+    string email = 1;
+    string password = 2;
+}
+
+message FindOneUserDto {
+    string id = 1;
+}
+
+message Users {
+    repeated User users = 1;
+}
+
+message Empty {}
+
+message UpdateUserDto{
+   optional string name = 1;
+   optional string passwordOld = 2;
+   optional string displayName = 3;
+   optional string status = 4;
+   optional string phone = 5;
+   optional string email = 6;
+   optional string avatar = 7;
+   optional bool isOwner = 8;
+   optional string password = 9;
+   Token token = 10;
+}
+
+message Token {
+    string authorization = 1;
+}

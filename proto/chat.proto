@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package chat;
+
+service ChatService {
+    rpc CreateChat(ChatCreateDto) returns (Chat) {}
+    rpc GetAllChats(Empty) returns (Chats) {}
+    rpc GetChatById(FindOneChatDto) returns (Chat) {}
+}
+
+message ChatCreateDto {
+    string senderId = 1;
+    string receiveId = 2;
+    optional string chatId = 3;
+}
+
+message Chat {
+    string senderId = 1;
+    string receiveId = 2;
+    optional string chatId = 3;
+}
+
+message Chats {
+    repeated Chat chats = 1;
+}
+
+message Empty {}
+
+message FindOneChatDto {
+    string chatId = 1;
+}

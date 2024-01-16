@@ -9,25 +9,27 @@ generator client {
 }
 
 model users {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
-  name        String      @unique
-  password    String
-  displayName String
-  status      String
-  phone       String
-  email       String      @unique
-  avatar      String
-  isOwner     Boolean?
-  createdAt   DateTime?   @default(now())
-  updatedAt   DateTime?   @updatedAt
-  deletedAt   DateTime?
-  chats       chats[]
-  channel     String[]    @db.ObjectId
-  channels    channels[]  @relation(fields: [channel], references: [id])
-  threads     threads[]
-  reactions   reactions[]
-  token       tokens?
-  isOnline    Boolean?    @default(false)
+  id                               String      @id @default(auto()) @map("_id") @db.ObjectId
+  name                             String      @unique
+  password                         String
+  displayName                      String
+  status                           String
+  phone                            String
+  email                            String      @unique
+  avatar                           String
+  isTwoFactorAuthenticationEnabled Boolean     @default(false)
+  twoFactorAuthenticationSecret    String      @default("")
+  isOwner                          Boolean?
+  createdAt                        DateTime?   @default(now())
+  updatedAt                        DateTime?   @updatedAt
+  deletedAt                        DateTime?
+  chats                            chats[]
+  channel                          String[]    @db.ObjectId
+  channels                         channels[]  @relation(fields: [channel], references: [id])
+  threads                          threads[]
+  reactions                        reactions[]
+  token                            tokens?
+  isOnline                         Boolean?    @default(false)
 }
 
 model tokens {

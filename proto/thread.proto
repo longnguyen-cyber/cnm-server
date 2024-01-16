@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package thread;
+
+
+service ThreadService {
+    rpc CreateThread(ThreadToDBDto) returns (Thread) {};
+    rpc UpdateThread(ThreadToDBDto) returns (Thread) {};
+    rpc DeleteThread(ThreadCondition) returns (Thread) {};
+    rpc RecallSendThread(ThreadCondition) returns (Thread) {};
+    rpc CreateReplyThread(ThreadCondition) returns (Thread) {};
+    rpc AddReact(ThreadCondition) returns (Thread) {};
+    rpc RemoveReact(ThreadCondition) returns (Thread) {};
+    rpc GetAllThreads(ThreadCondition) returns (Threads) {};
+    rpc GetThreadById(ThreadCondition) returns (Thread) {};
+    rpc GetThreadByReceiveId(ThreadCondition) returns (Thread) {};
+    rpc FindByText(ThreadCondition) returns (Threads) {};
+    rpc FindByDate(ThreadCondition) returns (Threads) {};
+    
+}
+message Threads{
+    repeated Thread threads = 1;
+}
+message ThreadCondition{
+    optional string threadId = 1;
+    optional string senderId = 2;
+    optional string reactString = 3;
+    optional int32 quantity = 4;
+    optional MessageToDBDto messages = 5;
+    optional FileCreateDto file = 6;
+    optional ReactCreateDto react = 7;
+    optional TextSearch text = 8;
+    optional DateSearch date = 9;
+    optional string channelId = 10;
+    optional string chatId = 11;
+    optional string receiveId = 12;
+}
+
+message TextSearch{
+    string text = 1;
+}
+
+message DateSearch{
+    string from = 1;
+    optional string to = 2;
+}
+
+
+
+message ThreadToDBDto {
+    optional string receiveId = 1;  
+    string senderId = 2;
+    string chatId = 3;
+    optional string channelId = 4;
+    optional string threadId = 5;
+    optional MessageToDBDto messages = 6;
+    optional FileCreateDto file = 7;
+    optional ReactCreateDto react = 8;
+}
+
+message MessageToDBDto {
+    string message = 1;
+}
+
+message FileCreateDto{
+    string fileName = 1;
+    string originalName = 2;
+    string encoding = 3;
+    string minetype = 4;
+    string description = 5;
+    string path = 6;
+    string size = 7;
+}
+
+message ReactCreateDto{
+    string react = 1;
+    int32 quantity = 2;
+}
+
+message Thread {
+    optional string receiveId = 1;  
+    optional string senderId = 2;
+    optional string chatId = 3;
+    optional string threadId = 4;
+    optional MessageToDBDto messages = 5;
+    optional FileCreateDto file = 6;
+    optional ReactCreateDto react = 7;
+}
