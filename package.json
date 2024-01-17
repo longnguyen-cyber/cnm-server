@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./apps/api-getaway/test/jest-e2e.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.490.0",
     "@grpc/grpc-js": "^1.9.13",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.1.1",

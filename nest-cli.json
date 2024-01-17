@@ -74,6 +74,15 @@
         "assets": ["proto/thread.proto"],
         "watchAssets": true
       }
+    },
+    "upload": {
+      "type": "application",
+      "root": "apps/upload",
+      "entryFile": "src/main",
+      "sourceRoot": "./",
+      "compilerOptions": {
+        "tsConfigPath": "apps/upload/tsconfig.app.json"
+      }
     }
   }
 }

@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 
 @Module({
@@ -20,6 +18,7 @@ import { ConfigService } from '@nestjs/config';
   controllers: [UploadController],
   providers: [
     UploadService,
+    ConfigService,
     // {
     //   provide: APP_GUARD,
     //   useClass: ThrottlerGuard,
