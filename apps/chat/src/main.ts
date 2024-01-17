@@ -6,18 +6,20 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { join } from 'path';
+import { ChatModule } from './chat.module';
 
 async function bootstrap() {
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>({
+  const app = await NestFactory.create(ChatModule);
+  await NestFactory.createMicroservice<MicroserviceOptions>(ChatModule, {
     transport: Transport.GRPC,
     options: {
-      host: '0.0.0.0',
-      port: 50051,
+      url: 'localhost:7000',
       protoPath: join(__dirname, '../chat.proto'),
       package: CHAT_PACKAGE_NAME,
     },
   } as GrpcOptions);
-  await app.listen();
+  await app.startAllMicroservices();
+  await app.listen(7000);
   console.log('Chat microservice is running');
 }
 bootstrap();

@@ -20,7 +20,7 @@ import { UserService } from './user.service';
             package: AUTH_PACKAGE_NAME,
             protoPath: join(process.cwd(), 'proto/auth.proto'),
 
-            url: 'localhost:5000',
+            url: 'localhost:6000',
           },
         });
       },
