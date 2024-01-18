@@ -15,7 +15,6 @@ async function bootstrap() {
     transport: Transport.GRPC,
     options: {
       url: 'localhost:5000',
-
       protoPath: join(__dirname, '../thread.proto'),
       package: THREAD_PACKAGE_NAME,
     },

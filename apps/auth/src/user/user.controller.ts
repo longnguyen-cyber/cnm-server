@@ -1,33 +1,34 @@
-import { Controller } from '@nestjs/common';
-import { UserService } from './user.service';
 import {
-  UsersServiceController,
-  UpdateUserDto,
-  UsersServiceControllerMethods,
   FindOneUserDto,
-  Empty,
+  UpdateUserDto,
   User,
   UserCreateDto,
   UserLoginDto,
   Users,
-  Token,
+  UsersServiceController,
+  UsersServiceControllerMethods,
 } from '@app/common';
+import { Controller } from '@nestjs/common';
 import { Observable } from 'rxjs';
+import { UserService } from './user.service';
 
 @Controller()
 @UsersServiceControllerMethods()
 export class UserController implements UsersServiceController {
   constructor(private readonly usersService: UserService) {}
   register(request: UserCreateDto): User | Promise<User> | Observable<User> {
+    console.log(request);
     return this.usersService.createUser(request);
   }
   login(request: UserLoginDto): User | Promise<User> | Observable<User> {
+    console.log(request);
     return this.usersService.login(request);
   }
   getUser(request: FindOneUserDto): User | Promise<User> | Observable<User> {
+    console.log(request);
     return this.usersService.getUser(request);
   }
-  getAllUsers(request: Empty): Users | Promise<Users> | Observable<Users> {
+  getAllUsers(): Users | Promise<Users> | Observable<Users> {
     return this.usersService.getAllUser();
   }
 

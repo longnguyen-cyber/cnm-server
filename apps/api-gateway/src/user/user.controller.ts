@@ -26,27 +26,28 @@ export class UserController {
   @UseInterceptors(FileInterceptor('avatar'))
   async createUsers(
     @Body() userCreateDto: any,
-    @UploadedFile()
-    file: Express.Multer.File,
+    // @UploadedFile()
+    // file: Express.Multer.File,
   ): Promise<any> {
     console.log(userCreateDto);
-    console.log(file);
+    // console.log(file);
     // const fileUpload: FileCreateDto = {
     //   ...file,
     //   path: file.path.replace('\\', '/'),
     // };
-    // return this.userService.create({
-    //   ...userCreateDto,
-    //   // avatar: fileUpload.path,
-    // });
+    return this.userService.create({
+      ...userCreateDto,
+      // avatar: fileUpload.path,
+    });
   }
 
   @Post('login')
-  @UsePipes(new CustomValidationPipe())
+  // @UsePipes(new CustomValidationPipe())
   async login(
     @Body() userLoginDto: any,
     // @Req() request: Request,
   ): Promise<any> {
+    console.log(userLoginDto);
     const user = this.userService.findOne(userLoginDto);
 
     return {
