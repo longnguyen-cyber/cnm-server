@@ -120,10 +120,7 @@ export class ChannelRepository {
     };
   }
 
-  async createChannel(
-    ChannelCreateDto: ChannelCreateDto,
-    prisma: Tx = this.prisma,
-  ) {
+  async createChannel(ChannelCreateDto: any, prisma: Tx = this.prisma) {
     const users = await prisma.users.findMany();
     const newChannel = await prisma.channels.create({
       data: {
@@ -167,7 +164,7 @@ export class ChannelRepository {
 
   async updateChannel(
     id: string,
-    channelUpdateDto: ChannelUpdateDto,
+    channelUpdateDto: any,
     prisma: Tx = this.prisma,
   ) {
     await prisma.channels.update({

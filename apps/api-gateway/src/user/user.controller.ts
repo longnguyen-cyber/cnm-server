@@ -26,8 +26,8 @@ export class UserController {
   @UseInterceptors(FileInterceptor('avatar'))
   async createUsers(
     @Body() userCreateDto: any,
-    // @UploadedFile()
-    // file: Express.Multer.File,
+    @UploadedFile()
+    file: Express.Multer.File,
   ): Promise<any> {
     console.log(userCreateDto);
     // console.log(file);
@@ -37,7 +37,7 @@ export class UserController {
     // };
     return this.userService.create({
       ...userCreateDto,
-      // avatar: fileUpload.path,
+      avatar: file,
     });
   }
 

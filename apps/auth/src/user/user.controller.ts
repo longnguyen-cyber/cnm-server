@@ -22,7 +22,8 @@ export class UserController implements UsersServiceController {
   }
   login(request: UserLoginDto): User | Promise<User> | Observable<User> {
     console.log(request);
-    return this.usersService.login(request);
+    // return this.usersService.login(request);
+    return null;
   }
   getUser(request: FindOneUserDto): User | Promise<User> | Observable<User> {
     console.log(request);

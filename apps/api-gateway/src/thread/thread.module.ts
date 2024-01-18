@@ -13,14 +13,13 @@ import { ThreadService } from './thread.service';
     ThreadService,
     {
       provide: THREAD_SERVICE_NAME,
-      useFactory: () => {
+      useFactory: (config: ConfigService) => {
         return ClientProxyFactory.create({
           transport: Transport.GRPC,
           options: {
             package: THREAD_PACKAGE_NAME,
             protoPath: join(process.cwd(), 'proto/thread.proto'),
-
-            url: 'localhost:5000',
+            url: config.get('THREAD_SERVICE_URL'),
           },
         });
       },

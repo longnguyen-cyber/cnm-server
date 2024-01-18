@@ -10,16 +10,15 @@ import { ChatModule } from './chat.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(ChatModule);
-  await NestFactory.createMicroservice<MicroserviceOptions>(ChatModule, {
+  app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.GRPC,
     options: {
-      url: 'localhost:7000',
+      url: process.env.CHAT_SERVICE_URL,
       protoPath: join(__dirname, '../chat.proto'),
       package: CHAT_PACKAGE_NAME,
     },
   } as GrpcOptions);
   await app.startAllMicroservices();
-  await app.listen(7000);
   console.log('Chat microservice is running');
 }
 bootstrap();
