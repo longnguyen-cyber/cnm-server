@@ -1,32 +1,35 @@
-import { Injectable } from '@nestjs/common';
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class UploadService {
   private readonly s3Client = new S3Client({
-    region: this.configService.getOrThrow('AWS_S3_REGION'),
+    region: process.env.AWS_S3_REGION,
     credentials: {
-      accessKeyId: this.configService.getOrThrow('AWS_ACCESS_KEY_ID'),
-      secretAccessKey: this.configService.getOrThrow('AWS_SECRET_ACCESS_KEY'),
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
   });
-
-  constructor(private readonly configService: ConfigService) {}
 
   async upload(fileName: string, file: Buffer) {
     await this.s3Client.send(
       new PutObjectCommand({
-        Bucket: this.configService.getOrThrow('AWS_BUCKET_NAME'),
+        Bucket: process.env.AWS_BUCKET_NAME,
         Key: fileName,
         Body: file,
         ACL: 'public-read',
       }),
+    );
+  }
+
+  async uploadMultiple(files: { fileName: string; file: Buffer }[]) {
+    await Promise.all(
+      files.map(({ fileName, file }) => this.upload(fileName, file)),
     );
   }
 
@@ -38,7 +41,7 @@ export class UploadService {
   async delete(fileName: string) {
     await this.s3Client.send(
       new DeleteObjectCommand({
-        Bucket: this.configService.getOrThrow('AWS_BUCKET_NAME'),
+        Bucket: process.env.AWS_BUCKET_NAME,
         Key: fileName,
       }),
     );
@@ -47,7 +50,7 @@ export class UploadService {
   async deleteMultiple(fileNames: string[]) {
     await this.s3Client.send(
       new DeleteObjectsCommand({
-        Bucket: this.configService.getOrThrow('AWS_BUCKET_NAME'),
+        Bucket: process.env.AWS_BUCKET_NAME,
         Delete: {
           Objects: fileNames.map((fileName) => ({ Key: fileName })),
         },

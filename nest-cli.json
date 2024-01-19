@@ -81,7 +81,9 @@
       "entryFile": "src/main",
       "sourceRoot": "./",
       "compilerOptions": {
-        "tsConfigPath": "apps/upload/tsconfig.app.json"
+        "tsConfigPath": "apps/upload/tsconfig.app.json",
+        "assets": ["proto/upload.proto"],
+        "watchAssets": true
       }
     }
   }

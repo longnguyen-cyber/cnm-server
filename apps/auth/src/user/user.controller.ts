@@ -8,14 +8,28 @@ import {
   UsersServiceController,
   UsersServiceControllerMethods,
 } from '@app/common';
-import { Controller } from '@nestjs/common';
+import {
+  UPLOAD_SERVICE_NAME,
+  UploadServiceClient,
+} from '@app/common/types/upload';
+import { Controller, Inject } from '@nestjs/common';
+import { ClientGrpc } from '@nestjs/microservices';
 import { Observable } from 'rxjs';
 import { UserService } from './user.service';
 
 @Controller()
 @UsersServiceControllerMethods()
 export class UserController implements UsersServiceController {
-  constructor(private readonly usersService: UserService) {}
+  private uploadService: UploadServiceClient;
+  constructor(
+    private readonly usersService: UserService,
+    @Inject('upload') private readonly client: ClientGrpc,
+  ) {}
+  OnModuleInit() {
+    this.uploadService =
+      this.client.getService<UploadServiceClient>(UPLOAD_SERVICE_NAME);
+  }
+
   register(request: UserCreateDto): User | Promise<User> | Observable<User> {
     console.log(request);
     return this.usersService.createUser(request);
