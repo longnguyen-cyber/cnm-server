@@ -18,7 +18,9 @@
       "sourceRoot": "./",
       "compilerOptions": {
         "tsConfigPath": "apps/api-gateway/tsconfig.app.json",
-        "assets": ["proto/*.proto"],
+        "assets": [
+          "proto/*.proto"
+        ],
         "watchAssets": true
       }
     },
@@ -29,7 +31,9 @@
       "sourceRoot": "./",
       "compilerOptions": {
         "tsConfigPath": "apps/auth/tsconfig.app.json",
-        "assets": ["proto/auth.proto"],
+        "assets": [
+          "proto/auth.proto"
+        ],
         "watchAssets": true
       }
     },
@@ -49,7 +53,9 @@
       "sourceRoot": "./",
       "compilerOptions": {
         "tsConfigPath": "apps/chat/tsconfig.app.json",
-        "assets": ["proto/chat.proto"],
+        "assets": [
+          "proto/chat.proto"
+        ],
         "watchAssets": true
       }
     },
@@ -60,7 +66,9 @@
       "sourceRoot": "./",
       "compilerOptions": {
         "tsConfigPath": "apps/channel/tsconfig.app.json",
-        "assets": ["proto/channel.proto"],
+        "assets": [
+          "proto/channel.proto"
+        ],
         "watchAssets": true
       }
     },
@@ -71,7 +79,9 @@
       "sourceRoot": "./",
       "compilerOptions": {
         "tsConfigPath": "apps/thread/tsconfig.app.json",
-        "assets": ["proto/thread.proto"],
+        "assets": [
+          "proto/thread.proto"
+        ],
         "watchAssets": true
       }
     },
@@ -82,8 +92,19 @@
       "sourceRoot": "./",
       "compilerOptions": {
         "tsConfigPath": "apps/upload/tsconfig.app.json",
-        "assets": ["proto/upload.proto"],
+        "assets": [
+          "proto/upload.proto"
+        ],
         "watchAssets": true
+      }
+    },
+    "rabbitmq": {
+      "type": "library",
+      "root": "libs/rabbitmq",
+      "entryFile": "index",
+      "sourceRoot": "libs/rabbitmq/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/rabbitmq/tsconfig.lib.json"
       }
     }
   }

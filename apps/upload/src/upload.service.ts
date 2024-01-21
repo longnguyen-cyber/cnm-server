@@ -1,3 +1,4 @@
+import { RabbitMQService } from '@app/rabbitmq';
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,

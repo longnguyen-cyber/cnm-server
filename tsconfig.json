@@ -23,6 +23,12 @@
       ],
       "@app/common/*": [
         "libs/common/src/*"
+      ],
+      "@app/rabbitmq": [
+        "libs/rabbitmq/src"
+      ],
+      "@app/rabbitmq/*": [
+        "libs/rabbitmq/src/*"
       ]
     }
   }

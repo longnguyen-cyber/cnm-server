@@ -13,7 +13,10 @@ import { UploadService } from './upload.service';
 
 @Controller('upload')
 export class UploadController {
-  constructor(private readonly uploadService: UploadService) {}
+  constructor(
+    private readonly uploadService: UploadService,
+    // private readonly rabbitMQService: RabbitMQService,
+  ) {}
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
