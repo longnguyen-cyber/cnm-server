@@ -15,11 +15,16 @@ export class RabbitMQService {
     });
   }
 
-  async addToQueue(queue: Queue, message: any) {
+  async addToQueue(queue: Queue, message: UploadMethod, payload?: any) {
     try {
+      const data = {
+        cmd: message,
+        payload,
+      };
+      console.log(data);
       await this.channelWrapper.sendToQueue(
         queue,
-        Buffer.from(JSON.stringify(message)),
+        Buffer.from(JSON.stringify(data)),
         {
           persistent: true,
         },
