@@ -76,7 +76,6 @@ export class ThreadController {
       react: reactCreateDto,
       file: fileUpload,
     });
-    console.log(rs);
     // if (!rs) {
     //   console.log('error');
     //   if (file && file.path) {

@@ -1,4 +1,3 @@
-import { Queue, UploadMethod } from '@app/common/enums';
 import { RabbitMQService } from '@app/rabbitmq';
 import { Controller, Get, Inject } from '@nestjs/common';
 
@@ -11,16 +10,5 @@ export class AppController {
   @Get('heath-check')
   getHello(): string {
     return 'I am alive!';
-  }
-
-  @Get('test')
-  async test() {
-    await this.rabbitMQService.addToQueue(
-      Queue.Upload,
-      UploadMethod.UploadSingle,
-      {
-        fileName: 'test',
-      },
-    );
   }
 }

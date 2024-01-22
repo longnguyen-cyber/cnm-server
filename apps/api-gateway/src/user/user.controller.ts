@@ -1,5 +1,12 @@
 /* eslint-disable prettier/prettier */
-import { CustomValidationPipe, Token, UpdateUserDto } from '@app/common';
+import {
+  CustomValidationPipe,
+  Token,
+  UpdateUserDto,
+  UserCreateDto,
+  UserLoginDto,
+} from '@app/common';
+
 import {
   Body,
   Controller,
@@ -29,26 +36,23 @@ export class UserController {
     @UploadedFile()
     file: Express.Multer.File,
   ): Promise<any> {
-    console.log(userCreateDto);
-    // console.log(file);
-    // const fileUpload: FileCreateDto = {
-    //   ...file,
-    //   path: file.path.replace('\\', '/'),
-    // };
-    return this.userService.create({
+    const data: UserCreateDto = {
       ...userCreateDto,
-      avatar: file,
-    });
+      avatar: JSON.stringify({
+        fileName: file.originalname,
+        file: file.buffer,
+      }),
+    };
+    return this.userService.create(data);
   }
 
   @Post('login')
-  // @UsePipes(new CustomValidationPipe())
+  @UsePipes(new CustomValidationPipe())
   async login(
-    @Body() userLoginDto: any,
+    @Body() userLoginDto: UserLoginDto,
     // @Req() request: Request,
   ): Promise<any> {
-    console.log(userLoginDto);
-    const user = this.userService.findOne(userLoginDto);
+    const user = this.userService.loginUSer(userLoginDto);
 
     return {
       success: true,

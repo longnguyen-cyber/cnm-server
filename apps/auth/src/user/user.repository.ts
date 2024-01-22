@@ -132,9 +132,12 @@ export class UserRepository {
   async findOneByEmail(email: string, prisma: Tx = this.prisma) {
     const user = await prisma.users.findUnique({
       where: {
-        email: email,
+        email,
       },
     });
+    if (!user) {
+      return null;
+    }
     return user;
   }
 

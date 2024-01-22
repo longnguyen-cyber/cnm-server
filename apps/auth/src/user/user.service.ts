@@ -1,15 +1,18 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
-import { UserCheck } from './user.check';
-import { UserRepository } from './user.repository';
 import {
   CommonService,
   FindOneUserDto,
   HttpExceptionCustom,
   Token,
+  UserCreateDto,
 } from '@app/common';
+import { Queue, UploadMethod } from '@app/common/enums';
+import { RabbitMQService } from '@app/rabbitmq';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { AuthService } from '../auth.service';
-import { TokenDecode } from './types/tokenDecode.interface';
 import { UserModel } from './model/user.model';
+import { TokenDecode } from './types/tokenDecode.interface';
+import { UserCheck } from './user.check';
+import { UserRepository } from './user.repository';
 
 @Injectable()
 export class UserService {
@@ -18,6 +21,8 @@ export class UserService {
     private commonService: CommonService,
     private userRepository: UserRepository,
     private userCheck: UserCheck,
+    @Inject('RabbitMQUploadService')
+    private readonly rabbitMQService: RabbitMQService,
   ) {}
 
   async login({ email, password }: any): Promise<any> {
@@ -60,24 +65,38 @@ export class UserService {
     };
   }
 
-  async createUser(userCreateDto: any): Promise<any | null> {
+  async createUser(userCreateDto: UserCreateDto): Promise<any | null> {
+    // console.log(typeof userCreateDto.avatar);
     const userClean = { ...userCreateDto };
-    const { email } = userCreateDto;
+
+    const { avatar: _, email } = userClean;
+    const avatar = JSON.parse(_ as any);
+
     await this.checkUniqueUser(email);
     const passwordHashed = await this.authService.hashPassword(
       userClean.password,
     );
-
+    const uploadFile = await this.rabbitMQService.addToQueue(
+      Queue.Upload,
+      UploadMethod.UploadSingle,
+      {
+        fileName: avatar.fileName,
+        file: avatar.file,
+      },
+    );
     const data = {
       ...userClean,
       password: passwordHashed,
       status: 'active',
+      avatar: uploadFile ? this.pathUpload(avatar.fileName) : '',
     };
+    console.log('data', data);
 
     const tokenCreate = this.generateToken(email);
     const user = await this.userRepository.createUser(data, tokenCreate);
 
     return this.buildUserResponse(user);
+    return data;
   }
 
   async updateUser(userUpdateDto: any, token: Token): Promise<any> {
@@ -263,5 +282,9 @@ export class UserService {
     const seconds = Math.floor(((time % 3600000) % 60000) / 1000);
 
     return seconds > 0;
+  };
+
+  private pathUpload = (fileName: string): string => {
+    return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${fileName.replaceAll(' ', '-')}`;
   };
 }

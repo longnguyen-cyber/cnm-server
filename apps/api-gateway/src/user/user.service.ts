@@ -3,6 +3,7 @@ import {
   USERS_SERVICE_NAME,
   UpdateUserDto,
   UserCreateDto,
+  UserLoginDto,
   UsersServiceClient,
 } from '@app/common';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
@@ -25,6 +26,10 @@ export class UserService implements OnModuleInit {
     return this.userService.getAllUsers({});
   }
 
+  loginUSer(useLogin: UserLoginDto) {
+    console.log('in service', useLogin);
+    return this.userService.login(useLogin);
+  }
   findOne(id: string) {
     return this.userService.getUser({ id });
   }

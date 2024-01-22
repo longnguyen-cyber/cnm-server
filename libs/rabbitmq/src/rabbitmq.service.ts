@@ -15,13 +15,13 @@ export class RabbitMQService {
     });
   }
 
-  async addToQueue(queue: Queue, message: UploadMethod, payload: any) {
+  async addToQueue(queue: Queue, message: UploadMethod | string, payload: any) {
     try {
       const data = {
         cmd: message,
         payload,
       };
-      await this.channelWrapper.sendToQueue(
+      const rs = await this.channelWrapper.sendToQueue(
         queue,
         Buffer.from(JSON.stringify(data)),
         {
@@ -29,6 +29,7 @@ export class RabbitMQService {
         },
       );
       Logger.log('Sent To Queue');
+      return rs;
     } catch (error) {
       throw new HttpException(
         'Error adding mail to queue',

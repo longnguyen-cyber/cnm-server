@@ -58,9 +58,9 @@ export interface Token {
 export const AUTH_PACKAGE_NAME = 'auth';
 
 export interface UsersServiceClient {
-  register(request: UserCreateDto): Observable<User>;
-
   login(request: UserLoginDto): Observable<User>;
+
+  register(request: UserCreateDto): Observable<User>;
 
   getUser(request: FindOneUserDto): Observable<User>;
 
@@ -70,9 +70,9 @@ export interface UsersServiceClient {
 }
 
 export interface UsersServiceController {
-  register(request: UserCreateDto): Promise<User> | Observable<User> | User;
-
   login(request: UserLoginDto): Promise<User> | Observable<User> | User;
+
+  register(request: UserCreateDto): Promise<User> | Observable<User> | User;
 
   getUser(request: FindOneUserDto): Promise<User> | Observable<User> | User;
 
