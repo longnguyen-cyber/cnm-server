@@ -30,7 +30,7 @@ export const CHAT_PACKAGE_NAME = 'chat';
 export interface ChatServiceClient {
   createChat(request: ChatCreateDto): Observable<Chat>;
 
-  getAllChats(request: Empty): Observable<Chats>;
+  getAllChats(request: Empty): Observable<Chats> | Promise<Chats> | Chats | any;
 
   getChatById(request: FindOneChatDto): Observable<Chat>;
 }
@@ -38,7 +38,7 @@ export interface ChatServiceClient {
 export interface ChatServiceController {
   createChat(request: ChatCreateDto): Promise<Chat> | Observable<Chat> | Chat;
 
-  getAllChats(request: Empty): Promise<Chats> | Observable<Chats> | Chats;
+  getAllChats(request: Empty): Promise<Chats> | Observable<Chats> | Chats | any;
 
   getChatById(request: FindOneChatDto): Promise<Chat> | Observable<Chat> | Chat;
 }

@@ -23,15 +23,11 @@ export class ChatService {
     };
   }
 
-  async createChat(
-    chatCreateDto: ChatCreateDto,
-    senderId: string,
-    receiveId: string,
-  ): Promise<Chat | any> {
+  async createChat(chatCreateDto: ChatCreateDto): Promise<Chat | any> {
     const chatToDb = this.compareToCreateChat(
       chatCreateDto,
-      senderId,
-      receiveId,
+      chatCreateDto.senderId,
+      chatCreateDto.receiveId,
     );
 
     const chat = await this.chatRepository.createChat(chatToDb);

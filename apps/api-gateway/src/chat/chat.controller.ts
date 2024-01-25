@@ -13,12 +13,10 @@ export class ChatController {
   // @ApiBody({ type:  })
   @UsePipes(new CustomValidationPipe())
   async createChat(
-    @Body('chat') chat: string,
     @Body('senderId') senderId: string,
     @Body('receiveId') receiveId: string,
   ) {
     return this.chatService.createChat({
-      chatId: chat,
       senderId,
       receiveId,
     });

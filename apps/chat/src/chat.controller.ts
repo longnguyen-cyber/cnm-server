@@ -15,18 +15,17 @@ import { ChatService } from './chat.service';
 export class ChatController implements ChatServiceController {
   constructor(private readonly chatService: ChatService) {}
   createChat(request: ChatCreateDto): Chat | Observable<Chat> | Promise<Chat> {
-    return this.chatService.createChat(
-      request,
-      request.receiveId,
-      request.senderId,
-    );
+    return this.chatService.createChat(request);
   }
-  getAllChats(): Chats | Observable<Chats> | Promise<Chats> {
-    return this.chatService.getAllChat();
+  async getAllChats(): Promise<Chats | Observable<Chats> | Promise<Chats>> {
+    const chats = await this.chatService.getAllChat();
+    console.log(chats);
+    return chats;
   }
   getChatById(
     request: FindOneChatDto,
   ): Chat | Observable<Chat> | Promise<Chat> {
+    console.log(request);
     return this.chatService.getChatById(request.chatId);
   }
 }

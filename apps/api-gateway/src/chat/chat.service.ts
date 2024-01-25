@@ -23,10 +23,11 @@ export class ChatService implements OnModuleInit {
   }
 
   async getChatById(chatId: FindOneChatDto): Promise<Chat | any> {
+    console.log(chatId.chatId);
     return this.chatService.getChatById(chatId);
   }
 
   async getAllChat(): Promise<Chat[] | any> {
-    return this.chatService.getAllChats({});
+    return await this.chatService.getAllChats({});
   }
 }
