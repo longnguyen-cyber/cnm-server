@@ -6,9 +6,17 @@ import { ThreadModule } from './thread/thread.module';
 import { UserModule } from './user/user.module';
 import { RabbitMQModule } from '@app/rabbitmq';
 import { UploadModule } from 'apps/upload/src/upload.module';
+import { ChannelModule } from './channel/channel.module';
 
 @Module({
-  imports: [UserModule, ThreadModule, ChatModule, RabbitMQModule, UploadModule],
+  imports: [
+    UserModule,
+    ThreadModule,
+    ChatModule,
+    RabbitMQModule,
+    UploadModule,
+    ChannelModule,
+  ],
   controllers: [AppController],
 })
 export class AppModule {}

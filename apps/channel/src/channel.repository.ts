@@ -6,41 +6,6 @@ export class ChannelRepository {
   constructor(private prisma: PrismaService) {}
 
   async getAllChannel(prisma: Tx = this.prisma) {
-    // const channels = await prisma.channels.findMany();
-    // channels.map(async (channel) => {
-    //   await prisma.channels.update({
-    //     where: {
-    //       id: channel.id,
-    //     },
-    //     data: {
-    //       userCreated: '64d5bc027f6edb62664b4019',
-    //     },
-    //   });
-    // });
-
-    // const getAllUserOfChannel = async (channelId: string) => {
-    //   const users = await prisma.channels.findUnique({
-    //     where: {
-    //       id: channelId
-    //     },
-    //     include: {
-    //       users: true
-    //     }
-    //   })
-    //   return users
-    // }
-
-    // const final = await Promise.all(
-    //   channels.map(async (channel) => {
-    //     const channels = await getAllUserOfChannel(channel.id)
-    //     const users = channels?.users
-    //     return {
-    //       ...channel,
-    //       users
-    //     }
-    //   })
-    // )
-    // return final
     const channels = await prisma.channels.findMany({
       include: {
         users: true,
@@ -122,6 +87,7 @@ export class ChannelRepository {
 
   async createChannel(ChannelCreateDto: any, prisma: Tx = this.prisma) {
     const users = await prisma.users.findMany();
+    console.log(ChannelCreateDto);
     const newChannel = await prisma.channels.create({
       data: {
         name: ChannelCreateDto.name,

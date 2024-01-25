@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { GrpcMethod, GrpcStreamMethod } from '@nestjs/microservices';
 import { Observable } from 'rxjs';
+import { Empty } from './empty';
 
 export const protobufPackage = 'upload';
 
@@ -10,8 +11,6 @@ export interface Upload {
   fileName: string;
   file: Buffer;
 }
-
-export interface Empty {}
 
 export interface Update {
   fileName: string;

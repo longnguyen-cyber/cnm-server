@@ -1,12 +1,58 @@
-import { Controller, Get } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import {
+  AddUserToChannelDto,
+  Channel,
+  ChannelCreateDto,
+  ChannelServiceController,
+  ChannelServiceControllerMethods,
+  ChannelUpdateDto,
+  Channels,
+  Empty,
+  FindChannel,
+  RemoveUserFromChannelDto,
+} from '@app/common';
+import { Controller } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { ChannelService } from './channel.service';
 
 @Controller()
-export class ChannelController {
+@ChannelServiceControllerMethods()
+export class ChannelController implements ChannelServiceController {
   constructor(private readonly channelService: ChannelService) {}
-
-  @Get()
-  getHello(): string {
-    return this.channelService.getHello();
+  createChannel(
+    request: ChannelCreateDto,
+  ): Channel | Promise<Channel> | Observable<Channel> {
+    return this.channelService.createChannel(request);
+  }
+  updateChannel(
+    request: ChannelUpdateDto,
+  ): Channel | Promise<Channel> | Observable<Channel> {
+    return this.channelService.updateChannel(request);
+  }
+  deleteChannel(
+    request: FindChannel,
+  ): Channel | Promise<Channel> | Observable<Channel> {
+    return this.channelService.deleteChannel(request.id);
+  }
+  getAllChannels(
+    _request: Empty,
+  ): Channels | Promise<Channels> | Observable<Channels> {
+    return this.channelService.getAllChannels();
+  }
+  getChannelById(
+    request: FindChannel,
+  ): Channel | Promise<Channel> | Observable<Channel> {
+    return this.channelService.getChannelById(request.id);
+  }
+  addUserToChannel(
+    request: AddUserToChannelDto,
+  ): Channel | Promise<Channel> | Observable<Channel> {
+    return this.channelService.addUserToChannel(request);
+  }
+  removeUserFromChannel(
+    request: RemoveUserFromChannelDto,
+  ): Channel | Promise<Channel> | Observable<Channel> {
+    console.log(request);
+    return null;
   }
 }
