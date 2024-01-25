@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   CommonService,
   FindOneUserDto,
@@ -90,7 +91,6 @@ export class UserService {
       status: 'active',
       avatar: uploadFile ? this.pathUpload(avatar.fileName) : '',
     };
-    console.log('data', data);
 
     const tokenCreate = this.generateToken(email);
     const user = await this.userRepository.createUser(data, tokenCreate);

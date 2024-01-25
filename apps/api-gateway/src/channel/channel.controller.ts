@@ -19,7 +19,9 @@ export class ChannelController {
 
   @Get()
   async getAllChannel() {
-    return await this.channelService.getAllChannel();
+    const data = await this.channelService.getAllChannel();
+    console.log('type of data: ' + data);
+    return data;
   }
   @Get(':channelId')
   async getChannelById(@Param('channelId') channelId: string) {

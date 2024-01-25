@@ -76,16 +76,7 @@ export class ThreadController {
       react: reactCreateDto,
       file: fileUpload,
     });
-    // if (!rs) {
-    //   console.log('error');
-    //   if (file && file.path) {
-    //     unlink(file.path, (err) => {
-    //       if (err) {
-    //         throw new Error(`Error deleting file: ${file.path}`);
-    //       }
-    //     });
-    //   }
-    // }
+
     return {
       success: true,
       message: 'Create thread success',

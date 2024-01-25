@@ -19,13 +19,11 @@ export class ChatController implements ChatServiceController {
   }
   async getAllChats(): Promise<Chats | Observable<Chats> | Promise<Chats>> {
     const chats = await this.chatService.getAllChat();
-    console.log(chats);
     return chats;
   }
   getChatById(
     request: FindOneChatDto,
   ): Chat | Observable<Chat> | Promise<Chat> {
-    console.log(request);
     return this.chatService.getChatById(request.chatId);
   }
 }

@@ -28,18 +28,6 @@ export class ThreadService {
       threadDto.channelId,
       threadDto.chatId,
     );
-    // if (threadDto.file) {
-    //   const limitFileSize = this.limitFileSize(threadDto.file.size);
-    //   console.log(limitFileSize);
-    //   if (limitFileSize) {
-    //     return {
-    //       success: false,
-    //       message: 'File size is too large',
-    //       errors: 'File size is too large',
-    //       thread: null,
-    //     };
-    //   }
-    // }
 
     const thread = await this.threadRepository.createThread(threadToDb);
     return {
@@ -104,19 +92,6 @@ export class ThreadService {
       threadDto.threadId,
     );
 
-    // if (fileCreateDto) {
-    //   const limitFileSize = this.limitFileSize(fileCreateDto.size);
-    //   console.log(limitFileSize);
-
-    //   if (limitFileSize) {
-    //     return {
-    //       success: false,
-    //       message: 'File size is too large',
-    //       errors: 'File size is too large',
-    //       thread: null,
-    //     };
-    //   }
-    // }
     await this.threadRepository.createReplyThread(thread);
     return {
       success: true,

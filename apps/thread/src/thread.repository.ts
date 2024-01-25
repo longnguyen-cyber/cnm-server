@@ -16,7 +16,6 @@ export class ThreadRepository {
     let newMsg: any;
     let newFile: any;
     let react: any;
-    console.log(threadToDB);
     if (threadToDB.chatId === undefined || threadToDB.receiveId === null) {
       newThread = await prisma.threads.create({
         data: {
@@ -355,7 +354,6 @@ export class ThreadRepository {
         userId,
       },
     });
-    console.log(react);
 
     if (react) {
       await prisma.reactions.update({

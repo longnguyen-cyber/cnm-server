@@ -34,10 +34,9 @@ export class ChannelController implements ChannelServiceController {
   ): Channel | Promise<Channel> | Observable<Channel> {
     return this.channelService.deleteChannel(request.id);
   }
-  getAllChannels(
-    _request: Empty,
-  ): Channels | Promise<Channels> | Observable<Channels> {
-    return this.channelService.getAllChannels();
+  async getAllChannels(_request: Empty): Promise<Channels> {
+    const data = await this.channelService.getAllChannels();
+    return { channels: data };
   }
   getChannelById(
     request: FindChannel,

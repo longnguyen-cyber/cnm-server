@@ -87,7 +87,6 @@ export class ChannelRepository {
 
   async createChannel(ChannelCreateDto: any, prisma: Tx = this.prisma) {
     const users = await prisma.users.findMany();
-    console.log(ChannelCreateDto);
     const newChannel = await prisma.channels.create({
       data: {
         name: ChannelCreateDto.name,

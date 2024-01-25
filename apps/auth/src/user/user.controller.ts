@@ -18,13 +18,9 @@ export class UserController implements UsersServiceController {
   constructor(private readonly usersService: UserService) {}
 
   register(request: UserCreateDto): User | Promise<User> | Observable<User> {
-    console.log(request);
-    // return this.usersService.createUser(request);
-    return null;
+    return this.usersService.createUser(request);
   }
   login(request: UserLoginDto): User | Promise<User> | Observable<User> {
-    console.log(request);
-    console.log('in controller');
     return this.usersService.login(request);
     // return null;
   }

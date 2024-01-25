@@ -34,12 +34,14 @@ export class ChannelService implements OnModuleInit {
     return this.channelService.deleteChannel(channelId);
   }
 
-  async getChannelById(channelId: FindChannel): Promise<Channel | any> {
+  async getChannelById(channelId: FindChannel): Promise<any> {
     return this.channelService.getChannelById(channelId);
   }
 
-  async getAllChannel(): Promise<Channel[] | any> {
-    return this.channelService.getAllChannels({});
+  async getAllChannel(): Promise<any> {
+    const data = this.channelService.getAllChannels({});
+
+    return data;
   }
 
   async addUserToChannel(add: AddUserToChannelDto): Promise<Channel | any> {

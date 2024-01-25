@@ -19,7 +19,6 @@ export class UploadService {
   });
 
   async upload(fileName: string, file: Buffer) {
-    console.log('uploading', fileName);
     await this.s3Client.send(
       new PutObjectCommand({
         Bucket: this.config.get('AWS_S3_BUCKET_NAME'),

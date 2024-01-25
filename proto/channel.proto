@@ -16,6 +16,15 @@ message FindChannel{
   string id=1;
 }
 
+message User{
+    string name = 1;
+    string displayName = 3;
+    string status = 4;
+    string phone = 5;
+    string email = 6;
+    string avatar = 7;
+}
+
 message ChannelCreateDto {
   string name = 1;
   bool isPublic = 2;
@@ -26,7 +35,7 @@ message Channel {
   string id = 1;
   string name = 2;
   bool isPublic = 3;
-  string userCreated = 4;
+  User userCreated = 4;
   repeated string userId = 5;
 }
 
