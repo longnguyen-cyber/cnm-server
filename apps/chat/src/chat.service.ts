@@ -7,20 +7,9 @@ import { ChatToDBDto } from './dto/relateDB/ChatToDB.dto';
 export class ChatService {
   constructor(private chatRepository: ChatRepository) {}
 
-  async getAllChat(): Promise<Chat[] | any> {
-    return await this.chatRepository.getAllChat();
-  }
-
-  async getChatById(chatId: string) {
-    const chat = await this.chatRepository.getChatById(chatId);
-
-    return {
-      ...chat,
-      user: {
-        ...chat.user,
-        // avatar: this.commonService.transferFileToURL(req, chat.user.avatar),
-      },
-    };
+  async getAllChat(): Promise<any> {
+    const data = await this.chatRepository.getAllChat();
+    return data;
   }
 
   async createChat(chatCreateDto: ChatCreateDto): Promise<Chat | any> {

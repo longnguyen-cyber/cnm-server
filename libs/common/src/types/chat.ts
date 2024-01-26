@@ -21,31 +21,23 @@ export interface Chats {
   chats: Chat[];
 }
 
-export interface FindOneChatDto {
-  chatId: string;
-}
-
 export const CHAT_PACKAGE_NAME = 'chat';
 
 export interface ChatServiceClient {
   createChat(request: ChatCreateDto): Observable<Chat>;
 
-  getAllChats(request: Empty): Observable<Chats> | Promise<Chats> | Chats | any;
-
-  getChatById(request: FindOneChatDto): Observable<Chat>;
+  getAllChats(request: Empty): Observable<Chats>;
 }
 
 export interface ChatServiceController {
   createChat(request: ChatCreateDto): Promise<Chat> | Observable<Chat> | Chat;
 
-  getAllChats(request: Empty): Promise<Chats> | Observable<Chats> | Chats | any;
-
-  getChatById(request: FindOneChatDto): Promise<Chat> | Observable<Chat> | Chat;
+  getAllChats(request: Empty): Promise<Chats> | Observable<Chats> | Chats;
 }
 
 export function ChatServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ['createChat', 'getAllChats', 'getChatById'];
+    const grpcMethods: string[] = ['createChat', 'getAllChats'];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(
         constructor.prototype,

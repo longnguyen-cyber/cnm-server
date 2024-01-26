@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UsePipes } from '@nestjs/common';
+import { Body, Controller, Get, Post, UsePipes } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ChatService } from './chat.service';
 
@@ -25,16 +25,5 @@ export class ChatController {
   @Get()
   async getAllChats() {
     return this.chatService.getAllChat();
-  }
-
-  @Get(':chatId')
-  async getChatById(@Param('chatId') chatId: string) {
-    const chat = await this.chatService.getChatById({ chatId });
-    return {
-      success: true,
-      message: 'Get chat success',
-      errors: null,
-      data: chat,
-    };
   }
 }

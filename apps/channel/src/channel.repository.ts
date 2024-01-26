@@ -51,36 +51,27 @@ export class ChannelRepository {
       return thread;
     };
 
-    const getAllFileOfThread = async (threadId: string) => {
-      const thread = await prisma.threads.findUnique({
-        where: {
-          id: threadId,
-        },
-        include: {
-          files: true,
-        },
-      });
-      return thread;
-    };
-
     const threads = channel.thread;
 
     const newThread = await Promise.all(
       threads.map(async (thread) => {
         const threads = await getAllMessageOfThread(thread.id);
         const messages = threads?.messages;
-        const files = await getAllFileOfThread(thread.id);
-        const filesThread = files?.files;
         return {
           ...thread,
           messages,
-          files: filesThread,
         };
       }),
     );
+    const userCreated = await prisma.users.findUnique({
+      where: {
+        id: channel.userCreated,
+      },
+    });
 
     return {
       ...channel,
+      userCreated,
       thread: newThread,
     };
   }

@@ -1,4 +1,10 @@
 import {
+  CustomValidationPipe,
+  FileCreateDto,
+  MessageToDBDto,
+  ReactCreateDto,
+} from '@app/common';
+import {
   Body,
   Controller,
   Delete,
@@ -14,20 +20,13 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 import { unlink } from 'fs';
 import { diskStorage } from 'multer';
-import { Request } from 'express';
 import slugify from 'slugify';
-import { ThreadRequestCreateDto } from './dto/threadRequestCreate.dto';
-import { ResThreadDto } from './dto/resThread.dto';
 import { MessageCreateDto } from './dto/messageCreate.dto';
-import {
-  CustomValidationPipe,
-  FileCreateDto,
-  MessageToDBDto,
-  ReactCreateDto,
-  ThreadServiceClient,
-} from '@app/common';
+import { ResThreadDto } from './dto/resThread.dto';
+import { ThreadRequestCreateDto } from './dto/threadRequestCreate.dto';
 import { ThreadService } from './thread.service';
 
 @ApiTags('threads')
@@ -107,15 +106,7 @@ export class ThreadController {
     @Body('senderId') senderId?: string,
     @UploadedFile() file?: any, // Express.Multer.File,
   ): Promise<ResThreadDto> {
-    let fileUpload: FileCreateDto;
-    if (file) {
-      fileUpload = {
-        ...file,
-        path: file.path.replace(/\\/g, '/'),
-      };
-    }
-
-    const rs = this.threadService.createReplyThread({
+    this.threadService.createReplyThread({
       threadId: threadId,
       senderId: senderId,
       messages: messageCreateDto,

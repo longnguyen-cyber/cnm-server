@@ -17,13 +17,8 @@ export class ChatController implements ChatServiceController {
   createChat(request: ChatCreateDto): Chat | Observable<Chat> | Promise<Chat> {
     return this.chatService.createChat(request);
   }
-  async getAllChats(): Promise<Chats | Observable<Chats> | Promise<Chats>> {
+  async getAllChats(): Promise<Chats> {
     const chats = await this.chatService.getAllChat();
-    return chats;
-  }
-  getChatById(
-    request: FindOneChatDto,
-  ): Chat | Observable<Chat> | Promise<Chat> {
-    return this.chatService.getChatById(request.chatId);
+    return { chats };
   }
 }

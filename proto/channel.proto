@@ -18,11 +18,11 @@ message FindChannel{
 
 message User{
     string name = 1;
-    string displayName = 3;
-    string status = 4;
-    string phone = 5;
-    string email = 6;
-    string avatar = 7;
+    string displayName = 2;
+    string status = 3;
+    string phone = 4;
+    string email = 5;
+    string avatar = 6;
 }
 
 message ChannelCreateDto {

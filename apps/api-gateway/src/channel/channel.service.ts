@@ -35,6 +35,7 @@ export class ChannelService implements OnModuleInit {
   }
 
   async getChannelById(channelId: FindChannel): Promise<any> {
+    console.log(channelId);
     return this.channelService.getChannelById(channelId);
   }
 

@@ -5,7 +5,16 @@ package chat;
 service ChatService {
     rpc CreateChat(ChatCreateDto) returns (Chat) {}
     rpc GetAllChats(Empty) returns (Chats) {}
-    rpc GetChatById(FindOneChatDto) returns (Chat) {}
+    rpc GetChatById(FindChat) returns (Chat) {}
+}
+
+message User{
+    string name = 1;
+    string displayName = 3;
+    string status = 4;
+    string phone = 5;
+    string email = 6;
+    string avatar = 7;
 }
 
 message ChatCreateDto {
@@ -15,9 +24,10 @@ message ChatCreateDto {
 }
 
 message Chat {
-    string senderId = 1;
-    string receiveId = 2;
-    optional string chatId = 3;
+    string id = 1;
+    string senderId = 2;
+    string receiveId = 3;
+    User receiveUser = 4;
 }
 
 message Chats {
@@ -26,6 +36,6 @@ message Chats {
 
 message Empty {}
 
-message FindOneChatDto {
-    string chatId = 1;
+message FindChat {
+    string id = 1;
 }

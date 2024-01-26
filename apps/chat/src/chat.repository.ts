@@ -5,50 +5,29 @@ export class ChatRepository {
   constructor(private prisma: PrismaService) {}
 
   async getAllChat(prisma: Tx = this.prisma) {
-    // const chats = prisma.chats.findMany({
-    //   include: {
-    //     user: true,
-    //     thread: true
-    //   }
-    // })
-
-    // const getAllMessageOfThread = async (threadId: string) => {
-    //   const thread = await prisma.threads.findUnique({
-    //     where: {
-    //       id: threadId
-    //     },
-    //     include: {
-    //       user: true,
-    //       messages: true
-    //     }
-    //   })
-    //   return thread
-    // }
-    // const final = await Promise.all(
-    //   (
-    //     await chats
-    //   ).map(async (chat) => {
-    //     const thread = await Promise.all(
-    //       chat.thread.map(async (thread) => {
-    //         const threads = await getAllMessageOfThread(thread.id)
-    //         return threads
-    //       })
-    //     )
-    //     delete chat.senderId
-    //     delete chat.receiveId
-    //     return {
-    //       ...chat,
-    //       thread
-    //     }
-    //   })
-    // )
-
-    // return final
-    return await this.prisma.chats.findMany({
+    const chats = prisma.chats.findMany({
       include: {
-        user: true,
+        thread: true,
       },
     });
+    //find information of receiveUser
+    const final = await Promise.all(
+      (await chats).map(async (chat) => {
+        const receiveId = chat.receiveId;
+        if (receiveId === null) return chat;
+        const receiveUser = await prisma.users.findUnique({
+          where: {
+            id: receiveId,
+          },
+        });
+        return {
+          ...chat,
+          receiveUser,
+        };
+      }),
+    );
+
+    return final;
   }
 
   async getChatById(id: string, prisma: Tx = this.prisma) {

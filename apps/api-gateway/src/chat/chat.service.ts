@@ -3,11 +3,10 @@ import {
   Chat,
   ChatCreateDto,
   ChatServiceClient,
-  FindOneChatDto,
 } from '@app/common';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { CHAT_SERVICE } from './constants';
 import { ClientGrpc } from '@nestjs/microservices';
+import { CHAT_SERVICE } from './constants';
 
 @Injectable()
 export class ChatService implements OnModuleInit {
@@ -22,11 +21,7 @@ export class ChatService implements OnModuleInit {
     return this.chatService.createChat(chatCreateDto);
   }
 
-  async getChatById(chatId: FindOneChatDto): Promise<Chat | any> {
-    return this.chatService.getChatById(chatId);
-  }
-
   async getAllChat(): Promise<Chat[] | any> {
-    return await this.chatService.getAllChats({});
+    return this.chatService.getAllChats({});
   }
 }
