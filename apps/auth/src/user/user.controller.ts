@@ -21,6 +21,7 @@ export class UserController implements UsersServiceController {
     return this.usersService.createUser(request);
   }
   login(request: UserLoginDto): User | Promise<User> | Observable<User> {
+    console.log('in controller', request);
     return this.usersService.login(request);
     // return null;
   }

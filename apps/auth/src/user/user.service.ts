@@ -14,6 +14,8 @@ import { UserModel } from './model/user.model';
 import { TokenDecode } from './types/tokenDecode.interface';
 import { UserCheck } from './user.check';
 import { UserRepository } from './user.repository';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue as QueueEmail } from 'bull';
 
 @Injectable()
 export class UserService {
@@ -24,6 +26,7 @@ export class UserService {
     private userCheck: UserCheck,
     @Inject('RabbitMQUploadService')
     private readonly rabbitMQService: RabbitMQService,
+    @InjectQueue('send-mail') private readonly mailQueue: QueueEmail,
   ) {}
 
   async login({ email, password }: any): Promise<any> {
@@ -94,9 +97,20 @@ export class UserService {
 
     const tokenCreate = this.generateToken(email);
     const user = await this.userRepository.createUser(data, tokenCreate);
+    if (user) {
+      await this.mailQueue.add(
+        'register',
+        {
+          to: data.email,
+          name: data.name,
+        },
+        {
+          removeOnComplete: true,
+        },
+      );
+    }
 
     return this.buildUserResponse(user);
-    return data;
   }
 
   async updateUser(userUpdateDto: any, token: Token): Promise<any> {

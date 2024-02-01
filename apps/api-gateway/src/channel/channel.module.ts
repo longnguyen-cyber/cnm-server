@@ -6,7 +6,6 @@ import { join } from 'path';
 import { ChannelController } from './channel.controller';
 import { ChannelService } from './channel.service';
 import { CHANNEL_SERVICE } from './constants';
-
 @Module({
   imports: [ConfigModule],
   controllers: [ChannelController],

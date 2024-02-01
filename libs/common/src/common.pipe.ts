@@ -10,10 +10,17 @@ import { validate, ValidationError } from 'class-validator';
 
 export class CustomValidationPipe implements PipeTransform {
   async transform(value: any, metadata: ArgumentMetadata) {
+    console.log('in pipe', value);
+    if (value === undefined || value === null) {
+      throw new HttpException(
+        'Validation failed: No body submitted',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     if (typeof value === 'string') {
       return value.trim();
     }
-
     if (this.isEmpty(value)) {
       throw new HttpException(
         'Validation failed: No body submitted',

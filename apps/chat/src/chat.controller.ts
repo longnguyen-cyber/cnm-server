@@ -4,7 +4,6 @@ import {
   ChatServiceController,
   ChatServiceControllerMethods,
   Chats,
-  FindOneChatDto,
 } from '@app/common';
 import { Controller } from '@nestjs/common';
 import { Observable } from 'rxjs';
