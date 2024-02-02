@@ -27,8 +27,7 @@ export class UserService implements OnModuleInit {
     return this.userService.getAllUsers({});
   }
 
-  loginUSer(useLogin: UserLoginDto): Observable<any> {
-    console.log('in service', this.userService.login(useLogin));
+  async loginUSer(useLogin: UserLoginDto) {
     return this.userService.login(useLogin);
   }
   findOne(id: string) {
@@ -41,5 +40,10 @@ export class UserService implements OnModuleInit {
 
   checkUserService() {
     return 'UserService OK';
+  }
+
+  long() {
+    console.log('in service');
+    return this.userService.long({});
   }
 }

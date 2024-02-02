@@ -58,6 +58,8 @@ export interface Token {
 export const AUTH_PACKAGE_NAME = 'auth';
 
 export interface UsersServiceClient {
+  long(request: Empty): Observable<Users>;
+
   login(request: UserLoginDto): Observable<User>;
 
   register(request: UserCreateDto): Observable<User>;
@@ -70,6 +72,8 @@ export interface UsersServiceClient {
 }
 
 export interface UsersServiceController {
+  long(request: Empty): Promise<Users> | Observable<Users> | Users;
+
   login(request: UserLoginDto): Promise<User> | Observable<User> | User;
 
   register(request: UserCreateDto): Promise<User> | Observable<User> | User;
@@ -84,6 +88,7 @@ export interface UsersServiceController {
 export function UsersServiceControllerMethods() {
   return function (constructor: Function) {
     const grpcMethods: string[] = [
+      'long',
       'register',
       'login',
       'getUser',

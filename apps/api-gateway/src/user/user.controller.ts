@@ -52,7 +52,7 @@ export class UserController {
     @Body() userLoginDto: UserLoginDto,
     // @Req() request: Request,
   ): Promise<any> {
-    const user = this.userService.loginUSer(userLoginDto);
+    const user = await this.userService.loginUSer(userLoginDto);
 
     return {
       success: true,
@@ -72,6 +72,19 @@ export class UserController {
       data: data,
     };
   }
+
+  @Get('long')
+  async long(): Promise<any> {
+    const data = this.userService.long();
+    console.log('in controller', data);
+    return {
+      success: true,
+      message: 'Get user success',
+      errors: null,
+      data: data,
+    };
+  }
+
   @Get()
   async getAllUser(): Promise<any> {
     const data = this.userService.findAll();

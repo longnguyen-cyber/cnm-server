@@ -8,6 +8,7 @@ service UsersService {
     rpc GetUser(FindOneUserDto) returns (User) {}
     rpc GetAllUsers(Empty) returns (Users) {}
     rpc UpdateUser(UpdateUserDto) returns (User) {}
+    rpc long(Empty) returns (Users){}
 }
 
 message UserCreateDto {

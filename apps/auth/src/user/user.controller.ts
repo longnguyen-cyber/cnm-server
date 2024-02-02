@@ -16,6 +16,10 @@ import { UserService } from './user.service';
 @UsersServiceControllerMethods()
 export class UserController implements UsersServiceController {
   constructor(private readonly usersService: UserService) {}
+  long(): Users | Observable<Users> | Promise<Users> {
+    console.log('in controller');
+    return this.usersService.getAllUser();
+  }
 
   register(request: UserCreateDto): User | Promise<User> | Observable<User> {
     return this.usersService.createUser(request);
