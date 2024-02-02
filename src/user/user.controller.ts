@@ -5,7 +5,7 @@ import {
   CACHE_MANAGER,
   Controller,
   Get,
-  Headers,
+  HttpStatus,
   Inject,
   Param,
   Post,
@@ -17,15 +17,16 @@ import {
   UsePipes,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
-import { ApiHeader, ApiTags } from '@nestjs/swagger'
-import { UserService } from './user.service'
-import { CustomValidationPipe } from '../common/common.pipe'
-import { Token } from '../auth/iterface/auth.interface'
-import { AuthGuard } from '../auth/guard/auth.guard'
+import { ApiTags } from '@nestjs/swagger'
 import { Cache } from 'cache-manager'
+import { Response } from 'src/common/common.type'
+import { AuthGuard } from '../auth/guard/auth.guard'
+import { CustomValidationPipe } from '../common/common.pipe'
+import { UserService } from './user.service'
 
 @ApiTags('users')
 @Controller('users')
+@UseGuards(AuthGuard)
 export class UserController {
   constructor(
     private readonly userService: UserService,
@@ -39,7 +40,7 @@ export class UserController {
     @Body() userCreateDto: any,
     @UploadedFile()
     file: Express.Multer.File,
-  ): Promise<any> {
+  ): Promise<Response> {
     const data: any = {
       ...userCreateDto,
       avatar: JSON.stringify({
@@ -47,58 +48,97 @@ export class UserController {
         file: file.buffer,
       }),
     }
-    return this.userService.createUser(data)
-  }
-
-  @Post('login')
-  @UseGuards(AuthGuard)
-  @UsePipes(new CustomValidationPipe())
-  async login(@Body() userLoginDto: any, @Req() req: any): Promise<any> {
-    if (req.error) {
-      const user = await this.userService.login(userLoginDto)
+    const rs = await this.userService.createUser(data)
+    if (rs) {
       return {
-        success: true,
-        message: 'Login success',
-        errors: null,
-        data: user,
+        status: HttpStatus.CREATED,
+        message: 'Create user success',
+        data: rs,
       }
     } else {
       return {
-        success: true,
-        message: 'Login success with token',
-        errors: null,
-        data: req.user,
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Create user fail',
+      }
+    }
+  }
+
+  @Post('login')
+  @UsePipes(new CustomValidationPipe())
+  async login(@Body() userLoginDto: any, @Req() req: any): Promise<Response> {
+    if (req.error) {
+      const user = await this.userService.login(userLoginDto)
+      if (user) {
+        return {
+          status: HttpStatus.OK,
+          message: 'Login success',
+          data: user,
+        }
+      } else {
+        return {
+          status: HttpStatus.NOT_FOUND,
+          message: 'Login fail',
+        }
+      }
+    } else {
+      const user = req.user
+      if (user) {
+        return {
+          status: HttpStatus.OK,
+          message: 'Login success with token',
+          data: req.user,
+        }
+      } else {
+        return {
+          status: HttpStatus.UNAUTHORIZED,
+          message: 'Login fail',
+          errors: req.error,
+        }
       }
     }
   }
 
   @Get(':id')
-  @UseGuards(AuthGuard)
-  async getUser(@Param('id') id: string, @Req() req: any): Promise<any> {
+  async getUser(@Param('id') id: string, @Req() req: any): Promise<Response> {
     if (req.error) {
       return {
-        success: false,
+        status: HttpStatus.UNAUTHORIZED,
         message: 'Please login again',
         errors: req.error,
-        data: null,
       }
     }
     const user = await this.userService.getUser(id)
-    return {
-      success: true,
-      message: 'Get user success',
-      errors: null,
-      data: user,
+    if (user) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Get user success',
+        data: user,
+      }
+    } else {
+      return {
+        status: HttpStatus.NOT_FOUND,
+        message: 'Get user fail',
+      }
     }
   }
 
-  @UseGuards(AuthGuard)
   @Put('update')
   // @UsePipes(new CustomValidationPipe())
   async updateCurrentUser(
     @Body('user') userUpdateDto: any,
     @Req() req: any,
-  ): Promise<any> {
-    return this.userService.updateUser(userUpdateDto, req.user)
+  ): Promise<Response> {
+    const user = await this.userService.getUser(req.user.id)
+    if (!user) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'User not found',
+      }
+    }
+    return {
+      status: HttpStatus.OK,
+      message: 'Update user success',
+      data: user,
+    }
   }
 }

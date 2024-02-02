@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 import { NestExpressApplication } from '@nestjs/platform-express'
+import { HttpExceptionFilter } from './common/common.filter'
 
 if (process.env.NODE_ENV || process.env.NODE_ENV === 'prod') {
   require('module-alias/register')
@@ -23,7 +24,7 @@ async function bootstrap() {
     .build()
   const document = SwaggerModule.createDocument(app, config)
   SwaggerModule.setup('doc', app, document)
-  // app.useGlobalFilters(new HttpExceptionFilter());
+  // app.useGlobalFilters(new HttpExceptionFilter())
 
   app.enableCors({
     origin: 'http://localhost:3000',

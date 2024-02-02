@@ -143,7 +143,6 @@ export class ChannelRepository {
     channelUpdateDto: ChannelUpdateDto,
     prisma: Tx = this.prisma,
   ) {
-    console.log(channelUpdateDto)
     const rs = await prisma.channels.update({
       where: {
         id: id,
@@ -152,12 +151,7 @@ export class ChannelRepository {
         ...channelUpdateDto,
       },
     })
-    console.log(rs)
-    return {
-      success: true,
-      message: 'Update channel successfully',
-      errors: '',
-    }
+    return rs
   }
 
   async deleteChannel(id: string, prisma: Tx = this.prisma) {

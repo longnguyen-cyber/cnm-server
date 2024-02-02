@@ -9,23 +9,19 @@ import {
   Query,
   Req,
   UploadedFile,
-  UseInterceptors,
   UsePipes,
 } from '@nestjs/common'
-import { FileInterceptor } from '@nestjs/platform-express'
 import { ApiBody, ApiCreatedResponse, ApiTags } from '@nestjs/swagger'
+import { Request } from 'express'
 import { unlink } from 'fs'
-import { diskStorage } from 'multer'
-import { extname } from 'path'
 import { CustomValidationPipe } from '../common/common.pipe'
+import { Response } from '../common/common.type'
 import { FileCreateDto } from './dto/fileCreate.dto'
 import { MessageCreateDto } from './dto/messageCreate.dto'
+import { ReactCreateDto } from './dto/reactCreate.dto'
 import { ResThreadDto } from './dto/resThread.dto'
 import { ThreadRequestCreateDto } from './dto/threadRequestCreate.dto'
 import { ThreadService } from './thread.service'
-import { Request } from 'express'
-import slugify from 'slugify'
-import { ReactCreateDto } from './dto/reactCreate.dto'
 
 @ApiTags('threads')
 @Controller('threads')
@@ -79,9 +75,7 @@ export class ThreadController {
       channelId,
       chatId,
     )
-    console.log(rs)
     if (!rs) {
-      console.log('error')
       if (file && file.path) {
         unlink(file.path, (err) => {
           if (err) {
@@ -220,7 +214,7 @@ export class ThreadController {
     @Body('receiveId') receiveId?: string,
     @Body('channelId') channelId?: string,
     @Body('chatId') chatId?: string,
-  ): Promise<ResThreadDto> {
+  ): Promise<Response> {
     const fileUpload: FileCreateDto = { ...file }
     const rs = await this.threadService.updateThread(
       threadId,
@@ -244,8 +238,7 @@ export class ThreadController {
       }
     }
     return {
-      success: rs.thread.success,
-
+      status: rs.thread.success,
       message: rs.thread.message,
       errors: rs.thread.errors,
       data: null,

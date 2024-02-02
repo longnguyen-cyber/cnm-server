@@ -1,29 +1,16 @@
-import { CacheModule, Module, forwardRef } from '@nestjs/common'
-import { ChannelService } from './channel.service'
+import { BullModule } from '@nestjs/bull'
+import { CacheModule, Module } from '@nestjs/common'
+import { PrismaModule } from '../prisma/prisma.module'
+import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { ChannelController } from './channel.controller'
 import { ChannelRepository } from './channel.repository'
-import { AuthModule } from '../auth/auth.module'
-import { CommonModule } from '../common/common.module'
-import { PrismaModule } from '../prisma/prisma.module'
-import { UserCheck } from '../user/user.check'
-import { UserRepository } from '../user/user.repository'
-import { UserService } from '../user/user.service'
-import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
-import { BullModule } from '@nestjs/bull'
+import { ChannelService } from './channel.service'
 
 @Module({
   controllers: [ChannelController],
-  providers: [
-    ChannelService,
-    ChannelRepository,
-    UserService,
-    UserRepository,
-    UserCheck,
-  ],
+  providers: [ChannelService, ChannelRepository],
   imports: [
-    forwardRef(() => AuthModule),
     PrismaModule,
-    CommonModule,
     CacheModule.register(),
     RabbitMQModule,
     BullModule.registerQueue({

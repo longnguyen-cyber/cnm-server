@@ -33,6 +33,7 @@ export class UserService {
     const user = await this.checkLoginData(email, password)
     const token = this.authService.generateJWT(user.id.toString())
     await this.cacheManager.set(token, JSON.stringify(user))
+
     delete user.password
 
     return {
@@ -46,8 +47,7 @@ export class UserService {
     return user
   }
 
-  async createUser(userCreateDto: UserCreateDto): Promise<any | null> {
-    // console.log(typeof userCreateDto.avatar);
+  async createUser(userCreateDto: UserCreateDto) {
     const userClean = { ...userCreateDto }
 
     const { avatar: _, email } = userClean
@@ -126,7 +126,7 @@ export class UserService {
       return user
     } catch (e) {
       throw new HttpExceptionCustom(
-        'login or password incorrect',
+        'email or password incorrect',
         HttpStatus.BAD_REQUEST,
       )
     }
@@ -207,14 +207,12 @@ export class UserService {
   private buildUserResponse(user: UserModel): any {
     const { name, email, avatar, displayName, phone, status } = user
     return {
-      user: {
-        name,
-        email,
-        avatar,
-        displayName,
-        phone,
-        status,
-      },
+      name,
+      email,
+      avatar,
+      displayName,
+      phone,
+      status,
     }
   }
 

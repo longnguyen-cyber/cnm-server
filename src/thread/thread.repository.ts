@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { Res, Tx } from '../common/common.type'
+import { Response, Tx } from '../common/common.type'
 import { PrismaService } from '../prisma/prisma.service'
 import { ReactToDBDto } from './dto/relateDB/reactToDB.dto'
 import { ThreadToDBDto } from './dto/relateDB/threadToDB.dto'
@@ -11,14 +11,13 @@ export class ThreadRepository {
   async createThread(
     threadToDB: ThreadToDBDto,
     prisma: Tx = this.prisma,
-  ): Promise<Res> {
+  ): Promise<any> {
     const messages = threadToDB.messages
     let threadId = ''
     let newThread: any
     let newMsg: any
     let newFile: any
     let react: any
-    console.log(threadToDB)
     if (threadToDB.chatId === undefined || threadToDB.receiveId === null) {
       newThread = await prisma.threads.create({
         data: {
@@ -116,7 +115,7 @@ export class ThreadRepository {
     threadId: string,
     senderId: string,
     prisma: Tx = this.prisma,
-  ): Promise<Res> {
+  ): Promise<any> {
     const deleteThread = await prisma.threads.update({
       where: {
         id: threadId,
@@ -172,7 +171,7 @@ export class ThreadRepository {
   async createReplyThread(
     threadToDB: ThreadToDBDto,
     prisma: Tx = this.prisma,
-  ): Promise<Res> {
+  ): Promise<any> {
     const messages = threadToDB.messages
     const threadId = threadToDB.threadId
     const senderId = threadToDB.senderId
@@ -357,7 +356,6 @@ export class ThreadRepository {
         userId,
       },
     })
-    console.log(react)
 
     if (react) {
       await prisma.reactions.update({

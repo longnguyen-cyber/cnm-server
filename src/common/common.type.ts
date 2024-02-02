@@ -1,3 +1,4 @@
+import { HttpStatus } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
 export type Tx = Omit<
@@ -5,10 +6,10 @@ export type Tx = Omit<
   '$connect' | '$disconnect' | '$on' | '$transaction' | '$use'
 >
 
-export type Res = {
-  success: boolean
+export type Response = {
+  status: HttpStatus
   message: string
-  errors: string
+  errors?: any
   data?: any
 }
 

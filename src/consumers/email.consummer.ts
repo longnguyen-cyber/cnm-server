@@ -8,7 +8,6 @@ export class EmailConsumer {
 
   @Process('register')
   async registerEmail(job: Job<unknown>) {
-    console.log(job.data)
     const time1 = new Date()
     await this.mailerService.sendMail({
       to: job.data['to'],

@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common'
-import { UploadController } from './upload.controller'
-import { UploadService } from './upload.service'
 import { ConfigService } from '@nestjs/config'
 import { ConsumerService } from '../consumers/upload.consumer'
+import { UploadService } from './upload.service'
 
 @Module({
   /* The commented out code block is configuring the ThrottlerModule for rate limiting in the
@@ -16,17 +15,7 @@ import { ConsumerService } from '../consumers/upload.consumer'
   //     inject: [ConfigService],
   //   }),
   // ],
-  // imports: [RabbitMQModule],
-  controllers: [UploadController],
-  providers: [
-    UploadService,
-    ConfigService,
-    ConsumerService,
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: ThrottlerGuard,
-    // },
-  ],
+  providers: [UploadService, ConfigService, ConsumerService],
   exports: [UploadService],
 })
 export class UploadModule {}

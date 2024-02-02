@@ -1,22 +1,14 @@
 /* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common'
-import { AuthService } from '../auth/auth.service'
-import { CommonService } from '../common/common.service'
-import { UserCheck } from '../user/user.check'
 import { ChannelRepository } from './channel.repository'
 import { ChannelCreateDto } from './dto/ChannelCreate.dto'
 import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
 
 @Injectable()
 export class ChannelService {
-  constructor(
-    private authService: AuthService,
-    private commonService: CommonService,
-    private channelRepository: ChannelRepository,
-    private userCheck: UserCheck,
-  ) {}
+  constructor(private channelRepository: ChannelRepository) {}
 
-  async getAllChannel(req) {
+  async getAllChannel() {
     const channels = await this.channelRepository.getAllChannel()
     return channels
   }

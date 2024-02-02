@@ -51,7 +51,6 @@ export class UserRepository {
 
   async findAll(prisma: Tx = this.prisma) {
     const users = await prisma.users.findMany()
-    console.log(users)
 
     const final = await Promise.all(
       users.map(async (user) => {

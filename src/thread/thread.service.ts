@@ -34,7 +34,6 @@ export class ThreadService {
     )
     if (fileCreateDto) {
       const limitFileSize = this.limitFileSize(fileCreateDto.size)
-      console.log(limitFileSize)
       if (limitFileSize) {
         return {
           success: false,
@@ -125,7 +124,6 @@ export class ThreadService {
 
     if (fileCreateDto) {
       const limitFileSize = this.limitFileSize(fileCreateDto.size)
-      console.log(limitFileSize)
 
       if (limitFileSize) {
         return {

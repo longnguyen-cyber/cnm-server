@@ -17,14 +17,13 @@ import { ReactCreateDto } from '../thread/dto/reactCreate.dto'
     origin: '*',
   },
 })
-export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private threadService: ThreadService) {}
   user = []
   @WebSocketServer() server: Server
 
   handleConnection(@ConnectedSocket() socket: Socket) {
     const isAuthenticated = socket.handshake.auth
-    console.log('User connected')
 
     if (isAuthenticated) {
       this.user.push({ userId: isAuthenticated.userId })
@@ -33,7 +32,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
   handleDisconnect(@ConnectedSocket() socket: Socket) {
     const isAuthenticated = socket.handshake.auth
-    console.log('User disconnected')
     this.user = this.user.filter(
       (item) => item.userId !== isAuthenticated.userId,
     )
@@ -123,7 +121,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
       threadId: string
       senderId: string
     } = data
-    console.log(data)
     await this.threadService.addReact(react, quantity, threadId, senderId)
     this.server.emit('addReact', null)
   }

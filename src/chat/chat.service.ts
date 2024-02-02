@@ -6,25 +6,14 @@ import { ChatToDBDto } from './dto/relateDB/ChatToDB.dto'
 
 @Injectable()
 export class ChatService {
-  constructor(
-    private commonService: CommonService,
-    private chatRepository: ChatRepository,
-  ) {}
+  constructor(private chatRepository: ChatRepository) {}
 
   async getAllChat() {
     return await this.chatRepository.getAllChat()
   }
 
-  async getChatById(chatId: string, req) {
-    const chat = await this.chatRepository.getChatById(chatId)
-
-    return {
-      ...chat,
-      user: {
-        ...chat.user,
-        avatar: this.commonService.transferFileToURL(req, chat.user.avatar),
-      },
-    }
+  async getChatById(chatId: string) {
+    return await this.chatRepository.getChatById(chatId)
   }
 
   async createChat(senderId: string, receiveId: string) {

@@ -1,28 +1,27 @@
 /* eslint-disable prettier/prettier */
-import { MulterModule } from '@nestjs/platform-express'
-import { AppGateway } from './app/app.gateway'
-import { AuthModule } from './auth/auth.module'
-import { ChannelModule } from './channel/channel.module'
-import { ChatModule } from './chat/chat.module'
-import { PrismaModule } from './prisma/prisma.module'
-import { ThreadController } from './thread/thread.controller'
-import { ThreadModule } from './thread/thread.module'
-import { UserModule } from './user/user.module'
 import {
   CacheModule,
   MiddlewareConsumer,
   Module,
   NestModule,
 } from '@nestjs/common'
-import { Middleware } from './app.middleware'
-import { UserController } from './user/user.controller'
-import { UploadModule } from './upload/upload.module'
 import * as redisStore from 'cache-manager-redis-store'
+import { Middleware } from './app.middleware'
+import { AuthModule } from './auth/auth.module'
+import { ChannelModule } from './channel/channel.module'
+import { ChatModule } from './chat/chat.module'
+import { PrismaModule } from './prisma/prisma.module'
+import { ThreadController } from './thread/thread.controller'
+import { ThreadModule } from './thread/thread.module'
+import { UploadModule } from './upload/upload.module'
+import { UserController } from './user/user.controller'
+import { UserModule } from './user/user.module'
 
-import { ConfigModule, ConfigService } from '@nestjs/config'
-import { BullModule } from '@nestjs/bull'
-import { join } from 'path'
 import { HandlebarsAdapter, MailerModule } from '@nest-modules/mailer'
+import { BullModule } from '@nestjs/bull'
+import { ConfigModule, ConfigService } from '@nestjs/config'
+import { join } from 'path'
+import { SocketGateway } from './socket/socket.gateway'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -86,7 +85,7 @@ import { HandlebarsAdapter, MailerModule } from '@nest-modules/mailer'
 
     UploadModule,
   ],
-  providers: [AppGateway],
+  providers: [SocketGateway],
   controllers: [ThreadController, UserController],
 })
 export class AppModule implements NestModule {
