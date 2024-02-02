@@ -12,7 +12,7 @@ export class UserRepository {
     const channels = await findChannelOfUser(id, prisma)
     const chatsOfUser = await prisma.chats.findMany({
       where: {
-        OR: [{ senderId: id }, { receiveId: id }],
+        senderId: id,
       },
       include: {
         thread: true,
@@ -20,35 +20,23 @@ export class UserRepository {
       },
     })
 
-    const chats = chatsOfUser.map(async (chat: any) => {
-      const receiveID = chat.receiveId
-      const senderID = chat.senderId
-      if (receiveID === id) {
+    const chats = await Promise.all(
+      chatsOfUser.map(async (chat: any) => {
         const userOfChat = await prisma.users.findUnique({
           where: {
-            id: senderID,
+            id: chat.senderId,
           },
         })
         const newChat = {
           ...chat,
-          receiveId: senderID,
           user: userOfChat,
         }
-        return newChat
-      } else {
-        const userOfChat = await prisma.users.findUnique({
-          where: {
-            id: receiveID,
-          },
-        })
-
-        const newChat = {
+        return {
           ...chat,
           user: userOfChat,
         }
-        return newChat
-      }
-    })
+      }),
+    )
     const user = await prisma.users.findUnique({
       where: {
         id: id,
@@ -61,9 +49,9 @@ export class UserRepository {
     }
   }
 
-  async findAll() {
-    const prisma = this.prisma
+  async findAll(prisma: Tx = this.prisma) {
     const users = await prisma.users.findMany()
+    console.log(users)
 
     const final = await Promise.all(
       users.map(async (user) => {

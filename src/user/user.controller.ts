@@ -75,38 +75,30 @@ export class UserController {
   @Get(':id')
   @UseGuards(AuthGuard)
   async getUser(@Param('id') id: string, @Req() req: any): Promise<any> {
+    if (req.error) {
+      return {
+        success: false,
+        message: 'Please login again',
+        errors: req.error,
+        data: null,
+      }
+    }
+    const user = await this.userService.getUser(id)
     return {
       success: true,
       message: 'Get user success',
       errors: null,
-      data: req.user,
+      data: user,
     }
   }
 
-  @Get()
-  async getAllUser(): Promise<any> {
-    const data = this.userService.getAllUser()
-
-    return {
-      success: true,
-      message: 'Get all user success',
-      errors: null,
-      data: data,
-    }
-    // return data;
-  }
-
-  // @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard)
   @Put('update')
-  @ApiHeader({
-    name: 'Authorization',
-    description: 'Authorization: Token jwt.token.here',
-  })
-  @UsePipes(new CustomValidationPipe())
+  // @UsePipes(new CustomValidationPipe())
   async updateCurrentUser(
-    @Headers('Authorization') auth: Token,
     @Body('user') userUpdateDto: any,
+    @Req() req: any,
   ): Promise<any> {
-    return this.userService.updateUser(auth, userUpdateDto)
+    return this.userService.updateUser(userUpdateDto, req.user)
   }
 }

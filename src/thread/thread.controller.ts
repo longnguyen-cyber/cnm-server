@@ -35,24 +35,24 @@ export class ThreadController {
   @Post()
   @ApiBody({ type: ThreadRequestCreateDto })
   @ApiCreatedResponse({ type: ResThreadDto })
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, callback) => {
-          const sanitizedFilename = slugify(file.originalname, {
-            replacement: '-', // replace spaces with replacement character, defaults to `-`
-            remove: undefined, // remove characters that match regex, defaults to `undefined`
-            lower: false, // convert to lower case, defaults to `false`
-            strict: false, // strip special characters except replacement, defaults to `false`
-            locale: 'vi', // language code of the locale to use
-            trim: true,
-          })
-          callback(null, sanitizedFilename)
-        },
-      }),
-    }),
-  )
+  // @UseInterceptors(
+  //   FileInterceptor('file', {
+  //     storage: diskStorage({
+  //       destination: './uploads',
+  //       filename: (req, file, callback) => {
+  //         const sanitizedFilename = slugify(file.originalname, {
+  //           replacement: '-', // replace spaces with replacement character, defaults to `-`
+  //           remove: undefined, // remove characters that match regex, defaults to `undefined`
+  //           lower: false, // convert to lower case, defaults to `false`
+  //           strict: false, // strip special characters except replacement, defaults to `false`
+  //           locale: 'vi', // language code of the locale to use
+  //           trim: true,
+  //         })
+  //         callback(null, sanitizedFilename)
+  //       },
+  //     }),
+  //   }),
+  // )
   async createThread(
     @Body('messages') messageCreateDto?: MessageCreateDto,
     @Body('react') reactCreateDto?: ReactCreateDto,
@@ -100,20 +100,20 @@ export class ThreadController {
   @Post('reply')
   @ApiBody({ type: ThreadRequestCreateDto })
   @ApiCreatedResponse({ type: ResThreadDto })
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (_, file, callback) => {
-          const sanitizedFilename = slugify(file.originalname, {
-            lower: true, // convert to lower case, defaults to `false`
-            strict: true, // strip special characters except replacement, defaults to `false`
-          })
-          callback(null, sanitizedFilename)
-        },
-      }),
-    }),
-  )
+  // @UseInterceptors(
+  //   FileInterceptor('file', {
+  //     storage: diskStorage({
+  //       destination: './uploads',
+  //       filename: (_, file, callback) => {
+  //         const sanitizedFilename = slugify(file.originalname, {
+  //           lower: true, // convert to lower case, defaults to `false`
+  //           strict: true, // strip special characters except replacement, defaults to `false`
+  //         })
+  //         callback(null, sanitizedFilename)
+  //       },
+  //     }),
+  //   }),
+  // )
   async createReplyThread(
     @Body('threadId') threadId: string,
     @Body('message') messageCreateDto?: MessageCreateDto,
@@ -197,20 +197,20 @@ export class ThreadController {
   @Patch(':threadId')
   @ApiBody({ type: ThreadRequestCreateDto })
   @ApiCreatedResponse({ type: ResThreadDto })
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (_, file, callback) => {
-          const sanitizedFilename = slugify(file.originalname, {
-            lower: true, // convert to lower case, defaults to `false`
-            strict: true, // strip special characters except replacement, defaults to `false`
-          })
-          callback(null, sanitizedFilename)
-        },
-      }),
-    }),
-  )
+  // @UseInterceptors(
+  //   FileInterceptor('file', {
+  //     storage: diskStorage({
+  //       destination: './uploads',
+  //       filename: (_, file, callback) => {
+  //         const sanitizedFilename = slugify(file.originalname, {
+  //           lower: true, // convert to lower case, defaults to `false`
+  //           strict: true, // strip special characters except replacement, defaults to `false`
+  //         })
+  //         callback(null, sanitizedFilename)
+  //       },
+  //     }),
+  //   }),
+  // )
   async updateThread(
     @Param('threadId') threadId: string,
     @Body('message') messageCreateDto?: MessageCreateDto,

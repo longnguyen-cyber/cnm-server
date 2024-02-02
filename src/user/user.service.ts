@@ -31,13 +31,9 @@ export class UserService {
 
   async login({ email, password }: any): Promise<any> {
     const user = await this.checkLoginData(email, password)
-    delete user.password
-    // const resUser = this.buildUserResponse({
-    //   ...user,
-    //   avatar: this.commonService.transferFileToURL(req, user.avatar),
-    // });
     const token = this.authService.generateJWT(user.id.toString())
     await this.cacheManager.set(token, JSON.stringify(user))
+    delete user.password
 
     return {
       ...user,
@@ -45,13 +41,9 @@ export class UserService {
     }
   }
 
-  async getAllUser(): Promise<any> {
-    const users = await this.userRepository.findAll()
-    users.map((user) => {
-      delete user.password
-      // user.avatar = this.commonService.transferFileToURL(req, user.avatar);
-    })
-    return users
+  async getUser(id: string) {
+    const user = await this.userRepository.findOneById(id)
+    return user
   }
 
   async createUser(userCreateDto: UserCreateDto): Promise<any | null> {
@@ -107,40 +99,19 @@ export class UserService {
     const isNotEmptyObject = this.commonService.isNotEmptyObject(userClean)
     this.userCheck.isNotEmptyUpdate(isNotEmptyObject)
 
-    const { password: passwordNew, passwordOld, email } = userClean
+    const { password: passwordNew, passwordOld } = userClean
+    let passwordHashed = ''
+    if (passwordNew && passwordOld) {
+      await this.validatePassword(passwordNew, passwordOld, password)
 
-    await this.checkUniqueUser(email)
-
-    await this.validatePassword(passwordNew, passwordOld, password)
-
-    const passwordHashed = await this.generatePassword(passwordNew)
-
+      passwordHashed = await this.generatePassword(passwordNew)
+    }
     const data = this.generateStructureUpdateUser(userClean, passwordHashed)
 
     const userUpdate = await this.userRepository.updateUser(id, data)
 
     return this.buildUserResponse(userUpdate)
   }
-
-  // @Interval(1000) // Chạy mỗi 1000ms (1 giây)
-  // async handleInterval() {
-  //   const now = new Date().getTime()
-  //   const token = await this.userRepository.getToken()
-  //   token.map((item) => {
-  //     const { email, exp } = this.authService.decodeToken(
-  //       item.accessToken
-  //     ) as TokenDecode
-
-  //     const timeLeft = this.convertTime(exp * 1000 - now)
-
-  //     if (!timeLeft) {
-  //       const user = this.userRepository.findOneByEmail(email)
-  //       if (user) this.userRepository.deleteToken(email)
-  //       else
-  //         throw new HttpExceptionCustom("User not found", HttpStatus.NOT_FOUND)
-  //     }
-  //   })
-  // }
 
   private async checkLoginData(
     email: string,
@@ -221,11 +192,13 @@ export class UserService {
 
   private generateStructureUpdateUser(
     userUpdateDto: any,
-    passwordHashed: string,
+    passwordHashed?: string,
   ): any {
     const user = { ...userUpdateDto }
     delete user.passwordOld
-    user.password = passwordHashed
+    if (passwordHashed) {
+      user.password = passwordHashed
+    }
     return Object.fromEntries(
       Object.entries(user).filter(([_, value]) => value !== ''),
     )

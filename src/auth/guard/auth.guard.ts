@@ -27,7 +27,6 @@ export class AuthGuard implements CanActivate {
       return true
     }
     const tokenBearer = request.headers.authorization.split(' ')[1]
-    console.log('tokenBearer', tokenBearer)
     const token = await this.cacheManager.get(tokenBearer)
     try {
       if (!token) {
@@ -37,7 +36,6 @@ export class AuthGuard implements CanActivate {
         }
         return true
       } else {
-        console.log('token', token)
         request.user = JSON.parse(token as any)
         return true
       }
