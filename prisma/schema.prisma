@@ -28,19 +28,7 @@ model users {
   channels                         channels[]  @relation(fields: [channel], references: [id])
   threads                          threads[]
   reactions                        reactions[]
-  token                            tokens?
   isOnline                         Boolean?    @default(false)
-}
-
-model tokens {
-  id           String    @id @default(auto()) @map("_id") @db.ObjectId
-  accessToken  String
-  refreshToken String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
-  email        String?   @unique
-  user         users?    @relation(fields: [email], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model channels {
