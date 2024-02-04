@@ -1,20 +1,18 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common'
-import { Cache } from 'cache-manager'
-import { UserModel } from './model/user.model'
-import { UserCheck } from './user.check'
-import { UserRepository } from './user.repository'
 import { InjectQueue } from '@nestjs/bull'
+import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common'
 import { Queue as QueueEmail } from 'bull'
+import { Cache } from 'cache-manager'
 import { AuthService } from '../auth/auth.service'
 import { HttpExceptionCustom } from '../common/common.exception'
 import { CommonService } from '../common/common.service'
 import { Queue, UploadMethod } from '../enums'
 import { RabbitMQService } from '../rabbitmq/rabbitmq.service'
 import { UserCreateDto } from './dto/userCreate.dto'
-import { TokenDecode } from './type/tokenDecode.interface'
-import { Token } from '../auth/iterface/auth.interface'
+import { UserModel } from './model/user.model'
+import { UserCheck } from './user.check'
+import { UserRepository } from './user.repository'
 
 @Injectable()
 export class UserService {
@@ -69,7 +67,7 @@ export class UserService {
       ...userClean,
       password: passwordHashed,
       status: 'active',
-      avatar: uploadFile ? this.pathUpload(avatar.fileName) : '',
+      avatar: uploadFile ? this.commonService.pathUpload(avatar.fileName) : '',
     }
 
     const { accessToken } = this.generateToken(email)
@@ -92,13 +90,30 @@ export class UserService {
     return this.buildUserResponse(user)
   }
 
-  async updateUser(userUpdateDto: any, user: any): Promise<any> {
+  async updateUser(userUpdateDto: any, req: any): Promise<any> {
     const userClean = { ...userUpdateDto }
-    const { id, password } = user
+    const { id, password, avatar: oldAvatar } = req.user
+    const token = req.token
 
     const isNotEmptyObject = this.commonService.isNotEmptyObject(userClean)
     this.userCheck.isNotEmptyUpdate(isNotEmptyObject)
-
+    if (userClean.avatar) {
+      const avatar = JSON.parse(userClean.avatar)
+      const payload = {
+        fileName: avatar.fileName,
+        file: avatar.file,
+        oldFileName: this.commonService.getFileName(oldAvatar),
+      }
+      const uploadFile = await this.rabbitMQService.addToQueue(
+        Queue.Upload,
+        UploadMethod.Update,
+        payload,
+      )
+      //! throw error if upload fail
+      userClean.avatar = uploadFile
+        ? this.commonService.pathUpload(avatar.fileName)
+        : oldAvatar
+    }
     const { password: passwordNew, passwordOld } = userClean
     let passwordHashed = ''
     if (passwordNew && passwordOld) {
@@ -110,6 +125,9 @@ export class UserService {
 
     const userUpdate = await this.userRepository.updateUser(id, data)
 
+    if (userUpdate) {
+      this.cacheManager.set(token, JSON.stringify(userUpdate))
+    }
     return this.buildUserResponse(userUpdate)
   }
 
@@ -223,9 +241,5 @@ export class UserService {
     return {
       accessToken: acessToken,
     }
-  }
-
-  private pathUpload = (fileName: string): string => {
-    return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${fileName.replace(/ /g, '-')}`
   }
 }

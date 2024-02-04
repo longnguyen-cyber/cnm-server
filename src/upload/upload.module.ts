@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { ConsumerService } from '../consumers/upload.consumer'
 import { UploadService } from './upload.service'
+import { UploadController } from './upload.controller'
 
 @Module({
   /* The commented out code block is configuring the ThrottlerModule for rate limiting in the
@@ -15,6 +16,7 @@ import { UploadService } from './upload.service'
   //     inject: [ConfigService],
   //   }),
   // ],
+  controllers: [UploadController],
   providers: [UploadService, ConfigService, ConsumerService],
   exports: [UploadService],
 })

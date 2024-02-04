@@ -1,23 +1,26 @@
-import { Injectable } from '@nestjs/common'
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common'
 import { CommonService } from '../common/common.service'
 import { FileCreateDto } from './dto/fileCreate.dto'
 import { MessageCreateDto } from './dto/messageCreate.dto'
+import { ReactCreateDto } from './dto/reactCreate.dto'
 import { ReactToDBDto } from './dto/relateDB/reactToDB.dto'
 import { ThreadToDBDto } from './dto/relateDB/threadToDB.dto'
 import { ThreadRepository } from './thread.repository'
-import { ReactCreateDto } from './dto/reactCreate.dto'
+import { RabbitMQService } from '../rabbitmq/rabbitmq.service'
+import { Queue, UploadMethod } from '../enums'
 
 @Injectable()
 export class ThreadService {
   constructor(
     private threadRepository: ThreadRepository,
     private commonService: CommonService,
+    @Inject('RabbitMQUploadService')
+    private readonly rabbitMQService: RabbitMQService,
   ) {}
 
   async createThread(
     messageCreateDto?: MessageCreateDto,
-    fileCreateDto?: FileCreateDto,
-    reactCreateDto?: ReactCreateDto,
+    fileCreateDto?: FileCreateDto[],
     senderId?: string,
     receiveId?: string,
     channelId?: string,
@@ -26,72 +29,124 @@ export class ThreadService {
     const threadToDb = this.compareToCreateThread(
       messageCreateDto,
       fileCreateDto,
-      reactCreateDto,
       senderId,
       receiveId,
       channelId,
       chatId,
     )
     if (fileCreateDto) {
-      const limitFileSize = this.limitFileSize(fileCreateDto.size)
+      const limitFileSize = fileCreateDto.some((file) => {
+        return this.commonService.limitFileSize(file.size)
+      })
       if (limitFileSize) {
-        return {
-          success: false,
-          message: 'File size is too large',
-          errors: 'File size is too large',
-          thread: null,
+        throw new HttpException(
+          `Currently the file size has exceeded our limit (2MB). Please try again with a smaller file.`,
+          HttpStatus.BAD_REQUEST,
+        )
+      } else {
+        const payload = fileCreateDto.map((file) => {
+          return {
+            fileName: file.originalname,
+            file: file.buffer,
+          }
+        })
+        const uploadFile = await this.rabbitMQService.addToQueue(
+          Queue.Upload,
+          UploadMethod.UploadMultiple,
+          payload,
+        )
+
+        if (uploadFile) {
+          threadToDb.file = fileCreateDto.map((file) => {
+            return {
+              ...file,
+              path: this.commonService.pathUpload(file.fileName),
+            }
+          })
         }
       }
     }
 
     const thread = await this.threadRepository.createThread(threadToDb)
-    return {
-      thread,
-    }
+    return thread
   }
 
   async updateThread(
     threadId: string,
+    senderId: string,
     messageCreateDto?: MessageCreateDto,
-    fileCreateDto?: FileCreateDto,
-    reactCreateDto?: ReactCreateDto,
-    senderId?: string,
-    receiveId?: string,
-    channelId?: string,
-    chatId?: string,
+    fileCreateDto?: FileCreateDto[],
   ) {
-    const threadToDb = this.compareToCreateThread(
+    const oldThread = await this.threadRepository.getThreadById(threadId)
+    const threadToDb = this.compareToUpdateThread(
+      threadId,
+      senderId,
       messageCreateDto,
       fileCreateDto,
-      reactCreateDto,
-      senderId,
-      receiveId,
-      channelId,
-      chatId,
-      threadId,
     )
 
-    const thread = await this.threadRepository.updateThread(threadToDb)
-    const limitFileSize = this.limitFileSize(fileCreateDto.size)
+    if (fileCreateDto) {
+      const limitFileSize = fileCreateDto.some((file) => {
+        return this.commonService.limitFileSize(file.size)
+      })
 
-    if (!limitFileSize) {
-      return {
-        success: false,
-        message: 'File size is too large',
-        errors: 'File size is too large',
-        thread: null,
+      if (limitFileSize) {
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'File size is too large',
+          errors: `Currently the file size has exceeded our limit (2MB). Please try again with a smaller file.`,
+        }
+      } else {
+        const payload = fileCreateDto.map((file) => {
+          return {
+            fileName: file.originalname,
+            file: file.buffer,
+          }
+        })
+        const uploadFile = await this.rabbitMQService.addToQueue(
+          Queue.Upload,
+          UploadMethod.UploadMultiple,
+          payload,
+        )
+
+        if (uploadFile) {
+          threadToDb.file = fileCreateDto.map((file) => {
+            return {
+              ...file,
+              path: this.commonService.pathUpload(file.fileName),
+            }
+          })
+        }
       }
     }
-    return {
-      thread,
+    const thread = await this.threadRepository.updateThread(threadToDb)
+    if (thread && fileCreateDto) {
+      const files = oldThread.files.map((file) => {
+        return this.commonService.getFileName(file.path)
+      })
+      await this.rabbitMQService.addToQueue(
+        Queue.Upload,
+        UploadMethod.DeleteMultiple,
+        files,
+      )
     }
+    return thread
   }
 
-  async deleteThread(threadId: string) {
-    const thread = await this.threadRepository.deleteThread(threadId)
-    return {
-      thread,
+  async deleteThread(threadId: string, senderId: string) {
+    const oldFile = await this.threadRepository.getThreadById(threadId)
+    const thread = await this.threadRepository.deleteThread(threadId, senderId)
+    if (thread && oldFile.files.length > 0) {
+      const files = oldFile.files.map((file) => {
+        return this.commonService.getFileName(file.path)
+      })
+      await this.rabbitMQService.addToQueue(
+        Queue.Upload,
+        UploadMethod.DeleteMultiple,
+        files,
+      )
     }
+    return thread
   }
 
   async recallSendThread(threadId: string, senderId: string) {
@@ -99,22 +154,18 @@ export class ThreadService {
       threadId,
       senderId,
     )
-    return {
-      thread,
-    }
+    return thread
   }
 
   async createReplyThread(
     threadId: string,
     senderId?: string,
     messageCreateDto?: MessageCreateDto,
-    fileCreateDto?: FileCreateDto,
-    reactCreateDto?: ReactCreateDto,
+    fileCreateDto?: FileCreateDto[],
   ) {
     const thread = this.compareToCreateThread(
       messageCreateDto,
       fileCreateDto,
-      reactCreateDto,
       senderId,
       null,
       null,
@@ -123,24 +174,20 @@ export class ThreadService {
     )
 
     if (fileCreateDto) {
-      const limitFileSize = this.limitFileSize(fileCreateDto.size)
+      const limitFileSize = fileCreateDto.some((file) => {
+        return this.commonService.limitFileSize(file.size)
+      })
 
       if (limitFileSize) {
         return {
-          success: false,
+          status: HttpStatus.BAD_REQUEST,
           message: 'File size is too large',
-          errors: 'File size is too large',
-          thread: null,
+          errors: `Currently the file size has exceeded our limit (2MB). Please try again with a smaller file.`,
         }
       }
     }
-    await this.threadRepository.createReplyThread(thread)
-    return {
-      success: true,
-      message: 'Create reply thread success',
-      errors: null,
-      thread: null,
-    }
+    const reply = await this.threadRepository.createReplyThread(thread)
+    return reply
   }
 
   async addReact(
@@ -156,58 +203,37 @@ export class ThreadService {
       senderId,
     )
     const thread = await this.threadRepository.addReact(reactToDb)
-    return {
-      thread,
-    }
+    return thread
   }
 
   async removeReact(threadId: string, senderId: string) {
     const reactToDb = this.compareToCreateReact(null, null, threadId, senderId)
     const thread = await this.threadRepository.removeReact(reactToDb)
-    return {
-      thread,
-    }
+    return thread
   }
 
-  async getAllThread(type: string, id: string, req) {
+  async getAllThread(type?: string, id?: string) {
     const threads = await this.threadRepository.getAllThread(type, id)
     const newThreads = threads.map((item) => {
-      const newAvatar = this.commonService.transferFileToURL(
-        req,
-        item.user?.avatar,
-      )
       delete item.user?.password
       return {
         ...item,
         files: item.files.map((file) => {
           return {
             ...file,
-            size: this.convertToMB(file.size),
-            path: this.commonService.transferFileToURL(req, file.path),
+            size: this.commonService.convertToSize(file.size),
           }
         }),
-        user: {
-          ...item.user,
-          avatar: newAvatar,
-        },
         replys:
           item.replys.length > 0 &&
           item.replys.map((rep) => {
             delete rep.user?.password
             return {
               ...rep,
-              user: {
-                ...rep.user,
-                avatar: this.commonService.transferFileToURL(
-                  req,
-                  rep.user.avatar,
-                ),
-              },
               files: rep.files.map((file) => {
                 return {
                   ...file,
-                  size: this.convertToMB(file.size),
-                  path: this.commonService.transferFileToURL(req, file.path),
+                  size: this.commonService.convertToSize(file.size),
                 }
               }),
             }
@@ -244,8 +270,7 @@ export class ThreadService {
 
   private compareToCreateThread(
     messageCreateDto?: MessageCreateDto,
-    fileCreateDto?: FileCreateDto,
-    react?: ReactCreateDto,
+    fileCreateDto?: FileCreateDto[],
     senderId?: string,
     receiveId?: string,
     channelId?: string,
@@ -255,16 +280,41 @@ export class ThreadService {
     return {
       messages: messageCreateDto,
       file: fileCreateDto
-        ? {
-            ...fileCreateDto,
-          }
+        ? fileCreateDto.map((file) => {
+            return {
+              fileName: file.originalname,
+              size: file.size,
+              path: file.path,
+            }
+          })
         : null,
-      react,
       senderId,
       receiveId,
       channelId,
       chatId,
       threadId,
+    }
+  }
+
+  private compareToUpdateThread(
+    threadId: string,
+    senderId: string,
+    messageCreateDto?: MessageCreateDto,
+    fileCreateDto?: FileCreateDto[],
+  ): any {
+    return {
+      threadId,
+      senderId,
+      messages: messageCreateDto,
+      file: fileCreateDto
+        ? fileCreateDto.map((file) => {
+            return {
+              fileName: file.originalname,
+              size: file.size,
+              path: file.path,
+            }
+          })
+        : null,
     }
   }
 
@@ -294,48 +344,5 @@ export class ThreadService {
 
     const formattedDate = `${year}-${month}-${day}`
     return formattedDate
-  }
-
-  private convertToMB = (bytes: number) => {
-    const mb = bytes / 1024 / 1024
-    return mb.toFixed(2)
-  }
-
-  private limitFileSize = (bytes: number) => {
-    const fileSize = bytes / 1024 / 1024 // MB
-    if (fileSize > 10) {
-      return true
-    }
-    return false
-  }
-  transformFile(file) {
-    return {
-      ...file,
-      size: this.convertToMB(file.size),
-    }
-  }
-
-  transformUser(req, user) {
-    return {
-      ...user,
-      avatar: this.commonService.transferFileToURL(req, user.avatar),
-    }
-  }
-
-  transformReply(req, reply) {
-    return {
-      ...reply,
-      user: this.transformUser(req, reply.user),
-      files: reply.files.map((file) => this.transformFile(file)),
-    }
-  }
-
-  transformThread(req, thread) {
-    return {
-      ...thread,
-      files: thread.files.map((file) => this.transformFile(file)),
-      user: this.transformUser(req, thread.user),
-      replys: thread.replys.map((reply) => this.transformReply(req, reply)),
-    }
   }
 }

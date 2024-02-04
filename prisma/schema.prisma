@@ -121,18 +121,13 @@ model reactions {
 }
 
 model files {
-  id           String    @id @default(auto()) @map("_id") @db.ObjectId
-  fieldname    String
-  originalname String
-  encoding     String
-  mimetype     String
-  destination  String
-  filename     String
-  path         String
-  size         Int
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
-  threadId     String?   @unique @db.ObjectId
-  thread       threads?  @relation(fields: [threadId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  filename  String
+  path      String
+  size      Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  threadId  String?   @unique @db.ObjectId
+  thread    threads?  @relation(fields: [threadId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }

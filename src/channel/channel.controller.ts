@@ -20,7 +20,7 @@ import { AuthGuard } from '../auth/guard/auth.guard'
 
 @ApiTags('channels')
 @Controller('channels')
-@UseGuards(AuthGuard)
+// @UseGuards(AuthGuard)
 export class ChannelController {
   constructor(private readonly channelService: ChannelService) {}
 

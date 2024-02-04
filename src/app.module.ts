@@ -11,7 +11,7 @@ import { AuthModule } from './auth/auth.module'
 import { ChannelModule } from './channel/channel.module'
 import { ChatModule } from './chat/chat.module'
 import { PrismaModule } from './prisma/prisma.module'
-import { ThreadController } from './thread/thread.controller'
+// import { ThreadController } from './thread/thread.controller'
 import { ThreadModule } from './thread/thread.module'
 import { UploadModule } from './upload/upload.module'
 import { UserController } from './user/user.controller'
@@ -22,6 +22,7 @@ import { BullModule } from '@nestjs/bull'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { join } from 'path'
 import { SocketGateway } from './socket/socket.gateway'
+import { CommonService } from './common/common.service'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -85,8 +86,8 @@ import { SocketGateway } from './socket/socket.gateway'
 
     UploadModule,
   ],
-  providers: [SocketGateway],
-  controllers: [ThreadController, UserController],
+  providers: [SocketGateway, CommonService],
+  controllers: [UserController],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

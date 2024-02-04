@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { CommonService } from '../common/common.service'
 import { ChatRepository } from './chat.repository'
-import { ChatCreateDto } from './dto/ChatCreate.dto'
 import { ChatToDBDto } from './dto/relateDB/ChatToDB.dto'
 
 @Injectable()

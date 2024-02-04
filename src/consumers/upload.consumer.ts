@@ -33,6 +33,7 @@ export class ConsumerService implements OnModuleInit {
               fileName,
               file: { data },
             } = payload
+
             const dataUpload = Buffer.from(data)
             switch (cmd) {
               case UploadMethod.UploadSingle:
@@ -48,11 +49,17 @@ export class ConsumerService implements OnModuleInit {
                   payload.oldFileName,
                 )
                 break
+              case UploadMethod.UpdateMultiple:
+                await this.uploadService.updateMultiple(payload)
+                break
               case UploadMethod.Delete:
                 await this.uploadService.delete(fileName)
                 break
               case UploadMethod.DeleteMultiple:
                 await this.uploadService.deleteMultiple(payload)
+                break
+              case UploadMethod.GetFileByKeyFileName:
+                await this.uploadService.getFileByKeyFileName(fileName)
                 break
               default:
                 this.logger.error('Unknown command')

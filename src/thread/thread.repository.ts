@@ -17,7 +17,6 @@ export class ThreadRepository {
     let newThread: any
     let newMsg: any
     let newFile: any
-    let react: any
     if (threadToDB.chatId === undefined || threadToDB.receiveId === null) {
       newThread = await prisma.threads.create({
         data: {
@@ -63,21 +62,16 @@ export class ThreadRepository {
           message: messages.message,
         },
       })
-    } else if (threadToDB.react !== undefined) {
-      react = await prisma.reactions.create({
-        data: {
-          threadId,
-          userId: threadToDB.senderId,
-          react: threadToDB.react.react,
-          quantity: threadToDB.react.quantity,
-        },
-      })
     } else if (threadToDB.file !== undefined || threadToDB.file !== null) {
-      newFile = await prisma.files.create({
-        data: {
-          ...threadToDB.file,
-          threadId,
-        },
+      newFile = threadToDB.file.map(async (file) => {
+        return await prisma.files.create({
+          data: {
+            threadId,
+            filename: file.fileName,
+            size: file.size,
+            path: file.path,
+          },
+        })
       })
       if (!newFile) {
         return {
@@ -90,23 +84,15 @@ export class ThreadRepository {
     }
 
     return {
-      success: true,
-      message: 'Create thread successfully',
-      errors: '',
-      data: {
-        ...newThread,
-        user: {
-          ...user,
-        },
-        messages: {
-          ...newMsg,
-        },
-        files: {
-          ...newFile,
-        },
-        reacts: {
-          ...react,
-        },
+      ...newThread,
+      user: {
+        ...user,
+      },
+      messages: {
+        ...newMsg,
+      },
+      files: {
+        ...newFile,
       },
     }
   }
@@ -204,11 +190,15 @@ export class ThreadRepository {
         },
       })
     } else if (threadToDB.file !== null) {
-      newFile = await prisma.files.create({
-        data: {
-          ...threadToDB.file,
-          threadId: newMsgReply.id,
-        },
+      newFile = threadToDB.file.map(async (file) => {
+        return await prisma.files.create({
+          data: {
+            filename: file.fileName,
+            size: file.size,
+            path: file.path,
+            threadId: newMsgReply.id,
+          },
+        })
       })
 
       if (!newFile) {
@@ -238,112 +228,112 @@ export class ThreadRepository {
 
   async updateThread(threadToDB: ThreadToDBDto, prisma: Tx = this.prisma) {
     const threadId = threadToDB.threadId
+    const senderId = threadToDB.senderId
     const messages = threadToDB.messages
-
-    const updateMsg = await prisma.messages.update({
+    const files = threadToDB.file
+    const threadUpdate = await prisma.threads.findUnique({
       where: {
-        threadId: threadId,
-      },
-      data: {
-        message: messages.message,
+        senderId,
+        threadId,
       },
     })
 
-    const updateFile = await prisma.files.update({
-      where: {
-        threadId: threadId,
-      },
-      data: {
-        ...threadToDB.file,
-      },
-    })
-
-    const udpateReact = await prisma.reactions.update({
-      where: {
-        threadId: threadId,
-      },
-      data: {
-        ...threadToDB.react,
-      },
-    })
-
-    if (!updateMsg && !updateFile && !udpateReact) {
-      return {
-        success: false,
-        message: 'Update thread failed',
-        errors: 'Update message and file failed',
-        data: null,
-      }
-    }
-
-    if (updateFile || updateMsg) {
-      await prisma.threads.update({
+    if (threadUpdate) {
+      const updateMsg = await prisma.messages.update({
         where: {
-          id: threadId,
+          threadId,
         },
         data: {
-          isEdited: true,
+          message: messages.message,
         },
       })
-    }
+      let updateFile: any
+      if (files) {
+        updateFile = files.map(async (file) => {
+          return await prisma.files.update({
+            where: {
+              threadId,
+            },
+            data: {
+              filename: file.fileName,
+              size: file.size,
+              path: file.path,
+            },
+          })
+        })
+      }
 
-    return {
-      success: true,
-      message: 'Update thread successfully',
-      errors: '',
-      data: {
+      if (!updateMsg) {
+        return false
+      }
+
+      if (updateFile || updateMsg) {
+        await prisma.threads.update({
+          where: {
+            id: threadId,
+          },
+          data: {
+            isEdited: true,
+          },
+        })
+      }
+
+      return {
         messages: {
           ...updateMsg,
         },
         files: {
           ...updateFile,
         },
-        reacts: {
-          ...udpateReact,
-        },
-      },
+      }
     }
   }
 
-  async deleteThread(threadId: string, prisma: Tx = this.prisma) {
-    const deleteMsg = await prisma.messages.deleteMany({
-      where: {
-        threadId: threadId,
-      },
-    })
-
-    const deleteFile = await prisma.files.deleteMany({
-      where: {
-        threadId: threadId,
-      },
-    })
-
-    const deleteReact = await prisma.reactions.deleteMany({
-      where: {
-        threadId: threadId,
-      },
-    })
-
-    const deleteThread = await prisma.threads.delete({
+  async deleteThread(
+    threadId: string,
+    senderId: string,
+    prisma: Tx = this.prisma,
+  ) {
+    const thread = await prisma.threads.findUnique({
       where: {
         id: threadId,
+        senderId,
       },
     })
+    if (thread) {
+      const deleteMsg = await prisma.messages.deleteMany({
+        where: {
+          threadId: threadId,
+        },
+      })
 
-    if (!deleteMsg && !deleteFile && !deleteReact && !deleteThread) {
-      return {
-        success: false,
-        message: 'Delete thread failed',
-        errors: 'Delete message, file, react and thread failed',
-        data: null,
+      const deleteFile = await prisma.files.deleteMany({
+        where: {
+          threadId: threadId,
+        },
+      })
+
+      const deleteReact = await prisma.reactions.deleteMany({
+        where: {
+          threadId: threadId,
+        },
+      })
+
+      const deleteThread = await prisma.threads.delete({
+        where: {
+          id: threadId,
+        },
+      })
+
+      if (!deleteMsg && !deleteFile && !deleteReact && !deleteThread) {
+        return {
+          success: false,
+          message: 'Delete thread failed',
+          errors: 'Delete message, file, react and thread failed',
+          data: null,
+        }
       }
-    }
-
-    return {
-      success: true,
-      message: 'Delete thread successfully',
-      errors: '',
-      data: null,
+      return true
     }
   }
 
@@ -409,36 +399,45 @@ export class ThreadRepository {
     }
   }
   async getAllThread(type: string, id: string, prisma: Tx = this.prisma) {
-    let threads: any
-    if (type === 'channelId') {
-      threads = await prisma.threads.findMany({
-        where: {
-          isReply: false,
-          channelId: id,
-        },
-        include: {
-          messages: true,
-          user: true,
-          files: true,
-          reactions: true,
-          replys: true,
-        },
-      })
-    } else if (type === 'chatId') {
-      threads = await prisma.threads.findMany({
-        where: {
-          isReply: false,
-          chatId: id,
-        },
-        include: {
-          messages: true,
-          user: true,
-          files: true,
-          reactions: true,
-          replys: true,
-        },
-      })
-    }
+    // let threads: any
+    // if (type === 'channelId') {
+    //   threads = await prisma.threads.findMany({
+    //     where: {
+    //       isReply: false,
+    //       channelId: id,
+    //     },
+    //     include: {
+    //       messages: true,
+    //       user: true,
+    //       files: true,
+    //       reactions: true,
+    //       replys: true,
+    //     },
+    //   })
+    // } else if (type === 'chatId') {
+    //   threads = await prisma.threads.findMany({
+    //     where: {
+    //       isReply: false,
+    //       chatId: id,
+    //     },
+    //     include: {
+    //       messages: true,
+    //       user: true,
+    //       files: true,
+    //       reactions: true,
+    //       replys: true,
+    //     },
+    //   })
+    // }
+    const threads = await prisma.threads.findMany({
+      include: {
+        messages: true,
+        user: true,
+        files: true,
+        reactions: true,
+        replys: true,
+      },
+    })
 
     const threadsHaveReply = await Promise.all(
       threads.map(async (thread) => {

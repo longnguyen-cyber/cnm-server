@@ -18,7 +18,7 @@ import { ChatRequestCreateDto } from './dto/chatRequestCreate.dto'
 
 @ApiTags('chats')
 @Controller('chats')
-@UseGuards(AuthGuard)
+// @UseGuards(AuthGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
@@ -47,7 +47,6 @@ export class ChatController {
 
   @Get()
   async getAllChat(@Req() req: any): Promise<Response> {
-    console.log(req.user)
     return {
       status: HttpStatus.OK,
       message: 'Get all chat success',

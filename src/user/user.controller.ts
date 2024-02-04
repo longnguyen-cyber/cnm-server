@@ -23,6 +23,7 @@ import { Response } from 'src/common/common.type'
 import { AuthGuard } from '../auth/guard/auth.guard'
 import { CustomValidationPipe } from '../common/common.pipe'
 import { UserService } from './user.service'
+import { CommonService } from '../common/common.service'
 
 @ApiTags('users')
 @Controller('users')
@@ -30,17 +31,25 @@ import { UserService } from './user.service'
 export class UserController {
   constructor(
     private readonly userService: UserService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly commonService: CommonService,
   ) {}
 
   @Post('register')
-  @UsePipes(new CustomValidationPipe())
+  // @UsePipes(new CustomValidationPipe())
   @UseInterceptors(FileInterceptor('avatar'))
   async createUsers(
     @Body() userCreateDto: any,
     @UploadedFile()
     file: Express.Multer.File,
   ): Promise<Response> {
+    const limitSize = this.commonService.limitFileSize(file.size)
+    if (!limitSize) {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'File size is too large',
+        errors: `Currently the file size has exceeded our limit (2MB). Your file size is ${this.commonService.convertToSize(file.size)}. Please try again with a smaller file.`,
+      }
+    }
     const data: any = {
       ...userCreateDto,
       avatar: JSON.stringify({
@@ -124,11 +133,33 @@ export class UserController {
 
   @Put('update')
   // @UsePipes(new CustomValidationPipe())
+  @UseInterceptors(FileInterceptor('avatar'))
   async updateCurrentUser(
-    @Body('user') userUpdateDto: any,
+    @Body() userUpdateDto: any,
     @Req() req: any,
+    @UploadedFile()
+    file: Express.Multer.File,
   ): Promise<Response> {
-    const user = await this.userService.getUser(req.user.id)
+    let data: any = userUpdateDto
+    const limitSize = this.commonService.limitFileSize(file.size)
+    if (!limitSize) {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'File size is too large',
+        errors: `Currently the file size has exceeded our limit (2MB). Your file size is ${this.commonService.convertToSize(file.size)}. Please try again with a smaller file.`,
+      }
+    }
+    if (file) {
+      data = {
+        ...userUpdateDto,
+        avatar: JSON.stringify({
+          fileName: file.originalname,
+          file: file.buffer,
+        }),
+      }
+    }
+
+    const user = await this.userService.updateUser(data, req)
     if (!user) {
       return {
         status: HttpStatus.FORBIDDEN,

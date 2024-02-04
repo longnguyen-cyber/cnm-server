@@ -28,7 +28,7 @@ export class RabbitMQService {
           persistent: true,
         },
       )
-      Logger.log('Sent To Queue')
+      Logger.log(`Sent To Queue ${message}`)
       return rs
     } catch (error) {
       throw new HttpException(

@@ -35,6 +35,7 @@ export class AuthGuard implements CanActivate {
             }
             return true
           } else {
+            request.token = tokenBearer
             request.user = JSON.parse(token as any)
             return true
           }

@@ -10,6 +10,8 @@ import { UserCheck } from '../user/user.check'
 import { UserRepository } from '../user/user.repository'
 import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { BullModule } from '@nestjs/bull'
+import { UploadService } from '../upload/upload.service'
+import { UploadModule } from '../upload/upload.module'
 
 @Module({
   controllers: [ThreadController],
@@ -26,6 +28,7 @@ import { BullModule } from '@nestjs/bull'
     CommonModule,
     CacheModule.register(),
     RabbitMQModule,
+    UploadModule,
     BullModule.registerQueue({
       name: 'send-mail',
     }),
