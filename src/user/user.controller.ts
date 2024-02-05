@@ -2,15 +2,16 @@
 
 import {
   Body,
-  CACHE_MANAGER,
   Controller,
   Get,
   HttpStatus,
-  Inject,
   Param,
   Post,
   Put,
   Req,
+  Request,
+  Response,
+  UnauthorizedException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -18,12 +19,11 @@ import {
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { ApiTags } from '@nestjs/swagger'
-import { Cache } from 'cache-manager'
-import { Response } from 'src/common/common.type'
 import { AuthGuard } from '../auth/guard/auth.guard'
 import { CustomValidationPipe } from '../common/common.pipe'
-import { UserService } from './user.service'
 import { CommonService } from '../common/common.service'
+import { Response as Respon } from '../common/common.type'
+import { UserService } from './user.service'
 
 @ApiTags('users')
 @Controller('users')
@@ -41,7 +41,7 @@ export class UserController {
     @Body() userCreateDto: any,
     @UploadedFile()
     file: Express.Multer.File,
-  ): Promise<Response> {
+  ): Promise<Respon> {
     const limitSize = this.commonService.limitFileSize(file.size)
     if (!limitSize) {
       return {
@@ -72,9 +72,64 @@ export class UserController {
     }
   }
 
+  // 2fa
+  @Post('2fa/generate')
+  @UseGuards(AuthGuard)
+  async register(@Request() request: any): Promise<Respon> {
+    const { otpAuthUrl } =
+      await this.userService.generateTwoFactorAuthenticationSecret(request)
+
+    return {
+      status: HttpStatus.OK,
+      message: 'Generate 2FA success',
+      data: await this.userService.generateQrCodeDataURL(otpAuthUrl),
+    }
+  }
+
+  @Post('2fa/turn-on')
+  @UseGuards(AuthGuard)
+  async turnOnTwoFactorAuthentication(
+    @Request() request: any,
+    @Body() body: any,
+  ): Promise<Respon> {
+    const isCodeValid = this.userService.isTwoFactorAuthenticationCodeValid(
+      body.twoFactorAuthenticationCode,
+      request.user,
+    )
+    if (!isCodeValid) {
+      throw new UnauthorizedException('Wrong authentication code')
+    }
+    return {
+      status: HttpStatus.OK,
+      message: 'Turn on 2FA success',
+    }
+  }
+
+  @Post('2fa/authenticate')
+  @UseGuards(AuthGuard)
+  async authenticate(
+    @Request() request: any,
+    @Body() body: any,
+  ): Promise<Respon> {
+    const isCodeValid = this.userService.isTwoFactorAuthenticationCodeValid(
+      body.twoFactorAuthenticationCode,
+      request.user,
+    )
+
+    if (!isCodeValid) {
+      throw new UnauthorizedException('Wrong authentication code')
+    }
+
+    return {
+      status: HttpStatus.OK,
+      message: '2FA success',
+      data: request.user,
+    }
+  }
+
   @Post('login')
   @UsePipes(new CustomValidationPipe())
-  async login(@Body() userLoginDto: any, @Req() req: any): Promise<Response> {
+  async login(@Body() userLoginDto: any, @Req() req: any): Promise<Respon> {
     if (req.error) {
       const user = await this.userService.login(userLoginDto)
       if (user) {
@@ -108,7 +163,7 @@ export class UserController {
   }
 
   @Get(':id')
-  async getUser(@Param('id') id: string, @Req() req: any): Promise<Response> {
+  async getUser(@Param('id') id: string, @Req() req: any): Promise<Respon> {
     if (req.error) {
       return {
         status: HttpStatus.UNAUTHORIZED,
@@ -139,7 +194,7 @@ export class UserController {
     @Req() req: any,
     @UploadedFile()
     file: Express.Multer.File,
-  ): Promise<Response> {
+  ): Promise<Respon> {
     let data: any = userUpdateDto
     const limitSize = this.commonService.limitFileSize(file.size)
     if (!limitSize) {

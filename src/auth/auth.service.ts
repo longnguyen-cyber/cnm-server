@@ -103,7 +103,7 @@ export class AuthService {
   }
 
   generateJWTRefresh(email: string): string {
-    return sign({ email }, process.env.JWT_REFRESH_SECRET, { expiresIn: '1h' })
+    return sign({ email }, process.env.JWT_REFRESH_SECRET, { expiresIn: '30d' })
   }
 
   decodeJWTRefresh(rf_token: string): JwtPayload | string {

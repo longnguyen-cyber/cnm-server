@@ -12,6 +12,8 @@ import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { BullModule } from '@nestjs/bull'
 import { UploadService } from '../upload/upload.service'
 import { UploadModule } from '../upload/upload.module'
+import { JwtService } from '@nestjs/jwt'
+import { ConfigModule } from '@nestjs/config'
 
 @Module({
   controllers: [ThreadController],
@@ -21,9 +23,11 @@ import { UploadModule } from '../upload/upload.module'
     UserService,
     UserCheck,
     UserRepository,
+    JwtService,
   ],
   imports: [
     forwardRef(() => AuthModule),
+    ConfigModule,
     PrismaModule,
     CommonModule,
     CacheModule.register(),

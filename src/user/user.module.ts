@@ -11,6 +11,7 @@ import { PrismaModule } from '../prisma/prisma.module'
 import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import * as redisStore from 'cache-manager-redis-store'
+import { JwtModule } from '@nestjs/jwt'
 @Module({
   controllers: [UserController],
   providers: [UserService, UserRepository, UserCheck, EmailConsumer],
@@ -19,6 +20,11 @@ import * as redisStore from 'cache-manager-redis-store'
     RabbitMQModule,
     PrismaModule,
     CommonModule,
+    ConfigModule,
+    JwtModule.register({
+      secret: 'secret',
+      signOptions: { expiresIn: '1d' },
+    }),
     CacheModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -13,6 +13,10 @@ import { UserCreateDto } from './dto/userCreate.dto'
 import { UserModel } from './model/user.model'
 import { UserCheck } from './user.check'
 import { UserRepository } from './user.repository'
+import { authenticator } from 'otplib'
+import { toDataURL } from 'qrcode'
+import { JwtService } from '@nestjs/jwt'
+import { ConfigService } from '@nestjs/config'
 
 @Injectable()
 export class UserService {
@@ -25,6 +29,7 @@ export class UserService {
     @Inject('RabbitMQUploadService')
     private readonly rabbitMQService: RabbitMQService,
     @InjectQueue('send-mail') private readonly mailQueue: QueueEmail,
+    private readonly configService: ConfigService,
   ) {}
 
   async login({ email, password }: any): Promise<any> {
@@ -42,6 +47,11 @@ export class UserService {
 
   async getUser(id: string) {
     const user = await this.userRepository.findOneById(id)
+    return user
+  }
+
+  async getUserByEmail(email: string) {
+    const user = await this.userRepository.getUserByEmail(email)
     return user
   }
 
@@ -129,6 +139,62 @@ export class UserService {
       this.cacheManager.set(token, JSON.stringify(userUpdate))
     }
     return this.buildUserResponse(userUpdate)
+  }
+
+  //2fa
+  async generateTwoFactorAuthenticationSecret(req: any) {
+    const secret = authenticator.generateSecret()
+    const user = req.user
+    const token = req.token
+
+    const otpAuthUrl = authenticator.keyuri(
+      user.email,
+      this.configService.get('PROJECT_NAME'),
+      secret,
+    )
+
+    const isSet = await this.setTwoFactorAuthenticationSecret(secret, user.id)
+    if (isSet) {
+      this.cacheManager.set(token, JSON.stringify(isSet))
+    }
+
+    return {
+      secret,
+      otpAuthUrl,
+    }
+  }
+
+  async setTwoFactorAuthenticationSecret(
+    secret: string,
+    userId: string,
+  ): Promise<any> {
+    const update = await this.userRepository.updateUser(userId, {
+      twoFactorAuthenticationSecret: secret,
+    })
+    return update
+  }
+
+  async turnOnTwoFactorAuthentication(req: any) {
+    const update = await this.userRepository.updateUser(req.user.id, {
+      isTwoFactorAuthenticationEnabled: true,
+    })
+    if (update) {
+      this.cacheManager.set(req.token, JSON.stringify(update))
+    }
+  }
+
+  async generateQrCodeDataURL(otpAuthUrl: string) {
+    return toDataURL(otpAuthUrl)
+  }
+
+  isTwoFactorAuthenticationCodeValid(
+    twoFactorAuthenticationCode: string,
+    user: any,
+  ) {
+    return authenticator.verify({
+      token: twoFactorAuthenticationCode,
+      secret: user.twoFactorAuthenticationSecret,
+    })
   }
 
   private async checkLoginData(
