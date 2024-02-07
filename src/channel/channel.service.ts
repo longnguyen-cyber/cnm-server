@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common'
 import { ChannelRepository } from './channel.repository'
 import { ChannelCreateDto } from './dto/ChannelCreate.dto'
@@ -8,28 +7,44 @@ import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
 export class ChannelService {
   constructor(private channelRepository: ChannelRepository) {}
 
-  async getAllChannel() {
-    const channels = await this.channelRepository.getAllChannel()
+  async getAllChannel(userId: string) {
+    const channels = await this.channelRepository.getAllChannel(userId)
     return channels
   }
 
-  async getChannelById(channelId: string) {
-    return this.channelRepository.getChannelById(channelId)
+  async getChannelById(channelId: string, userId: string) {
+    return this.channelRepository.getChannelById(channelId, userId)
   }
 
   async createChannel(channelCreateDto: ChannelCreateDto) {
     return this.channelRepository.createChannel(channelCreateDto)
   }
 
-  async updateChannel(channelId: string, channelUpdateDto: ChannelUpdateDto) {
-    return this.channelRepository.updateChannel(channelId, channelUpdateDto)
+  async updateChannel(
+    channelId: string,
+    userId: string,
+    channelUpdateDto: ChannelUpdateDto,
+  ) {
+    return this.channelRepository.updateChannel(
+      channelId,
+      userId,
+      channelUpdateDto,
+    )
   }
 
-  async deleteChannel(channelId: string) {
-    return this.channelRepository.deleteChannel(channelId)
+  async deleteChannel(channelId: string, userId: string) {
+    return this.channelRepository.deleteChannel(channelId, userId)
   }
 
-  async addUserToChannel(channelId: string, users: string[]) {
-    return this.channelRepository.addUserToChannel(channelId, users)
+  async addUserToChannel(
+    channelId: string,
+    users: string[],
+    personAddedId: string,
+  ) {
+    return this.channelRepository.addUserToChannel(
+      channelId,
+      users,
+      personAddedId,
+    )
   }
 }

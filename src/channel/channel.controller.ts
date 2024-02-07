@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import {
   Body,
   Controller,
@@ -8,49 +7,64 @@ import {
   Param,
   Post,
   Put,
+  Req,
   UseGuards,
 } from '@nestjs/common'
-import { ApiBody, ApiCreatedResponse, ApiTags } from '@nestjs/swagger'
+import { ApiBody, ApiTags } from '@nestjs/swagger'
 import { Response } from 'src/common/common.type'
+import { AuthGuard } from '../auth/guard/auth.guard'
 import { ChannelService } from './channel.service'
 import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
-import { ChannelResquestCreateDto } from './dto/channelResquestCreate.dto'
-import { ResChannelDto } from './dto/resChannel.dto'
-import { AuthGuard } from '../auth/guard/auth.guard'
+import { ChannelCreateDto } from './dto/ChannelCreate.dto'
 
 @ApiTags('channels')
 @Controller('channels')
-// @UseGuards(AuthGuard)
+@UseGuards(AuthGuard)
 export class ChannelController {
   constructor(private readonly channelService: ChannelService) {}
 
   @Get()
-  async getAllChannel(): Promise<Response> {
-    return {
-      status: HttpStatus.OK,
-      message: 'Get all channel success',
-      data: await this.channelService.getAllChannel(),
-    }
+  async getAllChannel(@Req() req: any): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not allowed to access this resource',
+      }
+    } else
+      return {
+        status: HttpStatus.OK,
+        message: 'Get all channel success',
+        data: await this.channelService.getAllChannel(req.user.id),
+      }
   }
   @Get(':channelId')
   async getChannelById(
     @Param('channelId') channelId: string,
+    @Req() req: any,
   ): Promise<Response> {
-    return {
-      status: HttpStatus.OK,
-      message: 'Get channel success',
-      data: await this.channelService.getChannelById(channelId),
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not allowed to access this resource',
+      }
+    } else {
+      return {
+        status: HttpStatus.OK,
+        message: 'Get channel success',
+        data: await this.channelService.getChannelById(channelId, req.user.id),
+      }
     }
   }
 
   @Post()
-  @ApiBody({ type: ChannelResquestCreateDto })
-  @ApiCreatedResponse({ type: ResChannelDto })
-  async createChannel(@Body() channel: any): Promise<Response> {
+  async createChannel(
+    @Body() channel: ChannelCreateDto,
+    @Req() req: any,
+  ): Promise<Response> {
     const channelCreateDto = {
       name: channel.name,
       isPublic: channel.isPublic,
-      userCreated: channel.userCreated.id,
+      userCreated: req.user.id,
     }
     const data = await this.channelService.createChannel(channelCreateDto)
     if (data) {
@@ -69,37 +83,50 @@ export class ChannelController {
   }
 
   @Put(':channelId')
-  @ApiBody({ type: ChannelResquestCreateDto })
-  @ApiCreatedResponse({ type: ResChannelDto })
   async updateChannel(
     @Param('channelId') channelId: string,
     @Body() channelUpdate: ChannelUpdateDto,
+    @Req() req: any,
   ): Promise<Response> {
-    const data = await this.channelService.updateChannel(
-      channelId,
-      channelUpdate,
-    )
-    if (data) {
+    if (req.error) {
       return {
-        status: HttpStatus.OK,
-        message: 'Update channel success',
-        data: data,
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
       }
     } else {
-      return {
-        status: HttpStatus.NOT_FOUND,
-        message: 'Channel not found',
-        errors: 'Channel not found',
+      const data = await this.channelService.updateChannel(
+        channelId,
+        req.user.id,
+        channelUpdate,
+      )
+      if (data) {
+        return {
+          status: HttpStatus.OK,
+          message: 'Update channel success',
+          data: data,
+        }
+      } else {
+        return {
+          status: HttpStatus.NOT_FOUND,
+          message: 'Channel not found',
+        }
       }
     }
   }
 
   @Delete(':channelId')
-  @ApiCreatedResponse({ type: ResChannelDto })
   async deleteChannel(
     @Param('channelId') channelId: string,
+    @Req() req: any,
   ): Promise<Response> {
-    const data = await this.channelService.deleteChannel(channelId)
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not authorized to delete this channel',
+      }
+    }
+
+    const data = await this.channelService.deleteChannel(channelId, req.user.id)
     if (data) {
       return {
         status: HttpStatus.OK,
@@ -108,19 +135,28 @@ export class ChannelController {
     } else {
       return {
         status: HttpStatus.BAD_REQUEST,
-        message: 'Delete channel fail',
-        errors: 'Delete channel fail',
+        message: 'Failed to delete channel',
       }
     }
   }
 
   @Put(':channelId/add-user')
-  @ApiCreatedResponse({ type: ResChannelDto })
   async addUserToChannel(
     @Param('channelId') channelId: string,
     @Body('users') users: string[],
+    @Req() req: any,
   ): Promise<Response> {
-    const data = await this.channelService.addUserToChannel(channelId, users)
+    const data = await this.channelService.addUserToChannel(
+      channelId,
+      users,
+      req.user.id,
+    )
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not authorized to add user to this channel',
+      }
+    }
     if (data) {
       return {
         status: HttpStatus.OK,

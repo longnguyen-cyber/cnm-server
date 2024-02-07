@@ -1,21 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger'
 import {
   IsEmail,
   IsOptional,
   IsString,
   MaxLength,
   MinLength,
-} from 'class-validator';
+} from 'class-validator'
 
 export class UserUpdateDto {
-  @ApiProperty({
-    example: 'username',
-    description: 'thre username of the User',
-    required: false,
-  })
-  @IsOptional()
-  readonly name?: string;
-
   @ApiProperty({
     example: 'password',
     description: 'the password of the User',
@@ -24,7 +16,7 @@ export class UserUpdateDto {
   @IsOptional()
   @IsString()
   @MinLength(6)
-  readonly passwordOld?: string;
+  readonly passwordOld?: string
 
   @ApiProperty({
     example: 'new password',
@@ -34,22 +26,14 @@ export class UserUpdateDto {
   @IsOptional()
   @IsString()
   @MinLength(6)
-  readonly password?: string;
+  readonly password?: string
 
   @ApiProperty({
     example: 'display name',
     description: 'the display name of the User',
     required: false,
   })
-  readonly displayName?: string;
-
-  @ApiProperty({
-    example: 'status',
-    description: 'the status of the User',
-    required: false,
-    default: 'active',
-  })
-  readonly status?: string;
+  readonly displayName?: string
 
   @ApiProperty({
     example: 'phone',
@@ -60,21 +44,12 @@ export class UserUpdateDto {
   @IsString()
   @MinLength(10)
   @MaxLength(10)
-  readonly phone?: string;
-
-  @ApiProperty({
-    example: 'email',
-    description: 'the email of the User',
-    required: false,
-  })
-  @IsOptional()
-  @IsEmail()
-  readonly email?: string;
+  readonly phone?: string
 
   @ApiProperty({
     example: 'avatar',
     description: 'the avatar of the User',
     required: false,
   })
-  readonly avatar?: string;
+  readonly avatar?: string
 }

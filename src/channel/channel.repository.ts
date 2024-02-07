@@ -1,16 +1,19 @@
 /* eslint-disable prettier/prettier */
+import { Injectable } from '@nestjs/common'
 import { Tx } from '../common/common.type'
 import { PrismaService } from '../prisma/prisma.service'
 import { ChannelCreateDto } from './dto/ChannelCreate.dto'
 import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
-import { Injectable } from '@nestjs/common'
 
 @Injectable()
 export class ChannelRepository {
   constructor(private prisma: PrismaService) {}
 
-  async getAllChannel(prisma: Tx = this.prisma) {
+  async getAllChannel(userId: string, prisma: Tx = this.prisma) {
     const channels = await prisma.channels.findMany({
+      where: {
+        userCreated: userId,
+      },
       include: {
         users: true,
       },
@@ -34,13 +37,14 @@ export class ChannelRepository {
       }),
     )
 
-    return final
+    return channels
   }
 
-  async getChannelById(id: string, prisma: Tx = this.prisma) {
+  async getChannelById(id: string, userId: string, prisma: Tx = this.prisma) {
     const channel = await prisma.channels.findUnique({
       where: {
         id: id,
+        userCreated: userId,
       },
       include: {
         thread: true,
@@ -54,35 +58,20 @@ export class ChannelRepository {
         },
         include: {
           messages: true,
-        },
-      })
-      return thread
-    }
-
-    const getAllFileOfThread = async (threadId: string) => {
-      const thread = await prisma.threads.findUnique({
-        where: {
-          id: threadId,
-        },
-        include: {
           files: true,
+          reactions: true,
         },
       })
       return thread
     }
-
-    const threads = channel.thread
 
     const newThread = await Promise.all(
-      threads.map(async (thread) => {
+      channel.thread.map(async (thread) => {
         const threads = await getAllMessageOfThread(thread.id)
         const messages = threads?.messages
-        const files = await getAllFileOfThread(thread.id)
-        const filesThread = files?.files
         return {
           ...thread,
           messages,
-          files: filesThread,
         }
       }),
     )
@@ -96,7 +85,7 @@ export class ChannelRepository {
   async createChannel(
     ChannelCreateDto: ChannelCreateDto,
     prisma: Tx = this.prisma,
-  ) {
+  ): Promise<boolean> {
     const users = await prisma.users.findMany()
     const newChannel = await prisma.channels.create({
       data: {
@@ -130,22 +119,19 @@ export class ChannelRepository {
       })
     }
 
-    return {
-      success: true,
-      message: 'Create channel successfully',
-      errors: ' ',
-      data: newChannel,
-    }
+    return true
   }
 
   async updateChannel(
     id: string,
+    userId: string,
     channelUpdateDto: ChannelUpdateDto,
     prisma: Tx = this.prisma,
   ) {
     const rs = await prisma.channels.update({
       where: {
         id: id,
+        userCreated: userId,
       },
       data: {
         ...channelUpdateDto,
@@ -154,28 +140,37 @@ export class ChannelRepository {
     return rs
   }
 
-  async deleteChannel(id: string, prisma: Tx = this.prisma) {
-    await prisma.channels.delete({
+  async deleteChannel(
+    id: string,
+    userId: string,
+    prisma: Tx = this.prisma,
+  ): Promise<boolean> {
+    const rs = await prisma.channels.delete({
       where: {
         id: id,
+        userCreated: userId,
       },
     })
-
-    return {
-      success: true,
-      message: 'Delete channel successfully',
-      errors: '',
+    if (rs) {
+      return true
     }
+    return false
   }
 
   async addUserToChannel(
     channelId: string,
     users: string[],
+    personAddedId: string,
     prisma: Tx = this.prisma,
   ) {
     const add = await prisma.channels.update({
       where: {
         id: channelId,
+        users: {
+          some: {
+            id: personAddedId,
+          },
+        },
       },
       data: {
         userId: {

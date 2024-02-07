@@ -5,30 +5,34 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
   Req,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common'
-import { ApiBody, ApiTags } from '@nestjs/swagger'
+import { ApiTags } from '@nestjs/swagger'
 import { Response } from 'src/common/common.type'
 import { AuthGuard } from '../auth/guard/auth.guard'
-import { CustomValidationPipe } from '../common/common.pipe'
 import { ChatService } from './chat.service'
-import { ChatRequestCreateDto } from './dto/chatRequestCreate.dto'
 
 @ApiTags('chats')
 @Controller('chats')
-// @UseGuards(AuthGuard)
+@UseGuards(AuthGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Post()
-  @ApiBody({ type: ChatRequestCreateDto })
-  @UsePipes(new CustomValidationPipe())
+  // @UsePipes(new CustomValidationPipe())
   async createChat(
     @Body('receiveId') receiveId: string,
     @Req() req: any,
   ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
+
     const senderId = req.user.id
     const data = await this.chatService.createChat(senderId, receiveId)
     if (data) {
@@ -47,16 +51,31 @@ export class ChatController {
 
   @Get()
   async getAllChat(@Req() req: any): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
     return {
       status: HttpStatus.OK,
       message: 'Get all chat success',
-      data: await this.chatService.getAllChat(),
+      data: await this.chatService.getAllChat(req.user.id),
     }
   }
 
   @Get(':chatId')
-  async getChatById(@Param('chatId') chatId: string): Promise<Response> {
-    const chat = await this.chatService.getChatById(chatId)
+  async getChatById(
+    @Param('chatId') chatId: string,
+    @Req() req: any,
+  ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
+    const chat = await this.chatService.getChatById(chatId, req.user.id)
     if (chat) {
       return {
         status: HttpStatus.OK,
@@ -66,7 +85,7 @@ export class ChatController {
     } else {
       return {
         status: HttpStatus.BAD_REQUEST,
-        message: 'Get chat fail',
+        message: 'Not found chat',
       }
     }
   }

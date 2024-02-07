@@ -16,19 +16,6 @@ export class AuthService {
   }
   private readonly SCRYPT_PREFIX = '$scrypt$N=32768,r=8,p=1,maxmem=67108864$'
 
-  getToken(tokenString: string): string {
-    const token = tokenString.split(' ')[1]
-    return token
-  }
-
-  decodeToken(tokenString: Token): string | JwtPayload {
-    try {
-      return this.decodeJWT(tokenString)
-    } catch (error) {
-      return null
-    }
-  }
-
   private serializeHash(hash: Buffer, salt: Buffer) {
     const saltString = salt.toString('base64').split('=')[0]
     const hashString = hash.toString('base64').split('=')[0]

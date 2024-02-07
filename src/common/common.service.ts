@@ -72,4 +72,16 @@ export class CommonService {
     const arr = url.split('/')
     return arr[arr.length - 1]
   }
+
+  deleteField(obj: any, fields: string[]): any {
+    for (let key in obj) {
+      if (fields.includes(key)) {
+        delete obj[key]
+      } else if (typeof obj[key] === 'object') {
+        this.deleteField(obj[key], fields)
+      }
+    }
+
+    return obj
+  }
 }

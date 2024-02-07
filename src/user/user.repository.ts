@@ -3,50 +3,17 @@ import { Injectable } from '@nestjs/common'
 import { Tx } from '../common/common.type'
 import { PrismaService } from '../prisma/prisma.service'
 import { UserCreateDto } from './dto/userCreate.dto'
-import { TokenCreateDto } from './dto/tokenCreate.dto'
 @Injectable()
 export class UserRepository {
   constructor(private prisma: PrismaService) {}
 
   async findOneById(id: string, prisma: Tx = this.prisma) {
-    const channels = await findChannelOfUser(id, prisma)
-    const chatsOfUser = await prisma.chats.findMany({
-      where: {
-        senderId: id,
-      },
-      include: {
-        thread: true,
-        user: true,
-      },
-    })
-
-    const chats = await Promise.all(
-      chatsOfUser.map(async (chat: any) => {
-        const userOfChat = await prisma.users.findUnique({
-          where: {
-            id: chat.senderId,
-          },
-        })
-        const newChat = {
-          ...chat,
-          user: userOfChat,
-        }
-        return {
-          ...chat,
-          user: userOfChat,
-        }
-      }),
-    )
     const user = await prisma.users.findUnique({
       where: {
         id: id,
       },
     })
-    return {
-      ...user,
-      channels,
-      chats,
-    }
+    return user
   }
 
   async findAll(prisma: Tx = this.prisma) {
@@ -75,7 +42,10 @@ export class UserRepository {
 
   async createUser(userCreateDto: UserCreateDto, prisma: Tx = this.prisma) {
     const user = await prisma.users.create({
-      data: userCreateDto,
+      data: {
+        ...userCreateDto,
+        status: 'active',
+      },
     })
 
     if (!user) {

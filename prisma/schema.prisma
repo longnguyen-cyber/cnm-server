@@ -12,11 +12,11 @@ model users {
   id                               String      @id @default(auto()) @map("_id") @db.ObjectId
   name                             String      @unique
   password                         String
-  displayName                      String
+  displayName                      String?
   status                           String
-  phone                            String
+  phone                            String?
   email                            String      @unique
-  avatar                           String
+  avatar                           String?
   isTwoFactorAuthenticationEnabled Boolean     @default(false)
   twoFactorAuthenticationSecret    String      @default("")
   isOwner                          Boolean?

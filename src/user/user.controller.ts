@@ -10,19 +10,18 @@ import {
   Put,
   Req,
   Request,
-  Response,
   UnauthorizedException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
-  UsePipes,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { ApiTags } from '@nestjs/swagger'
 import { AuthGuard } from '../auth/guard/auth.guard'
-import { CustomValidationPipe } from '../common/common.pipe'
 import { CommonService } from '../common/common.service'
 import { Response as Respon } from '../common/common.type'
+import { UserCreateDto } from './dto/userCreate.dto'
+import { UserUpdateDto } from './dto/userUpdate.dto'
 import { UserService } from './user.service'
 
 @ApiTags('users')
@@ -36,28 +35,8 @@ export class UserController {
 
   @Post('register')
   // @UsePipes(new CustomValidationPipe())
-  @UseInterceptors(FileInterceptor('avatar'))
-  async createUsers(
-    @Body() userCreateDto: any,
-    @UploadedFile()
-    file: Express.Multer.File,
-  ): Promise<Respon> {
-    const limitSize = this.commonService.limitFileSize(file.size)
-    if (!limitSize) {
-      return {
-        status: HttpStatus.BAD_REQUEST,
-        message: 'File size is too large',
-        errors: `Currently the file size has exceeded our limit (2MB). Your file size is ${this.commonService.convertToSize(file.size)}. Please try again with a smaller file.`,
-      }
-    }
-    const data: any = {
-      ...userCreateDto,
-      avatar: JSON.stringify({
-        fileName: file.originalname,
-        file: file.buffer,
-      }),
-    }
-    const rs = await this.userService.createUser(data)
+  async createUsers(@Body() userCreateDto: UserCreateDto): Promise<Respon> {
+    const rs = await this.userService.createUser(userCreateDto)
     if (rs) {
       return {
         status: HttpStatus.CREATED,
@@ -128,7 +107,7 @@ export class UserController {
   }
 
   @Post('login')
-  @UsePipes(new CustomValidationPipe())
+  // @UsePipes(new CustomValidationPipe())
   async login(@Body() userLoginDto: any, @Req() req: any): Promise<Respon> {
     if (req.error) {
       const user = await this.userService.login(userLoginDto)
@@ -162,6 +141,7 @@ export class UserController {
     }
   }
 
+  //seen profile
   @Get(':id')
   async getUser(@Param('id') id: string, @Req() req: any): Promise<Respon> {
     if (req.error) {
@@ -190,11 +170,18 @@ export class UserController {
   // @UsePipes(new CustomValidationPipe())
   @UseInterceptors(FileInterceptor('avatar'))
   async updateCurrentUser(
-    @Body() userUpdateDto: any,
+    @Body() userUpdateDto: UserUpdateDto,
     @Req() req: any,
     @UploadedFile()
     file: Express.Multer.File,
   ): Promise<Respon> {
+    if (req.error) {
+      return {
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Please login again',
+      }
+    }
+
     let data: any = userUpdateDto
     const limitSize = this.commonService.limitFileSize(file.size)
     if (!limitSize) {
@@ -217,7 +204,7 @@ export class UserController {
     const user = await this.userService.updateUser(data, req)
     if (!user) {
       return {
-        status: HttpStatus.FORBIDDEN,
+        status: HttpStatus.NOT_FOUND,
         message: 'User not found',
       }
     }

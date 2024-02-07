@@ -1,17 +1,14 @@
-import { CacheModule, Module, forwardRef } from '@nestjs/common'
-import { ChatService } from './chat.service'
-import { ChatController } from './chat.controller'
-import { ChatRepository } from './chat.repository'
-import { UserService } from '../user/user.service'
-import { UserCheck } from '../user/user.check'
-import { UserRepository } from '../user/user.repository'
-import { AuthModule } from '../auth/auth.module'
-import { PrismaModule } from '../prisma/prisma.module'
-import { CommonModule } from '../common/common.module'
-import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { BullModule } from '@nestjs/bull'
+import { CacheModule, Module, forwardRef } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import * as redisStore from 'cache-manager-redis-store'
+import { AuthModule } from '../auth/auth.module'
+import { CommonModule } from '../common/common.module'
+import { PrismaModule } from '../prisma/prisma.module'
+import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
+import { ChatController } from './chat.controller'
+import { ChatRepository } from './chat.repository'
+import { ChatService } from './chat.service'
 @Module({
   controllers: [ChatController],
   providers: [ChatService, ChatRepository],
@@ -19,6 +16,7 @@ import * as redisStore from 'cache-manager-redis-store'
     PrismaModule,
     CommonModule,
     RabbitMQModule,
+    forwardRef(() => AuthModule),
     CacheModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -10,13 +10,15 @@ import { CommonService } from '../common/common.service'
 import { Queue, UploadMethod } from '../enums'
 import { RabbitMQService } from '../rabbitmq/rabbitmq.service'
 import { UserCreateDto } from './dto/userCreate.dto'
-import { UserModel } from './model/user.model'
 import { UserCheck } from './user.check'
 import { UserRepository } from './user.repository'
 import { authenticator } from 'otplib'
 import { toDataURL } from 'qrcode'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
+import { LoginDTO } from './dto/login.dto'
+import { UserUpdateDto } from './dto/userUpdate.dto'
+import { ResUserDto } from './dto/resUser.dto'
 
 @Injectable()
 export class UserService {
@@ -37,8 +39,6 @@ export class UserService {
     const token = this.authService.generateJWT(user.id.toString())
     await this.cacheManager.set(token, JSON.stringify(user))
 
-    delete user.password
-
     return {
       ...user,
       token,
@@ -47,7 +47,7 @@ export class UserService {
 
   async getUser(id: string) {
     const user = await this.userRepository.findOneById(id)
-    return user
+    return this.buildUserResponse(user)
   }
 
   async getUserByEmail(email: string) {
@@ -58,29 +58,19 @@ export class UserService {
   async createUser(userCreateDto: UserCreateDto) {
     const userClean = { ...userCreateDto }
 
-    const { avatar: _, email } = userClean
-    const avatar = JSON.parse(_ as any)
+    const { email } = userClean
 
     await this.checkUniqueUser(email)
     const passwordHashed = await this.authService.hashPassword(
       userClean.password,
     )
-    const uploadFile = await this.rabbitMQService.addToQueue(
-      Queue.Upload,
-      UploadMethod.UploadSingle,
-      {
-        fileName: avatar.fileName,
-        file: avatar.file,
-      },
-    )
+
     const data = {
       ...userClean,
       password: passwordHashed,
-      status: 'active',
-      avatar: uploadFile ? this.commonService.pathUpload(avatar.fileName) : '',
     }
 
-    const { accessToken } = this.generateToken(email)
+    const accessToken = this.authService.generateJWT(email)
     const user = await this.userRepository.createUser(data)
 
     if (user) {
@@ -100,7 +90,53 @@ export class UserService {
     return this.buildUserResponse(user)
   }
 
-  async updateUser(userUpdateDto: any, req: any): Promise<any> {
+  //old
+  // async createUser(userCreateDto: UserCreateDto) {
+  //   const userClean = { ...userCreateDto }
+
+  //   const { avatar: _, email } = userClean
+  //   const avatar = JSON.parse(_ as any)
+
+  //   await this.checkUniqueUser(email)
+  //   const passwordHashed = await this.authService.hashPassword(
+  //     userClean.password,
+  //   )
+  //   const uploadFile = await this.rabbitMQService.addToQueue(
+  //     Queue.Upload,
+  //     UploadMethod.UploadSingle,
+  //     {
+  //       fileName: avatar.fileName,
+  //       file: avatar.file,
+  //     },
+  //   )
+  //   const data = {
+  //     ...userClean,
+  //     password: passwordHashed,
+  //     status: 'active',
+  //     avatar: uploadFile ? this.commonService.pathUpload(avatar.fileName) : '',
+  //   }
+
+  //   const { accessToken } = this.generateToken(email)
+  //   const user = await this.userRepository.createUser(data)
+
+  //   if (user) {
+  //     this.cacheManager.set(accessToken, JSON.stringify(user))
+  //     await this.mailQueue.add(
+  //       'register',
+  //       {
+  //         to: data.email,
+  //         name: data.name,
+  //       },
+  //       {
+  //         removeOnComplete: true,
+  //       },
+  //     )
+  //   }
+
+  //   return this.buildUserResponse(user)
+  // }
+
+  async updateUser(userUpdateDto: UserUpdateDto, req: any): Promise<any> {
     const userClean = { ...userUpdateDto }
     const { id, password, avatar: oldAvatar } = req.user
     const token = req.token
@@ -200,7 +236,7 @@ export class UserService {
   private async checkLoginData(
     email: string,
     password: string,
-  ): Promise<UserModel> {
+  ): Promise<LoginDTO> {
     try {
       await this.checkEmailExist(email)
 
@@ -288,7 +324,7 @@ export class UserService {
     )
   }
 
-  private buildUserResponse(user: UserModel): any {
+  private buildUserResponse(user: ResUserDto): any {
     const { name, email, avatar, displayName, phone, status } = user
     return {
       name,
@@ -300,12 +336,12 @@ export class UserService {
     }
   }
 
-  private generateToken = (email: string): any => {
-    const acessToken = this.authService.generateJWT(email)
-    const refreshToken = this.authService.generateJWTRefresh(email)
+  // private generateToken = (email: string): any => {
+  //   const acessToken = this.authService.generateJWT(email)
+  //   const refreshToken = this.authService.generateJWTRefresh(email)
 
-    return {
-      accessToken: acessToken,
-    }
-  }
+  //   return {
+  //     accessToken: acessToken,
+  //   }
+  // }
 }

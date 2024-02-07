@@ -1,22 +1,27 @@
 import { Injectable } from '@nestjs/common'
 import { ChatRepository } from './chat.repository'
 import { ChatToDBDto } from './dto/relateDB/ChatToDB.dto'
+import { CommonService } from '../common/common.service'
 
 @Injectable()
 export class ChatService {
-  constructor(private chatRepository: ChatRepository) {}
+  constructor(
+    private chatRepository: ChatRepository,
+    private readonly commonService: CommonService,
+  ) {}
 
-  async getAllChat() {
-    return await this.chatRepository.getAllChat()
+  async getAllChat(userId: string) {
+    return await this.chatRepository.getAllChat(userId)
   }
 
-  async getChatById(chatId: string) {
-    return await this.chatRepository.getChatById(chatId)
+  async getChatById(chatId: string, userId: string) {
+    return this.buildChatResponse(
+      await this.chatRepository.getChatById(chatId, userId),
+    )
   }
 
   async createChat(senderId: string, receiveId: string) {
     const chatToDb = this.compareToCreateChat(senderId, receiveId)
-
     const chat = await this.chatRepository.createChat(chatToDb)
     return chat
   }
@@ -29,5 +34,14 @@ export class ChatService {
       senderId,
       receiveId,
     }
+  }
+
+  private buildChatResponse(chat: any) {
+    const buildChat = this.commonService.deleteField(chat, [
+      'password',
+      'isTwoFactorAuthenticationEnabled',
+      'twoFactorAuthenticationSecret',
+    ])
+    return buildChat
   }
 }

@@ -12,7 +12,3 @@ export type Response = {
   errors?: any
   data?: any
 }
-
-export interface Token {
-  authorization: string
-}
