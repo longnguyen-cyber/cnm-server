@@ -74,6 +74,21 @@ export class CommonService {
   }
 
   deleteField(obj: any, fields: string[]): any {
+    const fieldDefaultRemove = [
+      'password',
+      'createdAt',
+      'isTwoFactorAuthenticationEnabled',
+      'twoFactorAuthenticationSecret',
+      'channel',
+      'status',
+      'updatedAt',
+      'deletedAt',
+    ]
+    if (fields.length === 0) {
+      fields = fieldDefaultRemove
+    } else {
+      fields = [...fields, ...fieldDefaultRemove]
+    }
     for (let key in obj) {
       if (fields.includes(key)) {
         delete obj[key]
@@ -83,5 +98,19 @@ export class CommonService {
     }
 
     return obj
+  }
+
+  convertDateToDB(date: string): string {
+    const convert = new Date(date)
+    const year = convert.getFullYear()
+    const month =
+      convert.getMonth() + 1 < 10
+        ? `0${convert.getMonth() + 1}`
+        : convert.getMonth() + 1
+
+    const day = convert.getDate()
+
+    const formattedDate = `${year}-${month}-${day}`
+    return formattedDate
   }
 }

@@ -23,6 +23,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { join } from 'path'
 import { SocketGateway } from './socket/socket.gateway'
 import { CommonService } from './common/common.service'
+import { AppController } from './app.controller'
+import { AppService } from './app.service'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -86,8 +88,8 @@ import { CommonService } from './common/common.service'
 
     UploadModule,
   ],
-  providers: [SocketGateway, CommonService],
-  controllers: [UserController],
+  providers: [SocketGateway, CommonService, AppService],
+  controllers: [UserController, AppController],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

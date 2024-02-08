@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   Request,
   UnauthorizedException,
@@ -213,5 +214,11 @@ export class UserController {
       message: 'Update user success',
       data: user,
     }
+  }
+
+  @Get('/search/:name')
+  async search(@Param('name') name: string): Promise<any> {
+    const user = await this.userService.searchUser(name)
+    return user
   }
 }

@@ -11,7 +11,8 @@ export class ChatService {
   ) {}
 
   async getAllChat(userId: string) {
-    return await this.chatRepository.getAllChat(userId)
+    const rs = await this.chatRepository.getAllChat(userId)
+    return rs.map((chat) => this.buildChatResponse(chat))
   }
 
   async getChatById(chatId: string, userId: string) {
@@ -37,11 +38,7 @@ export class ChatService {
   }
 
   private buildChatResponse(chat: any) {
-    const buildChat = this.commonService.deleteField(chat, [
-      'password',
-      'isTwoFactorAuthenticationEnabled',
-      'twoFactorAuthenticationSecret',
-    ])
+    const buildChat = this.commonService.deleteField(chat, [])
     return buildChat
   }
 }

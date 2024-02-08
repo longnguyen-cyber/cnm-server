@@ -331,18 +331,4 @@ export class ThreadService {
       userId,
     }
   }
-
-  private convertDateToDB(date: string) {
-    const convert = new Date(date)
-    const year = convert.getFullYear()
-    const month =
-      convert.getMonth() + 1 < 10
-        ? `0${convert.getMonth() + 1}`
-        : convert.getMonth() + 1
-
-    const day = convert.getDate()
-
-    const formattedDate = `${year}-${month}-${day}`
-    return formattedDate
-  }
 }

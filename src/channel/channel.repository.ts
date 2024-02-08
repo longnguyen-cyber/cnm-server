@@ -166,10 +166,8 @@ export class ChannelRepository {
     const add = await prisma.channels.update({
       where: {
         id: channelId,
-        users: {
-          some: {
-            id: personAddedId,
-          },
+        userId: {
+          has: personAddedId,
         },
       },
       data: {

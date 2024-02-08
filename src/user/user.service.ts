@@ -1,27 +1,32 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { InjectQueue } from '@nestjs/bull'
-import { CACHE_MANAGER, HttpStatus, Inject, Injectable } from '@nestjs/common'
+import {
+  CACHE_MANAGER,
+  HttpStatus,
+  Inject,
+  Injectable,
+  OnModuleInit,
+} from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { Queue as QueueEmail } from 'bull'
 import { Cache } from 'cache-manager'
+import { authenticator } from 'otplib'
+import { toDataURL } from 'qrcode'
 import { AuthService } from '../auth/auth.service'
 import { HttpExceptionCustom } from '../common/common.exception'
 import { CommonService } from '../common/common.service'
 import { Queue, UploadMethod } from '../enums'
 import { RabbitMQService } from '../rabbitmq/rabbitmq.service'
+import { LoginDTO } from './dto/login.dto'
+import { ResUserDto } from './dto/resUser.dto'
 import { UserCreateDto } from './dto/userCreate.dto'
+import { UserUpdateDto } from './dto/userUpdate.dto'
 import { UserCheck } from './user.check'
 import { UserRepository } from './user.repository'
-import { authenticator } from 'otplib'
-import { toDataURL } from 'qrcode'
-import { JwtService } from '@nestjs/jwt'
-import { ConfigService } from '@nestjs/config'
-import { LoginDTO } from './dto/login.dto'
-import { UserUpdateDto } from './dto/userUpdate.dto'
-import { ResUserDto } from './dto/resUser.dto'
 
 @Injectable()
-export class UserService {
+export class UserService implements OnModuleInit {
   constructor(
     private authService: AuthService,
     private commonService: CommonService,
@@ -34,11 +39,32 @@ export class UserService {
     private readonly configService: ConfigService,
   ) {}
 
+  async onModuleInit() {
+    // const users = await this.userRepository.findAll()
+    // const userInCache = (await this.cacheManager.get('user')) as any
+    // if (!userInCache) {
+    //   this.cacheManager.set('user', JSON.stringify(users))
+    // } else if (users.length !== JSON.parse(userInCache).length) {
+    //   this.cacheManager.set('user', JSON.stringify(users))
+    // }
+  }
+
+  async searchUser(query: string) {
+    const users = (await this.cacheManager.get('user')) as any
+    if (users) {
+      const usersParsed = JSON.parse(users)
+      const userFilter = usersParsed.filter((user: any) => {
+        return user.name.toLowerCase().includes(query.toLowerCase())
+      })
+      return userFilter
+    }
+  }
+
   async login({ email, password }: any): Promise<any> {
     const user = await this.checkLoginData(email, password)
     const token = this.authService.generateJWT(user.id.toString())
     await this.cacheManager.set(token, JSON.stringify(user))
-
+    this.commonService.deleteField(user, [])
     return {
       ...user,
       token,
@@ -47,12 +73,16 @@ export class UserService {
 
   async getUser(id: string) {
     const user = await this.userRepository.findOneById(id)
-    return this.buildUserResponse(user)
+    const result = this.commonService.deleteField(
+      this.buildUserResponse(user),
+      [],
+    )
+    return result
   }
 
   async getUserByEmail(email: string) {
     const user = await this.userRepository.getUserByEmail(email)
-    return user
+    return this.commonService.deleteField(user, [])
   }
 
   async createUser(userCreateDto: UserCreateDto) {
@@ -87,7 +117,7 @@ export class UserService {
       )
     }
 
-    return this.buildUserResponse(user)
+    return this.commonService.deleteField(this.buildUserResponse(user), [,])
   }
 
   //old
@@ -174,7 +204,9 @@ export class UserService {
     if (userUpdate) {
       this.cacheManager.set(token, JSON.stringify(userUpdate))
     }
-    return this.buildUserResponse(userUpdate)
+    return this.commonService.deleteField(this.buildUserResponse(userUpdate), [
+      ,
+    ])
   }
 
   //2fa

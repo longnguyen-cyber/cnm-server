@@ -8,9 +8,10 @@ import { ChannelService } from './channel.service'
 import { AuthModule } from '../auth/auth.module'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import * as redisStore from 'cache-manager-redis-store'
+import { CommonService } from '../common/common.service'
 @Module({
   controllers: [ChannelController],
-  providers: [ChannelService, ChannelRepository],
+  providers: [ChannelService, ChannelRepository, CommonService],
   imports: [
     forwardRef(() => AuthModule),
     PrismaModule,

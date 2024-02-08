@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
 import { Response, Tx } from '../common/common.type'
 import { PrismaService } from '../prisma/prisma.service'
 import { ReactToDBDto } from './dto/relateDB/reactToDB.dto'
@@ -8,10 +8,7 @@ import { ThreadToDBDto } from './dto/relateDB/threadToDB.dto'
 export class ThreadRepository {
   constructor(private prisma: PrismaService) {}
 
-  async createThread(
-    threadToDB: ThreadToDBDto,
-    prisma: Tx = this.prisma,
-  ): Promise<any> {
+  async createThread(threadToDB: ThreadToDBDto, prisma: Tx = this.prisma) {
     const messages = threadToDB.messages
     let threadId = ''
     let newThread: any
@@ -74,12 +71,13 @@ export class ThreadRepository {
         })
       })
       if (!newFile) {
-        return {
-          success: false,
-          message: 'Create thread failed',
-          errors: 'Create file failed',
-          data: null,
-        }
+        throw new HttpException(
+          {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'File error. Please check again',
+          },
+          HttpStatus.BAD_REQUEST,
+        )
       }
     }
 

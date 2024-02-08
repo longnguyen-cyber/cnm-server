@@ -2,18 +2,30 @@ import { Injectable } from '@nestjs/common'
 import { ChannelRepository } from './channel.repository'
 import { ChannelCreateDto } from './dto/ChannelCreate.dto'
 import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
+import { CommonService } from '../common/common.service'
 
 @Injectable()
 export class ChannelService {
-  constructor(private channelRepository: ChannelRepository) {}
+  constructor(
+    private channelRepository: ChannelRepository,
+    private readonly commonService: CommonService,
+  ) {}
 
   async getAllChannel(userId: string) {
     const channels = await this.channelRepository.getAllChannel(userId)
-    return channels
+
+    return channels.map((channel) =>
+      this.commonService.deleteField(channel, ['userId']),
+    )
   }
 
   async getChannelById(channelId: string, userId: string) {
-    return this.channelRepository.getChannelById(channelId, userId)
+    const channel = await this.channelRepository.getChannelById(
+      channelId,
+      userId,
+    )
+
+    return this.commonService.deleteField(channel, ['userId'])
   }
 
   async createChannel(channelCreateDto: ChannelCreateDto) {
@@ -25,11 +37,12 @@ export class ChannelService {
     userId: string,
     channelUpdateDto: ChannelUpdateDto,
   ) {
-    return this.channelRepository.updateChannel(
+    const updated = await this.channelRepository.updateChannel(
       channelId,
       userId,
       channelUpdateDto,
     )
+    return this.commonService.deleteField(updated, ['userId'])
   }
 
   async deleteChannel(channelId: string, userId: string) {
@@ -41,10 +54,12 @@ export class ChannelService {
     users: string[],
     personAddedId: string,
   ) {
-    return this.channelRepository.addUserToChannel(
+    const added = await this.channelRepository.addUserToChannel(
       channelId,
       users,
       personAddedId,
     )
+
+    return this.commonService.deleteField(added, ['userId'])
   }
 }
