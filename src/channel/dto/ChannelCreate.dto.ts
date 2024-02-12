@@ -20,4 +20,10 @@ export class ChannelCreateDto {
     description: 'the id of the user who created the channel',
   })
   readonly userCreated: string
+
+  @ApiProperty({
+    example: ['65bceb94ceda5567efc0b629', '65bceb94ceda5567efc0b630'],
+    description: 'members of the channel',
+  })
+  readonly members: string[]
 }

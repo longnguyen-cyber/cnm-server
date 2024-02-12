@@ -66,7 +66,7 @@ import { AppService } from './app.service'
       useFactory: async (configService: ConfigService) => ({
         isGlobal: true,
         store: redisStore,
-        host: configService.get<string>('REDIS_HOST'),
+        // host: configService.get<string>('REDIS_HOST'),
         port: configService.get<number>('REDIS_PORT'),
         username: configService.get<string>('REDIS_USERNAME'),
         password: configService.get<string>('REDIS_PASSWORD'),
@@ -77,7 +77,7 @@ import { AppService } from './app.service'
 
       useFactory: async (config: ConfigService) => ({
         redis: {
-          host: config.get('REDIS_HOST'),
+          // host: config.get('REDIS_HOST'),
           port: config.get('REDIS_PORT'),
           password: config.get('REDIS_PASSWORD'),
         },

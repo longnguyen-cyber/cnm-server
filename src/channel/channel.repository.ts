@@ -86,7 +86,7 @@ export class ChannelRepository {
     ChannelCreateDto: ChannelCreateDto,
     prisma: Tx = this.prisma,
   ): Promise<boolean> {
-    const users = await prisma.users.findMany()
+    const members = ChannelCreateDto.members
     const newChannel = await prisma.channels.create({
       data: {
         name: ChannelCreateDto.name,
@@ -95,25 +95,14 @@ export class ChannelRepository {
       },
     })
 
-    if (newChannel && ChannelCreateDto.isPublic) {
+    if (newChannel) {
       await prisma.channels.update({
         where: {
           id: newChannel.id,
         },
         data: {
           userId: {
-            set: users.map((user) => user.id),
-          },
-        },
-      })
-    } else if (newChannel && !ChannelCreateDto.isPublic) {
-      await prisma.channels.update({
-        where: {
-          id: newChannel.id,
-        },
-        data: {
-          userId: {
-            set: [ChannelCreateDto.userCreated],
+            set: members,
           },
         },
       })

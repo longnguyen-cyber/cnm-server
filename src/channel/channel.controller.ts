@@ -65,6 +65,7 @@ export class ChannelController {
       name: channel.name,
       isPublic: channel.isPublic,
       userCreated: req.user.id,
+      members: channel.members.concat(req.user.id),
     }
     const data = await this.channelService.createChannel(channelCreateDto)
     if (data) {
