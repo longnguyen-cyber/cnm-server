@@ -25,9 +25,9 @@ async function bootstrap() {
 
   app.enableCors({
     origin: 'http://localhost:3000',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    methods: '*',
     credentials: true,
-    allowedHeaders: 'Content-Type, Accept',
+    allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
   })
 
   const cacheManager = app.get<Cache>(CACHE_MANAGER)
