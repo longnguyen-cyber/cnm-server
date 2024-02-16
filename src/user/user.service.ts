@@ -44,6 +44,7 @@ export class UserService implements OnModuleInit {
     users.map((user) => {
       this.commonService.deleteField(user, [])
     })
+
     const userInCache = (await this.cacheManager.get('user')) as any
     if (!userInCache) {
       this.cacheManager.set('user', JSON.stringify(users))
@@ -52,13 +53,17 @@ export class UserService implements OnModuleInit {
     }
   }
 
-  async searchUser(query: string) {
+  async searchUser(query: string, id: string) {
     const users = (await this.cacheManager.get('user')) as any
     if (users) {
       const usersParsed = JSON.parse(users)
       const userFilter = usersParsed.filter((user: any) => {
-        return user.name.toLowerCase().includes(query.toLowerCase())
+        return (
+          user.name.toLowerCase().includes(query.toLowerCase()) &&
+          user.id !== id
+        )
       })
+
       return this.commonService.deleteField(userFilter, [])
     }
   }

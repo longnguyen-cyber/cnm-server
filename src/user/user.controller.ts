@@ -217,8 +217,8 @@ export class UserController {
   }
 
   @Get('/search/:name')
-  async search(@Param('name') name: string): Promise<any> {
-    const user = await this.userService.searchUser(name)
+  async search(@Param('name') name: string, @Req() req: any): Promise<any> {
+    const user = await this.userService.searchUser(name, req.user.id)
     return user
   }
 }
