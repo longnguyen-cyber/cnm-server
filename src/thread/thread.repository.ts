@@ -27,6 +27,14 @@ export class ThreadRepository {
         },
       })
       threadId = newThread.id
+      await prisma.channels.update({
+        where: {
+          id: threadId,
+        },
+        data: {
+          timeThread: new Date(),
+        },
+      })
     } else {
       newThread = await prisma.threads.create({
         data: {
@@ -41,6 +49,14 @@ export class ThreadRepository {
         include: {
           user: true,
           messages: true,
+        },
+      })
+      await prisma.chats.update({
+        where: {
+          id: threadToDB.chatId,
+        },
+        data: {
+          timeThread: new Date(),
         },
       })
       threadId = newThread.id

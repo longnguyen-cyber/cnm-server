@@ -17,6 +17,9 @@ export class ChannelRepository {
       include: {
         users: true,
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
     })
 
     const final = await Promise.all(

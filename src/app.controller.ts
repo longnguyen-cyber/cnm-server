@@ -1,6 +1,16 @@
-import { CACHE_MANAGER, Controller, Get, Inject, Query } from '@nestjs/common'
+import {
+  CACHE_MANAGER,
+  Controller,
+  Get,
+  HttpStatus,
+  Inject,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common'
 import { AppService } from './app.service'
 import { Cache } from 'cache-manager'
+import { AuthGuard } from './auth/guard/auth.guard'
 
 @Controller()
 export class AppController {
@@ -13,5 +23,17 @@ export class AppController {
   async getHello(): Promise<string> {
     console.log('cacheManager', await this.cacheManager.get('key'))
     return this.appService.getHello()
+  }
+
+  @Get('/all')
+  @UseGuards(AuthGuard)
+  async getAll(@Req() req: any) {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
+    return this.appService.getAll(req.user.id)
   }
 }
