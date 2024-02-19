@@ -29,7 +29,7 @@ export class ThreadRepository {
       threadId = newThread.id
       await prisma.channels.update({
         where: {
-          id: threadId,
+          id: threadToDB.channelId,
         },
         data: {
           timeThread: new Date(),
@@ -216,26 +216,22 @@ export class ThreadRepository {
       })
 
       if (!newFile) {
-        return {
-          success: false,
-          message: 'Create thread failed',
-          errors: 'Create file failed',
-          data: null,
-        }
+        throw new HttpException(
+          {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'File error. Please check again',
+          },
+          HttpStatus.BAD_REQUEST,
+        )
       }
     }
 
     return {
-      success: true,
-      message: 'Create thread successfully',
-      errors: '',
-      data: {
-        messages: {
-          ...newMsg,
-        },
-        files: {
-          ...newFile,
-        },
+      messages: {
+        ...newMsg,
+      },
+      files: {
+        ...newFile,
       },
     }
   }

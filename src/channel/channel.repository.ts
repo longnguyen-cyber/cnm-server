@@ -16,31 +16,37 @@ export class ChannelRepository {
       },
       include: {
         users: true,
+        thread: true,
       },
       orderBy: {
         createdAt: 'desc',
       },
     })
 
-    const final = await Promise.all(
-      channels.map(async (channel) => {
-        const userCreated = await prisma.users.findUnique({
-          where: {
-            id: channel.userCreated,
-          },
-        })
-        channel.users.map((user) => {
-          delete user.password
-        })
-        delete userCreated.password
-        return {
-          ...channel,
-          userCreated,
-        }
-      }),
-    )
+    const lastedThreadId = channels.map((chat) => {
+      const thread = chat.thread
+      const lastThread = thread.sort(
+        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+      )
 
-    return channels
+      return lastThread[0].id
+    })[0]
+
+    const lastedThread = await prisma.threads.findUnique({
+      where: {
+        id: lastedThreadId,
+      },
+      include: {
+        messages: true,
+      },
+    })
+
+    return channels.map((channel) => {
+      return {
+        ...channel,
+        lastedThread,
+      }
+    })
   }
 
   async getChannelById(id: string, userId: string, prisma: Tx = this.prisma) {
@@ -53,6 +59,10 @@ export class ChannelRepository {
         thread: true,
       },
     })
+
+    if (!channel) {
+      return null
+    }
 
     const getAllMessageOfThread = async (threadId: string) => {
       const thread = await prisma.threads.findUnique({
@@ -77,6 +87,8 @@ export class ChannelRepository {
           messages,
         }
       }),
+    ).then((rs) =>
+      rs.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
     )
 
     return {

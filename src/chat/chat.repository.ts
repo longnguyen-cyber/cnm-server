@@ -13,6 +13,32 @@ export class ChatRepository {
       },
       include: {
         user: true,
+        thread: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    if (chats.length === 0) {
+      return []
+    }
+
+    const lastedThreadId = chats.map((chat) => {
+      const thread = chat.thread
+      const lastThread = thread.sort(
+        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+      )
+
+      return lastThread[0].id
+    })[0]
+
+    const lastedThread = await prisma.threads.findUnique({
+      where: {
+        id: lastedThreadId,
+      },
+      include: {
+        messages: true,
       },
     })
 
@@ -31,7 +57,12 @@ export class ChatRepository {
       }),
     )
 
-    return final
+    return final.map((chat) => {
+      return {
+        ...chat,
+        lastedThread,
+      }
+    })
   }
 
   async getChatById(id: string, senderId: string, prisma: Tx = this.prisma) {
@@ -100,6 +131,8 @@ export class ChatRepository {
         )
         return threads
       }),
+    ).then((rs) =>
+      rs.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
     )
 
     return {

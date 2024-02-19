@@ -15,7 +15,7 @@ export class ChannelService {
     const channels = await this.channelRepository.getAllChannel(userId)
 
     return channels.map((channel) =>
-      this.commonService.deleteField(channel, ['userId']),
+      this.commonService.deleteField(channel, ['userId', 'thread']),
     )
   }
 

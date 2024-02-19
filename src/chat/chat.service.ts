@@ -12,7 +12,7 @@ export class ChatService {
 
   async getAllChat(userId: string) {
     const rs = await this.chatRepository.getAllChat(userId)
-    return rs.map((chat) => this.buildChatResponse(chat))
+    return rs.map((chat) => this.commonService.deleteField(chat, ['thread']))
   }
 
   async getChatById(chatId: string, userId: string) {

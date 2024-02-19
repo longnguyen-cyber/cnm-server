@@ -41,7 +41,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('sendThread')
-  async handleSendThread(@MessageBody() data: any): Promise<void> {
+  async handleSendThread(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: any,
+  ): Promise<void> {
+    const isAuthenticated = socket.handshake.auth
     const {
       messages,
       fileCreateDto,
