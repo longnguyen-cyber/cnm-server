@@ -69,7 +69,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       channelId,
       chatId,
     )
-    this.server.emit('sendThread', { ...data, id: rs.id })
+    this.server.emit('updatedSendThread', { ...data, id: rs.id })
   }
 
   @SubscribeMessage('updateThread')
@@ -86,7 +86,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       files?: FileCreateDto[]
     } = data
     await this.threadService.updateThread(threadId, senderId, messages, files)
-    this.server.emit('updateThread', data)
+    this.server.emit('updatedSendThread', data)
   }
   @SubscribeMessage('deleteThread')
   async handleDeleteThread(@MessageBody() data: any): Promise<void> {
