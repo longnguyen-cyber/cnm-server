@@ -152,10 +152,17 @@ export class ChatRepository {
         },
       },
     })
-    return {
-      success: true,
-      message: 'Create chat successfully',
-      errors: '',
-    }
+    return true
+  }
+
+  async unfriend(chatId: string, userId: string, prisma: Tx = this.prisma) {
+    const unfriend = await prisma.chats.delete({
+      where: {
+        senderId: userId,
+        id: chatId,
+      },
+    })
+
+    return unfriend !== null
   }
 }

@@ -25,52 +25,50 @@ model users {
   deletedAt                        DateTime?
   chats                            chats[]
   channel                          String[]    @db.ObjectId
-  channels                         channels[]  @relation(fields: [channel], references: [id])
   threads                          threads[]
   reactions                        reactions[]
   isOnline                         Boolean?    @default(false)
 }
 
 model channels {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
   name        String
-  isPublic    Boolean     @default(false)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  isPublic    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
   thread      threads[]
-  bookmark    bookmarks[]
-  userId      String[]    @db.ObjectId
-  users       users[]     @relation(fields: [userId], references: [id])
-  userCreated String?     @unique @db.ObjectId
-  timeThread  DateTime?   @default(now())
+  // bookmark    bookmarks[]
+  users       Json[]
+  userCreated String?   @unique @db.ObjectId
+  timeThread  DateTime? @default(now())
 }
 
 model chats {
-  id         String      @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
-  bookmark   bookmarks[]
+  // bookmark   bookmarks[]
   thread     threads[]
-  receiveId  String      @unique @db.ObjectId
-  senderId   String?     @unique @db.ObjectId
-  user       users?      @relation(fields: [senderId], references: [id])
-  timeThread DateTime?   @default(now())
+  receiveId  String    @unique @db.ObjectId
+  senderId   String?   @unique @db.ObjectId
+  user       users?    @relation(fields: [senderId], references: [id])
+  timeThread DateTime? @default(now())
 }
 
-model bookmarks {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  url       String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  chat      chats?    @relation(fields: [chatId], references: [id])
-  chatId    String?   @db.ObjectId
-  channel   channels? @relation(fields: [channelId], references: [id])
-  channelId String?   @db.ObjectId
-}
+// model bookmarks {
+//   id        String    @id @default(auto()) @map("_id") @db.ObjectId
+//   name      String
+//   url       String
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @updatedAt
+//   deletedAt DateTime?
+//   chat      chats?    @relation(fields: [chatId], references: [id])
+//   chatId    String?   @db.ObjectId
+//   channel   channels? @relation(fields: [channelId], references: [id])
+//   channelId String?   @db.ObjectId
+// }
 
 model threads {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId

@@ -336,12 +336,7 @@ export class ThreadRepository {
       })
 
       if (!deleteMsg && !deleteFile && !deleteReact && !deleteThread) {
-        return {
-          success: false,
-          message: 'Delete thread failed',
-          errors: 'Delete message, file, react and thread failed',
-          data: null,
-        }
+        return false
       }
       return true
     }

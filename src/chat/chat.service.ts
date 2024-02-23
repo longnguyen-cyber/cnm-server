@@ -27,6 +27,10 @@ export class ChatService {
     return chat
   }
 
+  async unfriend(chatId: string, userId: string) {
+    return this.chatRepository.unfriend(chatId, userId)
+  }
+
   private compareToCreateChat(
     senderId: string,
     receiveId: string,

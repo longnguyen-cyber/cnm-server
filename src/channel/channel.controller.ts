@@ -16,6 +16,7 @@ import { AuthGuard } from '../auth/guard/auth.guard'
 import { ChannelService } from './channel.service'
 import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
 import { ChannelCreateDto } from './dto/ChannelCreate.dto'
+import { UserOfChannel } from './dto/UserOfChannel.dto'
 
 @ApiTags('channels')
 @Controller('channels')
@@ -61,6 +62,13 @@ export class ChannelController {
     @Body() channel: ChannelCreateDto,
     @Req() req: any,
   ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not allowed to access this resource',
+      }
+    }
+
     const channelCreateDto = {
       name: channel.name,
       isPublic: channel.isPublic,
@@ -78,7 +86,6 @@ export class ChannelController {
       return {
         status: HttpStatus.BAD_REQUEST,
         message: 'Create channel fail',
-        errors: 'Create channel fail',
       }
     }
   }
@@ -144,7 +151,7 @@ export class ChannelController {
   @Put(':channelId/add-user')
   async addUserToChannel(
     @Param('channelId') channelId: string,
-    @Body('users') users: string[],
+    @Body('users') users: UserOfChannel[],
     @Req() req: any,
   ): Promise<Response> {
     const data = await this.channelService.addUserToChannel(
@@ -167,7 +174,94 @@ export class ChannelController {
       return {
         status: HttpStatus.BAD_REQUEST,
         message: 'Add user to channel fail',
-        errors: 'Add user to channel fail',
+      }
+    }
+  }
+
+  @Delete(':channelId/remove-user')
+  async removeUserFromChannel(
+    @Param('channelId') channelId: string,
+    @Body('users') users: string[],
+    @Req() req: any,
+  ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not authorized to remove user from this channel',
+      }
+    }
+    const data = await this.channelService.removeUserFromChannel(
+      channelId,
+      users,
+    )
+    if (data) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Remove user from channel success',
+      }
+    } else {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Remove user from channel fail',
+      }
+    }
+  }
+
+  @Put(':channelId/update-role')
+  async updateRoleUserInChannel(
+    @Param('channelId') channelId: string,
+    @Body() user: UserOfChannel,
+    @Req() req: any,
+  ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not authorized to update role of this user',
+      }
+    }
+    const data = await this.channelService.updateRoleUserInChannel(
+      channelId,
+      user,
+    )
+    if (data) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Update role user in channel success',
+      }
+    } else {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Update role user in channel fail',
+      }
+    }
+  }
+
+  @Put(':channelId/leave')
+  async leaveChannel(
+    @Param('channelId') channelId: string,
+    @Req() req: any,
+    @Body('transferOwner') transferOwner?: string,
+  ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not authorized to leave this channel',
+      }
+    }
+    const data = await this.channelService.leaveChannel(
+      channelId,
+      req.user.id,
+      transferOwner,
+    )
+    if (data) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Leave channel success',
+      }
+    } else {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Leave channel fail',
       }
     }
   }

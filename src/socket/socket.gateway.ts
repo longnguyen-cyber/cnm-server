@@ -92,7 +92,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleDeleteThread(@MessageBody() data: any): Promise<void> {
     const { threadId, senderId } = data
     const rs = await this.threadService.deleteThread(threadId, senderId)
-    this.server.emit('deleteThread', rs)
+    this.server.emit('updatedSendThread', rs)
   }
   @SubscribeMessage('addReact')
   async handleAddReact(@MessageBody() data: any): Promise<void> {

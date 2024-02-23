@@ -3,6 +3,7 @@ import { ChannelRepository } from './channel.repository'
 import { ChannelCreateDto } from './dto/ChannelCreate.dto'
 import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
 import { CommonService } from '../common/common.service'
+import { UserOfChannel } from './dto/UserOfChannel.dto'
 
 @Injectable()
 export class ChannelService {
@@ -13,7 +14,6 @@ export class ChannelService {
 
   async getAllChannel(userId: string) {
     const channels = await this.channelRepository.getAllChannel(userId)
-
     return channels.map((channel) =>
       this.commonService.deleteField(channel, ['userId', 'thread']),
     )
@@ -51,7 +51,7 @@ export class ChannelService {
 
   async addUserToChannel(
     channelId: string,
-    users: string[],
+    users: UserOfChannel[],
     personAddedId: string,
   ) {
     const added = await this.channelRepository.addUserToChannel(
@@ -61,5 +61,28 @@ export class ChannelService {
     )
 
     return this.commonService.deleteField(added, ['userId'])
+  }
+
+  async removeUserFromChannel(channelId: string, personRemovedId: string[]) {
+    return this.channelRepository.removeUserFromChannel(
+      channelId,
+      personRemovedId,
+    )
+  }
+
+  async updateRoleUserInChannel(channelId: string, user: UserOfChannel) {
+    const updated = await this.channelRepository.updateRoleUserInChannel(
+      channelId,
+      user,
+    )
+    return this.commonService.deleteField(updated, ['userId'])
+  }
+
+  async leaveChannel(
+    channelId: string,
+    userId: string,
+    transferOwner?: string,
+  ) {
+    return this.channelRepository.leaveChannel(channelId, userId, transferOwner)
   }
 }

@@ -21,7 +21,6 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Post()
-  // @UsePipes(new CustomValidationPipe())
   async createChat(
     @Body('receiveId') receiveId: string,
     @Req() req: any,
@@ -86,6 +85,31 @@ export class ChatController {
       return {
         status: HttpStatus.BAD_REQUEST,
         message: 'Not found chat',
+      }
+    }
+  }
+
+  @Put(':chatId/unfriend')
+  async unfriend(
+    @Param('chatId') chatId: string,
+    @Req() req: any,
+  ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
+    const data = await this.chatService.unfriend(chatId, req.user.id)
+    if (data) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Unfriend success',
+      }
+    } else {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Unfriend fail',
       }
     }
   }

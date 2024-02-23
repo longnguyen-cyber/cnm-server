@@ -2,7 +2,7 @@
 import { randomBytes, scrypt, timingSafeEqual } from 'crypto'
 import { JwtPayload, sign, verify } from 'jsonwebtoken'
 import { Injectable } from '@nestjs/common'
-import { Token } from './iterface/auth.interface'
+import { Token } from './interface/auth.interface'
 
 @Injectable()
 export class AuthService {
