@@ -24,7 +24,7 @@ import { ChatService } from './chat.service'
         ttl: 60 * 60 * 24 * 10, // 10 days
         isGlobal: true,
         store: redisStore,
-        // host: configService.get<string>('REDIS_HOST'),
+        host: configService.get<string>('REDIS_HOST'),
         port: configService.get<number>('REDIS_PORT'),
         username: configService.get<string>('REDIS_USERNAME'),
         password: configService.get<string>('REDIS_PASSWORD'),

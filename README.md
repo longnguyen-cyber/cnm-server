@@ -71,3 +71,20 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](LICENSE).
+
+## before lunch deploy
+
+```
+docker network create cnm-network
+docker network connect cnm-network rabbitmq
+docker network connect cnm-network redis
+```
+
+after run docker without server service:
+
+```
+docker network inspect cnm-server_cnm-network
+```
+
+copy ip and change ip in .env file
+run again docker with server service
