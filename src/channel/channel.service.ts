@@ -14,6 +14,7 @@ export class ChannelService {
 
   async getAllChannel(userId: string) {
     const channels = await this.channelRepository.getAllChannel(userId)
+    console.log('channels', channels)
     return channels.map((channel) =>
       this.commonService.deleteField(channel, ['userId', 'thread']),
     )

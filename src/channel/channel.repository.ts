@@ -27,30 +27,57 @@ export class ChannelRepository {
       },
     })
 
-    const lastedThreadId = channels.map((chat) => {
-      const thread = chat.thread
-      const lastThread = thread.sort(
-        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
-      )
+    const userOfChannel = await Promise.all(
+      channels.map(async (channel) => {
+        const userOfChannel = channel.users
+        const users = await prisma.users.findMany({
+          where: {
+            id: {
+              in: userOfChannel.map((user: { id: string }) => user.id),
+            },
+          },
+        })
 
-      return lastThread[0].id
-    })[0]
+        return {
+          ...channel,
+          users,
+        }
+      }),
+    )
 
-    const lastedThread = await prisma.threads.findUnique({
-      where: {
-        id: lastedThreadId,
-      },
-      include: {
-        messages: true,
-      },
-    })
+    if (channels.length === 0) {
+      return []
+    } else {
+      const lastedThreadId = channels
+        .map((chat) => {
+          const thread = chat.thread
+          const lastThread = thread.sort(
+            (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+          )
 
-    return channels.map((channel) => {
-      return {
-        ...channel,
-        lastedThread,
+          return lastThread
+        })
+        .flat()
+
+      if (lastedThreadId.length !== 0) {
+        const lastedThread = await prisma.threads.findUnique({
+          where: {
+            id: lastedThreadId[0].id,
+          },
+          include: {
+            messages: true,
+          },
+        })
+        return userOfChannel.map((channel) => {
+          return {
+            ...channel,
+            lastedThread,
+          }
+        })
+      } else {
+        return userOfChannel
       }
-    })
+    }
   }
 
   async getChannelById(id: string, userId: string, prisma: Tx = this.prisma) {
@@ -68,6 +95,30 @@ export class ChannelRepository {
       return null
     }
 
+    // const userOfChannel = await Promise.all(
+    //   channels.map(async (channel) => {
+    //     const userOfChannel = channel.users
+    //     const users = await prisma.users.findMany({
+    //       where: {
+    //         id: {
+    //           in: userOfChannel.map((user: { id: string }) => user.id),
+    //         },
+    //       },
+    //     })
+
+    //     return {
+    //       ...channel,
+    //       users,
+    //     }
+    //   }),
+    // )
+    const userOfChannel = await prisma.users.findMany({
+      where: {
+        id: {
+          in: channel.users.map((user: { id: string }) => user.id),
+        },
+      },
+    })
     const getAllMessageOfThread = async (threadId: string) => {
       const thread = await prisma.threads.findUnique({
         where: {
@@ -97,6 +148,13 @@ export class ChannelRepository {
 
     return {
       ...channel,
+      users: channel.users.map((user: { id: string }) => {
+        const u = userOfChannel.find((u) => u.id === user.id)
+        return {
+          ...user,
+          ...u,
+        }
+      }),
       thread: newThread,
     }
   }
@@ -156,13 +214,53 @@ export class ChannelRepository {
     userId: string,
     prisma: Tx = this.prisma,
   ): Promise<boolean> {
+    console.log('id', id)
+    console.log('userId', userId)
+    const channel = await prisma.channels.findUnique({
+      where: {
+        id: id,
+        userCreated: userId,
+      },
+      include: {
+        thread: true,
+      },
+    })
+    console.log('channel', channel)
     const rs = await prisma.channels.delete({
       where: {
         id: id,
         userCreated: userId,
       },
     })
+
+    //test faill
     if (rs) {
+      await prisma.threads.deleteMany({
+        where: {
+          channelId: id,
+        },
+      })
+
+      channel?.thread.map(async (thread) => {
+        await prisma.messages.deleteMany({
+          where: {
+            threadId: thread.id,
+          },
+        })
+
+        await prisma.files.deleteMany({
+          where: {
+            threadId: thread.id,
+          },
+        })
+
+        await prisma.reactions.deleteMany({
+          where: {
+            threadId: thread.id,
+          },
+        })
+      })
+
       return true
     }
     return false
@@ -251,6 +349,7 @@ export class ChannelRepository {
     return false
   }
 
+  //missing if user not in users
   async updateRoleUserInChannel(
     channelId: string,
     user: UserOfChannel,

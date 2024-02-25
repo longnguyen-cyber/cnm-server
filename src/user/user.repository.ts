@@ -88,7 +88,7 @@ export class UserRepository {
 const findChannelOfUser = async (userId: string, prisma: any) => {
   const channels = await prisma.channels.findMany({
     where: {
-      userId: {
+      users: {
         has: userId,
       },
     },

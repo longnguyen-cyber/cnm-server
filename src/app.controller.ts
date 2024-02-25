@@ -21,8 +21,7 @@ export class AppController {
 
   @Get('/health-check')
   async getHello(): Promise<string> {
-    console.log('cacheManager', await this.cacheManager.get('key'))
-    return this.appService.getHello()
+    return "I'm alive!"
   }
 
   @Get('/all')
