@@ -241,7 +241,7 @@ export class ThreadRepository {
     const senderId = threadToDB.senderId
     const messages = threadToDB.messages
     const files = threadToDB.file
-    const threadUpdate = await prisma.threads.findUnique({
+    const threadUpdate = await prisma.threads.findMany({
       where: {
         senderId,
         threadId,

@@ -40,7 +40,7 @@ model channels {
   thread      threads[]
   // bookmark    bookmarks[]
   users       Json[]
-  userCreated String?   @unique @db.ObjectId
+  userCreated String?   @db.ObjectId
   timeThread  DateTime? @default(now())
 }
 
@@ -52,7 +52,7 @@ model chats {
   // bookmark   bookmarks[]
   thread     threads[]
   receiveId  String    @unique @db.ObjectId
-  senderId   String?   @unique @db.ObjectId
+  senderId   String?   @db.ObjectId
   user       users?    @relation(fields: [senderId], references: [id])
   timeThread DateTime? @default(now())
 }
@@ -79,13 +79,13 @@ model threads {
   isReply   Boolean?
   isRecall  Boolean?  @default(false)
 
-  receiveId String?   @unique @db.ObjectId
-  senderId  String?   @unique @db.ObjectId
+  receiveId String?   @db.ObjectId
+  senderId  String?   @db.ObjectId
   user      users?    @relation(fields: [senderId], references: [id])
-  chatId    String?   @unique @db.ObjectId
+  chatId    String?   @db.ObjectId
   chats     chats?    @relation(fields: [chatId], references: [id])
   channel   channels? @relation(fields: [channelId], references: [id])
-  channelId String?   @unique @db.ObjectId
+  channelId String?   @db.ObjectId
 
   //self relation
   threadId String?   @db.ObjectId

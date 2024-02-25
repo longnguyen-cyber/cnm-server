@@ -83,7 +83,7 @@ docker network connect cnm-network redis
 after run docker without server service:
 
 ```
-docker network inspect cnm-server_cnm-network
+docker network inspect cnm-network
 ```
 
 copy ip and change ip in .env file
