@@ -28,7 +28,8 @@ import { AppService } from './app.service'
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: '.env',
+      envFilePath: '.env.dev',
+      isGlobal: true,
     }),
     UserModule,
     PrismaModule,

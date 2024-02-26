@@ -12,7 +12,6 @@ export class ChatRepository {
         senderId: userId,
       },
       include: {
-        user: true,
         thread: true,
       },
       orderBy: {
@@ -24,45 +23,60 @@ export class ChatRepository {
       return []
     }
 
-    const lastedThreadId = chats.map((chat) => {
+    let latestThread = new Map()
+
+    chats.map((chat) => {
       const thread = chat.thread
-      const lastThread = thread.sort(
-        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
-      )
+      if (thread.length === 0) {
+        latestThread.set(chat.id, '')
+      } else {
+        const lastThread = thread.sort(
+          (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+        )
 
-      return lastThread[0].id
-    })[0]
-
-    const lastedThread = await prisma.threads.findUnique({
-      where: {
-        id: lastedThreadId,
-      },
-      include: {
-        messages: true,
-      },
-    })
-
-    const final = await Promise.all(
-      chats.map(async (chat) => {
-        const userReceive = await prisma.users.findUnique({
-          where: {
-            id: chat.receiveId,
-          },
-        })
-
-        return {
-          ...chat,
-          userReceive,
-        }
-      }),
-    )
-
-    return final.map((chat) => {
-      return {
-        ...chat,
-        lastedThread,
+        latestThread.set(chat.id, lastThread[0].id)
       }
     })
+    //check value of hashmap is empty or not
+    let lastedThreadId = []
+    latestThread.forEach((value, key) => {
+      if (value !== '') {
+        lastedThreadId.push({ id: value })
+      }
+    })
+
+    if (lastedThreadId.length === 0) {
+      return chats
+    } else {
+      const final = await Promise.all(
+        chats.map(async (chat) => {
+          const userReceive = await prisma.users.findUnique({
+            where: {
+              id: chat.receiveId,
+            },
+          })
+          let lastedThread = null
+          if (latestThread.get(chat.id) !== '') {
+            lastedThread = await prisma.threads.findUnique({
+              where: {
+                id: latestThread.get(chat.id),
+              },
+              include: {
+                messages: true,
+              },
+            })
+          }
+
+          return {
+            ...chat,
+            userReceive,
+            lastedThread,
+          }
+        }),
+      )
+
+      return final
+    }
   }
 
   async getChatById(id: string, senderId: string, prisma: Tx = this.prisma) {

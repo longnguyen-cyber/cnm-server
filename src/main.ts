@@ -4,12 +4,16 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 
 async function bootstrap() {
+  //use file env.dev
+
   const APP_PORT = process.env.APP_PORT
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     cors: {
       origin: '*',
     },
   })
+
+  // app.
 
   app.setGlobalPrefix('api')
 
@@ -20,8 +24,6 @@ async function bootstrap() {
     .build()
   const document = SwaggerModule.createDocument(app, config)
   SwaggerModule.setup('doc', app, document)
-
-  console.log('APP_PORT', APP_PORT)
 
   app.enableCors({
     origin: 'http://localhost:3000',

@@ -301,15 +301,27 @@ export class ThreadRepository {
 
   async deleteThread(
     threadId: string,
-    senderId: string,
+    senderId?: string,
+    receiveId?: string,
     prisma: Tx = this.prisma,
   ) {
-    const thread = await prisma.threads.findUnique({
-      where: {
-        id: threadId,
-        senderId,
-      },
-    })
+    let thread = null
+    if (senderId) {
+      thread = await prisma.threads.findFirst({
+        where: {
+          id: threadId,
+          senderId,
+        },
+      })
+    } else if (receiveId) {
+      thread = await prisma.threads.findFirst({
+        where: {
+          id: threadId,
+          receiveId,
+        },
+      })
+    }
+
     if (thread) {
       const deleteMsg = await prisma.messages.deleteMany({
         where: {

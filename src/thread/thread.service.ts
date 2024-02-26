@@ -76,6 +76,8 @@ export class ThreadService {
     senderId: string,
     messageCreateDto?: MessageCreateDto,
     fileCreateDto?: FileCreateDto[],
+    chatId?: string,
+    channelId?: string,
   ) {
     const oldThread = await this.threadRepository.getThreadById(threadId)
     const threadToDb = this.compareToUpdateThread(
@@ -133,9 +135,13 @@ export class ThreadService {
     return thread
   }
 
-  async deleteThread(threadId: string, senderId: string) {
+  async deleteThread(threadId: string, senderId?: string, receiveId?: string) {
     const oldFile = await this.threadRepository.getThreadById(threadId)
-    const thread = await this.threadRepository.deleteThread(threadId, senderId)
+    const thread = await this.threadRepository.deleteThread(
+      threadId,
+      senderId,
+      receiveId,
+    )
     if (thread && oldFile.files.length > 0) {
       const files = oldFile.files.map((file) => {
         return this.commonService.getFileName(file.path)

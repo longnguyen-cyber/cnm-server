@@ -79,19 +79,34 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       senderId,
       messages,
       files,
+      chatId,
+      channelId,
     }: {
       threadId: string
       senderId: string
       messages?: MessageCreateDto
       files?: FileCreateDto[]
+      chatId?: string
+      channelId?: string
     } = data
-    await this.threadService.updateThread(threadId, senderId, messages, files)
+    await this.threadService.updateThread(
+      threadId,
+      senderId,
+      messages,
+      files,
+      chatId,
+      channelId,
+    )
     this.server.emit('updatedSendThread', data)
   }
   @SubscribeMessage('deleteThread')
   async handleDeleteThread(@MessageBody() data: any): Promise<void> {
-    const { threadId, senderId } = data
-    const rs = await this.threadService.deleteThread(threadId, senderId)
+    const { threadId, senderId, receiveId } = data
+    const rs = await this.threadService.deleteThread(
+      threadId,
+      senderId,
+      receiveId,
+    )
     this.server.emit('updatedSendThread', rs)
   }
   @SubscribeMessage('addReact')

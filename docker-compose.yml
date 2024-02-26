@@ -12,8 +12,8 @@ services:
       - '5672'
     env_file:
       - .env
-    networks:
-      - backend_network
+    # networks:
+    #   - backend_network
 
   redis_prod:
     image: redis:latest
@@ -29,27 +29,27 @@ services:
       - HOST=${REDIS_HOST}
     env_file:
       - .env
-    networks:
-      - backend_network
+    # networks:
+    #   - backend_network
 
-  # server:
-  #   build:
-  #     context: ./
-  #     dockerfile: Dockerfile
-  #   container_name: server_prod
-  #   ports:
-  #     - '8080:8080'
-  #   expose:
-  #     - '8080'
+  #   server:
+  #     build:
+  #       context: ./
+  #       dockerfile: Dockerfile
+  #     container_name: server_prod
+  #     ports:
+  #       - '8080:8080'
+  #     expose:
+  #       - '8080'
 
-  #   depends_on:
-  #     - rabbitmq_prod
-  #     - redis_prod
-  #   networks:
-  #     - backend_network
-networks:
-  backend_network:
-    driver: bridge
+  #     depends_on:
+  #       - rabbitmq_prod
+  #       - redis_prod
+  #     # networks:
+  #     #   - backend_network
+  # networks:
+  # backend_network:
+  #   driver: bridge
 
 volumes:
   redis:

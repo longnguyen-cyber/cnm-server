@@ -79,6 +79,7 @@ export class UserController {
     if (!isCodeValid) {
       throw new UnauthorizedException('Wrong authentication code')
     }
+    await this.userService.turnOnTwoFactorAuthentication(request)
     return {
       status: HttpStatus.OK,
       message: 'Turn on 2FA success',
@@ -103,7 +104,7 @@ export class UserController {
     return {
       status: HttpStatus.OK,
       message: '2FA success',
-      data: request.user,
+      data: this.commonService.deleteField(request.user, ['']),
     }
   }
 

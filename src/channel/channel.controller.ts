@@ -154,26 +154,27 @@ export class ChannelController {
     @Body('users') users: UserOfChannel[],
     @Req() req: any,
   ): Promise<Response> {
-    const data = await this.channelService.addUserToChannel(
-      channelId,
-      users,
-      req.user.id,
-    )
     if (req.error) {
       return {
         status: HttpStatus.FORBIDDEN,
         message: 'You are not authorized to add user to this channel',
       }
-    }
-    if (data) {
-      return {
-        status: HttpStatus.OK,
-        message: 'Add user to channel success',
-      }
     } else {
-      return {
-        status: HttpStatus.BAD_REQUEST,
-        message: 'Add user to channel fail',
+      const data = await this.channelService.addUserToChannel(
+        channelId,
+        users,
+        req.user.id,
+      )
+      if (data) {
+        return {
+          status: HttpStatus.OK,
+          message: 'Add user to channel success',
+        }
+      } else {
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Add user to channel fail',
+        }
       }
     }
   }

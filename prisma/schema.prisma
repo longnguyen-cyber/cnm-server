@@ -40,7 +40,7 @@ model channels {
   thread      threads[]
   // bookmark    bookmarks[]
   users       Json[]
-  userCreated String?   @unique @db.ObjectId
+  userCreated String?   @db.ObjectId
   timeThread  DateTime? @default(now())
 }
 
