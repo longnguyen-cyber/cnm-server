@@ -169,11 +169,74 @@ export class ChatRepository {
     return true
   }
 
+  async reqAddFriend(
+    chatId: string,
+    receiveId: string,
+    prisma: Tx = this.prisma,
+  ) {
+    const reqAddFriend = await prisma.chats.update({
+      where: {
+        id: chatId,
+        receiveId,
+      },
+      data: {
+        requestAdd: true,
+      },
+    })
+
+    return reqAddFriend !== null
+  }
+
+  async acceptAddFriend(
+    chatId: string,
+    senderId: string,
+    prisma: Tx = this.prisma,
+  ) {
+    const acceptAddFriend = await prisma.chats.update({
+      where: {
+        id: chatId,
+        senderId,
+      },
+      data: {
+        requestAdd: false,
+        isFriend: true,
+      },
+    })
+
+    return acceptAddFriend !== null
+  }
+
+  async whitelistFriendAccept(senderId: string, prisma: Tx = this.prisma) {
+    const whitelistFriendAccept = await prisma.chats.findMany({
+      where: {
+        senderId,
+        isFriend: true,
+      },
+    })
+
+    return whitelistFriendAccept
+  }
+
+  async waitlistFriendAccept(senderId: string, prisma: Tx = this.prisma) {
+    const waitlistFriendAccept = await prisma.chats.findMany({
+      where: {
+        senderId,
+        requestAdd: true,
+      },
+    })
+
+    return waitlistFriendAccept
+  }
+
   async unfriend(chatId: string, userId: string, prisma: Tx = this.prisma) {
-    const unfriend = await prisma.chats.delete({
+    const unfriend = await prisma.chats.update({
       where: {
         senderId: userId,
         id: chatId,
+      },
+      data: {
+        isFriend: false,
+        requestAdd: false,
       },
     })
 

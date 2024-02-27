@@ -69,7 +69,7 @@ export class UserService implements OnModuleInit {
 
   async login({ email, password }: any): Promise<any> {
     const user = await this.checkLoginData(email, password)
-    const token = this.authService.generateJWT(user.id.toString())
+    const token = this.authService.generateJWT(email)
     await this.cacheManager.set(token, JSON.stringify(user))
     this.commonService.deleteField(user, [])
     return {
@@ -124,7 +124,10 @@ export class UserService implements OnModuleInit {
       )
     }
 
-    return this.commonService.deleteField(this.buildUserResponse(user), [,])
+    return {
+      ...this.commonService.deleteField(this.buildUserResponse(user), []),
+      token: accessToken,
+    }
   }
 
   //old
@@ -214,6 +217,32 @@ export class UserService implements OnModuleInit {
     return this.commonService.deleteField(this.buildUserResponse(userUpdate), [
       ,
     ])
+  }
+
+  async logout(req: any) {
+    const token = req.token
+    await this.cacheManager.del(token)
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.userRepository.getUserByEmail(email)
+    if (user) {
+      const token = this.authService.generateJWT(email)
+      this.cacheManager.set(token, JSON.stringify(user))
+      await this.mailQueue.add(
+        'forgot-password',
+        {
+          to: email,
+          name: user.name,
+          token,
+        },
+        {
+          removeOnComplete: true,
+        },
+      )
+      return true
+    }
+    return false
   }
 
   //2fa

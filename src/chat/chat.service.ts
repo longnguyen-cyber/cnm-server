@@ -27,6 +27,22 @@ export class ChatService {
     return chat
   }
 
+  async reqAddFriend(chatId: string, receiveId: string) {
+    return this.chatRepository.reqAddFriend(chatId, receiveId)
+  }
+
+  async acceptAddFriend(chatId: string, userId: string) {
+    return this.chatRepository.acceptAddFriend(chatId, userId)
+  }
+
+  async whitelistFriendAccept(userId: string) {
+    return this.chatRepository.whitelistFriendAccept(userId)
+  }
+
+  async waitlistFriendAccept(userId: string) {
+    return this.chatRepository.waitlistFriendAccept(userId)
+  }
+
   async unfriend(chatId: string, userId: string) {
     return this.chatRepository.unfriend(chatId, userId)
   }

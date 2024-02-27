@@ -89,6 +89,103 @@ export class ChatController {
     }
   }
 
+  @Put(':chatId/reqAddFriend')
+  async reqAddFriend(
+    @Param('chatId') chatId: string,
+    @Body('receiveId') receiveId: string,
+    @Req() req: any,
+  ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
+    const data = await this.chatService.reqAddFriend(chatId, receiveId)
+    if (data) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Request friend success',
+      }
+    } else {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Request friend fail',
+      }
+    }
+  }
+
+  @Put(':chatId/acceptAddFriend')
+  async acceptAddFriend(
+    @Param('chatId') chatId: string,
+    @Req() req: any,
+  ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
+    const data = await this.chatService.acceptAddFriend(chatId, req.user.id)
+    if (data) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Accept friend success',
+      }
+    } else {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Accept friend fail',
+      }
+    }
+  }
+
+  @Get('friend/whitelistFriendAccept')
+  async whitelistFriendAccept(@Req() req: any): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
+    const data = await this.chatService.whitelistFriendAccept(req.user.id)
+    if (data) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Whitelist friend success',
+        data,
+      }
+    } else {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Whitelist friend fail',
+      }
+    }
+  }
+
+  @Get('friend/waitlistFriendAccept')
+  async waitlistFriendAccept(@Req() req: any): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
+    const data = await this.chatService.waitlistFriendAccept(req.user.id)
+    if (data) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Waitlist friend success',
+        data,
+      }
+    } else {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Waitlist friend fail',
+      }
+    }
+  }
+
   @Put(':chatId/unfriend')
   async unfriend(
     @Param('chatId') chatId: string,

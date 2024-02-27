@@ -38,6 +38,7 @@ export class UserController {
   // @UsePipes(new CustomValidationPipe())
   async createUsers(@Body() userCreateDto: UserCreateDto): Promise<Respon> {
     const rs = await this.userService.createUser(userCreateDto)
+    console.log(rs)
     if (rs) {
       return {
         status: HttpStatus.CREATED,
@@ -185,15 +186,16 @@ export class UserController {
     }
 
     let data: any = userUpdateDto
-    const limitSize = this.commonService.limitFileSize(file.size)
-    if (!limitSize) {
-      return {
-        status: HttpStatus.BAD_REQUEST,
-        message: 'File size is too large',
-        errors: `Currently the file size has exceeded our limit (2MB). Your file size is ${this.commonService.convertToSize(file.size)}. Please try again with a smaller file.`,
-      }
-    }
+    console.log(data)
     if (file) {
+      const limitSize = this.commonService.limitFileSize(file.size)
+      if (!limitSize) {
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'File size is too large',
+          errors: `Currently the file size has exceeded our limit (2MB). Your file size is ${this.commonService.convertToSize(file.size)}. Please try again with a smaller file.`,
+        }
+      }
       data = {
         ...userUpdateDto,
         avatar: JSON.stringify({
@@ -221,5 +223,31 @@ export class UserController {
   async search(@Param('name') name: string, @Req() req: any): Promise<any> {
     const user = await this.userService.searchUser(name, req.user.id)
     return user
+  }
+
+  @Post('logout')
+  @UseGuards(AuthGuard)
+  async logout(@Request() request: any): Promise<Respon> {
+    await this.userService.logout(request)
+    return {
+      status: HttpStatus.OK,
+      message: 'Logout success',
+    }
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: any): Promise<Respon> {
+    const rs = await this.userService.forgotPassword(body.email)
+    if (rs) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Forgot password success',
+      }
+    } else {
+      return {
+        status: HttpStatus.NOT_FOUND,
+        message: 'Forgot password fail',
+      }
+    }
   }
 }
