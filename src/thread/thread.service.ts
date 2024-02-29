@@ -1,13 +1,13 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common'
+import { AppService } from '../app.service'
 import { CommonService } from '../common/common.service'
+import { Queue, UploadMethod } from '../enums'
+import { RabbitMQService } from '../rabbitmq/rabbitmq.service'
 import { FileCreateDto } from './dto/fileCreate.dto'
 import { MessageCreateDto } from './dto/messageCreate.dto'
-import { ReactCreateDto } from './dto/reactCreate.dto'
 import { ReactToDBDto } from './dto/relateDB/reactToDB.dto'
 import { ThreadToDBDto } from './dto/relateDB/threadToDB.dto'
 import { ThreadRepository } from './thread.repository'
-import { RabbitMQService } from '../rabbitmq/rabbitmq.service'
-import { Queue, UploadMethod } from '../enums'
 
 @Injectable()
 export class ThreadService {
@@ -16,6 +16,7 @@ export class ThreadService {
     private commonService: CommonService,
     @Inject('RabbitMQUploadService')
     private readonly rabbitMQService: RabbitMQService,
+    @Inject(AppService) private appService: AppService,
   ) {}
 
   async createThread(
@@ -68,6 +69,9 @@ export class ThreadService {
     }
 
     const thread = await this.threadRepository.createThread(threadToDb)
+    if (thread) {
+      this.appService.getAll(senderId)
+    }
     return thread
   }
 

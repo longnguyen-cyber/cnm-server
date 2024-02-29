@@ -46,7 +46,23 @@ export class ChatRepository {
     })
 
     if (lastedThreadId.length === 0) {
-      return chats
+      const final = await Promise.all(
+        chats.map(async (chat) => {
+          const userReceive = await prisma.users.findUnique({
+            where: {
+              id: chat.receiveId,
+            },
+          })
+
+          return {
+            ...chat,
+            userReceive,
+            lastedThread: null,
+          }
+        }),
+      )
+
+      return final
     } else {
       const final = await Promise.all(
         chats.map(async (chat) => {

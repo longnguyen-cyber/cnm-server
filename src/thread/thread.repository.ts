@@ -75,7 +75,9 @@ export class ThreadRepository {
           message: messages.message,
         },
       })
-    } else if (threadToDB.file !== undefined || threadToDB.file !== null) {
+    }
+    console.log(threadToDB)
+    if (threadToDB.file !== undefined && threadToDB.file !== null) {
       newFile = threadToDB.file.map(async (file) => {
         return await prisma.files.create({
           data: {
