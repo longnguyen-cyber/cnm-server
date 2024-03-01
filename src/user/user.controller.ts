@@ -10,7 +10,6 @@ import {
   Put,
   Query,
   Req,
-  Request,
   UnauthorizedException,
   UploadedFile,
   UseGuards,
@@ -24,6 +23,7 @@ import { Response as Respon } from '../common/common.type'
 import { UserCreateDto } from './dto/userCreate.dto'
 import { UserUpdateDto } from './dto/userUpdate.dto'
 import { UserService } from './user.service'
+import { Request } from 'express'
 
 @ApiTags('users')
 @Controller('users')
@@ -36,19 +36,46 @@ export class UserController {
 
   @Post('register')
   // @UsePipes(new CustomValidationPipe())
-  async createUsers(@Body() userCreateDto: UserCreateDto): Promise<Respon> {
-    const rs = await this.userService.createUser(userCreateDto)
-    console.log(rs)
+  async createUsers(
+    @Body() userCreateDto: UserCreateDto,
+    @Req() req: Request,
+  ): Promise<Respon> {
+    const clientUrl = req.get('Referer')
+    const rs = await this.userService.createUser(userCreateDto, clientUrl)
     if (rs) {
       return {
         status: HttpStatus.CREATED,
-        message: 'Create user success',
-        data: rs,
+        message: 'Please check your email to verify your account',
       }
     } else {
       return {
         status: HttpStatus.BAD_REQUEST,
-        message: 'Create user fail',
+        message: 'Register fail',
+      }
+    }
+  }
+
+  @Get('verify-email')
+  async verify(@Req() req: any): Promise<Respon> {
+    if (req.error) {
+      return {
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Token expired or invalid',
+        errors: req.error,
+      }
+    }
+
+    const rs = await this.userService.verifyUser(req.token)
+    if (rs) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Verify user success',
+        data: rs,
+      }
+    } else {
+      return {
+        status: HttpStatus.NOT_FOUND,
+        message: 'Verify user fail',
       }
     }
   }
@@ -56,7 +83,7 @@ export class UserController {
   // 2fa
   @Post('2fa/generate')
   @UseGuards(AuthGuard)
-  async register(@Request() request: any): Promise<Respon> {
+  async register(@Req() request: any): Promise<Respon> {
     const { otpAuthUrl } =
       await this.userService.generateTwoFactorAuthenticationSecret(request)
 
@@ -70,7 +97,7 @@ export class UserController {
   @Post('2fa/turn-on')
   @UseGuards(AuthGuard)
   async turnOnTwoFactorAuthentication(
-    @Request() request: any,
+    @Req() request: any,
     @Body() body: any,
   ): Promise<Respon> {
     const isCodeValid = this.userService.isTwoFactorAuthenticationCodeValid(
@@ -89,10 +116,7 @@ export class UserController {
 
   @Post('2fa/authenticate')
   @UseGuards(AuthGuard)
-  async authenticate(
-    @Request() request: any,
-    @Body() body: any,
-  ): Promise<Respon> {
+  async authenticate(@Req() request: any, @Body() body: any): Promise<Respon> {
     const isCodeValid = this.userService.isTwoFactorAuthenticationCodeValid(
       body.twoFactorAuthenticationCode,
       request.user,
@@ -110,7 +134,6 @@ export class UserController {
   }
 
   @Post('login')
-  // @UsePipes(new CustomValidationPipe())
   async login(@Body() userLoginDto: any, @Req() req: any): Promise<Respon> {
     if (req.error) {
       const user = await this.userService.login(userLoginDto)
@@ -170,7 +193,6 @@ export class UserController {
   }
 
   @Put('update')
-  // @UsePipes(new CustomValidationPipe())
   @UseInterceptors(FileInterceptor('avatar'))
   async updateCurrentUser(
     @Body() userUpdateDto: UserUpdateDto,
@@ -186,7 +208,6 @@ export class UserController {
     }
 
     let data: any = userUpdateDto
-    console.log(data)
     if (file) {
       const limitSize = this.commonService.limitFileSize(file.size)
       if (!limitSize) {
@@ -227,7 +248,7 @@ export class UserController {
 
   @Post('logout')
   @UseGuards(AuthGuard)
-  async logout(@Request() request: any): Promise<Respon> {
+  async logout(@Req() request: any): Promise<Respon> {
     await this.userService.logout(request)
     return {
       status: HttpStatus.OK,

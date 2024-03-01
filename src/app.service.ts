@@ -10,9 +10,7 @@ export class AppService {
     private readonly chatService: ChatService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
-  async getHello(userId: string): Promise<string> {
-    const redis = (await this.cacheManager.get(userId)) as any
-    console.log(redis)
+  async getHello() {
     return 'Health check'
   }
 

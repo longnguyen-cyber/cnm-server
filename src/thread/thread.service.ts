@@ -172,14 +172,16 @@ export class ThreadService {
     senderId?: string,
     messageCreateDto?: MessageCreateDto,
     fileCreateDto?: FileCreateDto[],
+    channelId?: string,
+    chatId?: string,
   ) {
     const thread = this.compareToCreateThread(
       messageCreateDto,
       fileCreateDto,
       senderId,
       null,
-      null,
-      null,
+      channelId,
+      chatId,
       threadId,
     )
 
@@ -197,6 +199,9 @@ export class ThreadService {
       }
     }
     const reply = await this.threadRepository.createReplyThread(thread)
+    if (reply) {
+      this.appService.getAll(senderId)
+    }
     return reply
   }
 

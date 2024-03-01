@@ -99,6 +99,35 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     )
     this.server.emit('updatedSendThread', data)
   }
+
+  @SubscribeMessage('replyThread')
+  async handleReplyThread(@MessageBody() data: any): Promise<void> {
+    const {
+      threadId,
+      userId,
+      messages,
+      files,
+      chatId,
+      channelId,
+    }: {
+      threadId: string
+      userId: string
+      messages?: MessageCreateDto
+      files?: FileCreateDto[]
+      chatId?: string
+      channelId?: string
+    } = data
+    await this.threadService.createReplyThread(
+      threadId,
+      userId,
+      messages,
+      files,
+      channelId,
+      chatId,
+    )
+    this.server.emit('updatedSendThread', data)
+  }
+
   @SubscribeMessage('deleteThread')
   async handleDeleteThread(@MessageBody() data: any): Promise<void> {
     const { threadId, senderId, receiveId } = data

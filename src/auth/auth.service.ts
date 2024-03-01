@@ -81,6 +81,12 @@ export class AuthService {
     })
   }
 
+  generateJWTRegisterAndLogin(email: string): string {
+    return sign({ email }, process.env.JWT_REGISTER_SECRET, {
+      expiresIn: '15m',
+    })
+  }
+
   generateJWT(email: string): string {
     return sign({ email }, process.env.JWT_SECRET, { expiresIn: '1d' })
   }

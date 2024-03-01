@@ -3,6 +3,7 @@
 import { InjectQueue } from '@nestjs/bull'
 import {
   CACHE_MANAGER,
+  HttpException,
   HttpStatus,
   Inject,
   Injectable,
@@ -69,6 +70,18 @@ export class UserService implements OnModuleInit {
 
   async login({ email, password }: any): Promise<any> {
     const user = await this.checkLoginData(email, password)
+    if (user.isTwoFactorAuthenticationEnabled) {
+      const token = this.authService.generateJWTRegisterAndLogin(email)
+      await this.cacheManager.set(token, JSON.stringify(user))
+      throw new HttpException(
+        {
+          message: 'Please provide two factor authentication code',
+          token,
+        },
+        HttpStatus.OK,
+      )
+    }
+
     const token = this.authService.generateJWT(email)
     await this.cacheManager.set(token, JSON.stringify(user))
     this.commonService.deleteField(user, [])
@@ -92,42 +105,66 @@ export class UserService implements OnModuleInit {
     return this.commonService.deleteField(user, [])
   }
 
-  async createUser(userCreateDto: UserCreateDto) {
+  async createUser(userCreateDto: UserCreateDto, clientUrl: string) {
     const userClean = { ...userCreateDto }
 
     const { email } = userClean
 
     await this.checkUniqueUser(email)
-    const passwordHashed = await this.authService.hashPassword(
-      userClean.password,
-    )
-
-    const data = {
-      ...userClean,
-      password: passwordHashed,
+    const emailExist = await this.cacheManager.get(email)
+    if (emailExist) {
+      throw new HttpExceptionCustom(
+        'email already exists',
+        HttpStatus.BAD_REQUEST,
+      )
     }
+    this.cacheManager.set(email, true)
 
-    const accessToken = this.authService.generateJWT(email)
-    const user = await this.userRepository.createUser(data)
+    const accessToken = this.authService.generateJWTRegisterAndLogin(email) //expires in 15 minutes
+    // const user = await this.userRepository.createUser(data)
 
-    if (user) {
-      this.cacheManager.set(accessToken, JSON.stringify(user))
+    if (userClean) {
+      this.cacheManager.set(accessToken, JSON.stringify(userClean))
       await this.mailQueue.add(
         'register',
         {
-          to: data.email,
-          name: data.name,
+          to: userClean.email,
+          name: userClean.name,
+          link: `${clientUrl}/auth/verify-email?token=${accessToken}`,
         },
         {
           removeOnComplete: true,
         },
       )
+      return true
     }
 
-    return {
-      ...this.commonService.deleteField(this.buildUserResponse(user), []),
-      token: accessToken,
+    return false
+  }
+
+  async verifyUser(token: string) {
+    const user = await this.cacheManager.get(token)
+    if (user) {
+      const userParsed = JSON.parse(user as any)
+      const passwordHashed = await this.authService.hashPassword(
+        userParsed.password,
+      )
+
+      const data = {
+        ...userParsed,
+        password: passwordHashed,
+      }
+
+      const userCreated = await this.userRepository.createUser(data)
+      if (userCreated) {
+        this.cacheManager.del(token)
+        this.cacheManager.del(userParsed.email)
+        const accessToken = this.authService.generateJWT(userCreated.email)
+        this.cacheManager.set(accessToken, JSON.stringify(userCreated))
+        return userCreated
+      }
     }
+    return false
   }
 
   //old

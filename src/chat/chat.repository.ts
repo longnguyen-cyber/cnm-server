@@ -121,6 +121,14 @@ export class ChatRepository {
           user: true,
           files: true,
           reactions: true,
+          replys: {
+            include: {
+              user: true,
+              files: true,
+              reactions: true,
+              messages: true,
+            },
+          },
         },
       })
       const receiveID = thread?.receiveId

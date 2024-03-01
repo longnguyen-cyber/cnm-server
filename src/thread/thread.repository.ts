@@ -76,7 +76,6 @@ export class ThreadRepository {
         },
       })
     }
-    console.log(threadToDB)
     if (threadToDB.file !== undefined && threadToDB.file !== null) {
       newFile = threadToDB.file.map(async (file) => {
         return await prisma.files.create({
@@ -177,12 +176,12 @@ export class ThreadRepository {
     const messages = threadToDB.messages
     const threadId = threadToDB.threadId
     const senderId = threadToDB.senderId
+    const files = threadToDB.file
     let newMsg: any
     let newFile: any
     const newMsgReply = await prisma.threads.create({
       data: {
         senderId: senderId,
-        isReply: true,
       },
     })
     await prisma.threads.update({
@@ -195,6 +194,7 @@ export class ThreadRepository {
             id: newMsgReply.id,
           },
         },
+        isReply: true,
       },
     })
 
@@ -205,8 +205,9 @@ export class ThreadRepository {
           message: messages.message,
         },
       })
-    } else if (threadToDB.file !== null) {
-      newFile = threadToDB.file.map(async (file) => {
+    }
+    if (files !== null) {
+      newFile = files.map(async (file) => {
         return await prisma.files.create({
           data: {
             filename: file.fileName,
@@ -226,6 +227,23 @@ export class ThreadRepository {
           HttpStatus.BAD_REQUEST,
         )
       }
+    }
+
+    if (!newMsgReply || !newMsg) {
+      await prisma.threads.delete({
+        where: {
+          id: newMsgReply.id,
+        },
+      })
+
+      await prisma.threads.update({
+        where: {
+          id: threadId,
+        },
+        data: {
+          isReply: false,
+        },
+      })
     }
 
     return {

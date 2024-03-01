@@ -16,7 +16,7 @@ async function bootstrap() {
   // app.
 
   app.setGlobalPrefix('api')
-
+  app.set('trust proxy', true)
   const config = new DocumentBuilder()
     .setTitle('NestJS Prisma')
     .setDescription('NestJS Prisma API description')

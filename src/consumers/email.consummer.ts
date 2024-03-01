@@ -12,9 +12,10 @@ export class EmailConsumer {
     await this.mailerService.sendMail({
       to: job.data['to'],
       subject: 'Welcome to my website',
-      template: './email',
+      template: './verify_account',
       context: {
         name: job.data['name'],
+        link: job.data['link'],
       },
     })
     const time2 = new Date()
