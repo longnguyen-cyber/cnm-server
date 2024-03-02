@@ -25,7 +25,11 @@ export class ChannelService {
       userId,
     )
 
-    return this.commonService.deleteField(channel, ['userId'])
+    return this.commonService.deleteField(
+      channel,
+      ['userId', 'thread'],
+      ['updatedAt'],
+    )
   }
 
   async createChannel(channelCreateDto: ChannelCreateDto) {

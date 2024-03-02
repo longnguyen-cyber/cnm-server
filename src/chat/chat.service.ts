@@ -18,6 +18,7 @@ export class ChatService {
   async getChatById(chatId: string, userId: string) {
     return this.buildChatResponse(
       await this.chatRepository.getChatById(chatId, userId),
+      ['thread'],
     )
   }
 
@@ -36,7 +37,11 @@ export class ChatService {
   }
 
   async whitelistFriendAccept(userId: string) {
-    return this.chatRepository.whitelistFriendAccept(userId)
+    return (await this.chatRepository.whitelistFriendAccept(userId)).map(
+      (chat) => {
+        return this.buildChatResponse(chat, ['thread'])
+      },
+    )
   }
 
   async waitlistFriendAccept(userId: string) {
@@ -57,8 +62,14 @@ export class ChatService {
     }
   }
 
-  private buildChatResponse(chat: any) {
-    const buildChat = this.commonService.deleteField(chat, [])
+  private buildChatResponse(
+    chat: any,
+    removeFields: string[],
+    addFields?: string[],
+  ) {
+    const buildChat = this.commonService.deleteField(chat, removeFields, [
+      'updatedAt',
+    ])
     return buildChat
   }
 }

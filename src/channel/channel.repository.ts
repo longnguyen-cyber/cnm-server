@@ -141,8 +141,10 @@ export class ChannelRepository {
           messages: true,
           files: true,
           reactions: true,
+          user: true,
         },
       })
+      console.log(thread)
       return thread
     }
 
@@ -150,9 +152,15 @@ export class ChannelRepository {
       channel.thread.map(async (thread) => {
         const threads = await getAllMessageOfThread(thread.id)
         const messages = threads?.messages
+        const files = threads?.files
+        const reactions = threads?.reactions
+        const user = threads?.user
         return {
           ...thread,
           messages,
+          files,
+          reactions,
+          user,
         }
       }),
     ).then((rs) =>
@@ -168,7 +176,7 @@ export class ChannelRepository {
           ...u,
         }
       }),
-      thread: newThread,
+      threads: newThread,
     }
   }
 

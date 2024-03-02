@@ -141,7 +141,7 @@ export class ChatRepository {
         })
         return {
           ...thread,
-          userReceive,
+          user: userReceive,
         }
       } else {
         const userSender = await prisma.users.findUnique({
@@ -160,7 +160,7 @@ export class ChatRepository {
       return null
     }
 
-    const thread = await Promise.all(
+    const threads = await Promise.all(
       chat.thread.map(async (thread) => {
         const threads = await getAllMessageOfThread(
           thread.id,
@@ -175,7 +175,7 @@ export class ChatRepository {
 
     return {
       ...chat,
-      thread,
+      threads,
     }
   }
 
@@ -238,7 +238,22 @@ export class ChatRepository {
       },
     })
 
-    return whitelistFriendAccept
+    const final = await Promise.all(
+      whitelistFriendAccept.map(async (chat) => {
+        const userReceive = await prisma.users.findUnique({
+          where: {
+            id: chat.receiveId,
+          },
+        })
+
+        return {
+          ...chat,
+          user: userReceive,
+        }
+      }),
+    )
+
+    return final
   }
 
   async waitlistFriendAccept(senderId: string, prisma: Tx = this.prisma) {
@@ -249,7 +264,22 @@ export class ChatRepository {
       },
     })
 
-    return waitlistFriendAccept
+    const final = await Promise.all(
+      waitlistFriendAccept.map(async (chat) => {
+        const userReceive = await prisma.users.findUnique({
+          where: {
+            id: chat.receiveId,
+          },
+        })
+
+        return {
+          ...chat,
+          userReceive,
+        }
+      }),
+    )
+    console.log(final)
+    return final
   }
 
   async unfriend(chatId: string, userId: string, prisma: Tx = this.prisma) {

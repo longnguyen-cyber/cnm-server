@@ -72,8 +72,7 @@ export class CommonService {
     const arr = url.split('/')
     return arr[arr.length - 1]
   }
-
-  deleteField(obj: any, fields: string[]): any {
+  deleteField(obj: any, removeFields: string[], addFields?: string[]): any {
     const fieldDefaultRemove = [
       'password',
       'createdAt',
@@ -84,16 +83,23 @@ export class CommonService {
       'updatedAt',
       'deletedAt',
     ]
-    if (fields.length === 0) {
-      fields = fieldDefaultRemove
+
+    if (removeFields.length === 0) {
+      removeFields = fieldDefaultRemove
     } else {
-      fields = [...fields, ...fieldDefaultRemove]
+      removeFields = [...removeFields, ...fieldDefaultRemove]
     }
+
+    // If addFields is specified, remove these removeFields from the removeFields array
+    if (addFields) {
+      removeFields = removeFields.filter((field) => !addFields.includes(field))
+    }
+
     for (let key in obj) {
-      if (fields.includes(key)) {
+      if (removeFields.includes(key)) {
         delete obj[key]
       } else if (typeof obj[key] === 'object') {
-        this.deleteField(obj[key], fields)
+        this.deleteField(obj[key], removeFields, addFields)
       }
     }
 
