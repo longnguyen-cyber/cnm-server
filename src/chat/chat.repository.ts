@@ -180,7 +180,7 @@ export class ChatRepository {
   }
 
   async createChat(chatToDB: ChatToDBDto, prisma: Tx = this.prisma) {
-    await prisma.chats.create({
+    const chat = await prisma.chats.create({
       data: {
         receiveId: chatToDB.receiveId,
         user: {
@@ -190,7 +190,8 @@ export class ChatRepository {
         },
       },
     })
-    return true
+    if (chat === null) return null
+    return chat
   }
 
   async reqAddFriendHaveChat(

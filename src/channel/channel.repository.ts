@@ -272,7 +272,7 @@ export class ChannelRepository {
     id: string,
     userId: string,
     prisma: Tx = this.prisma,
-  ): Promise<boolean> {
+  ): Promise<string[]> {
     const channel = await prisma.channels.findUnique({
       where: {
         id: id,
@@ -317,9 +317,9 @@ export class ChannelRepository {
         })
       })
 
-      return true
+      return channel.users.map((user: { id: string }) => user.id)
     }
-    return false
+    return []
   }
 
   async addUserToChannel(
@@ -339,11 +339,9 @@ export class ChannelRepository {
       throw new NotFoundException('Channel not found')
     }
 
-    //check users will be added with users in the channel have already
     const userInChannel = channel?.users.map((user: { id: string }) => user.id)
     const userAdded = users.map((user) => user.id)
     const check = userInChannel?.some((id) => userAdded.includes(id))
-    // const check = userInChannel?.filter((id) => userAdded.includes(id)) return array of user in channel have already
 
     if (check) {
       throw new BadRequestException('Have some user in the channel')
@@ -366,11 +364,13 @@ export class ChannelRepository {
       },
     })
     if (add) {
-      return await prisma.channels.findUnique({
+      const rs = await prisma.channels.findUnique({
         where: {
           id: channelId,
         },
       })
+
+      return rs.users.map((user: { id: string }) => user.id)
     }
   }
 
@@ -403,10 +403,10 @@ export class ChannelRepository {
     })
 
     if (removed) {
-      return true
+      return remainingUsers.map((user: { id: string }) => user.id)
     }
 
-    return false
+    return []
   }
 
   //missing if user not in users

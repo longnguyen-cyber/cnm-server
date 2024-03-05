@@ -12,8 +12,9 @@ import { FileCreateDto } from '../thread/dto/fileCreate.dto'
 import { MessageCreateDto } from '../thread/dto/messageCreate.dto'
 import { ThreadService } from '../thread/thread.service'
 import { ChannelService } from '../channel/channel.service'
-import { Req, UseGuards } from '@nestjs/common'
+import { HttpStatus, Req, UseGuards } from '@nestjs/common'
 import { AuthGuard } from '../auth/guard/auth.guard'
+import { ChatService } from '../chat/chat.service'
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -24,6 +25,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private threadService: ThreadService,
     private channelService: ChannelService,
+    private readonly chatService: ChatService,
   ) {}
   user = []
   @WebSocketServer() server: Server
@@ -51,19 +53,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleSendThread(
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: any,
+    @Req() req: any,
   ): Promise<void> {
-    const isAuthenticated = socket.handshake.auth
+    const userId = req.user.id
     const {
       messages,
       fileCreateDto,
-      userId,
       receiveId,
       channelId,
       chatId,
     }: {
       messages?: MessageCreateDto
       fileCreateDto?: FileCreateDto[]
-      userId?: string
       receiveId?: string
       channelId?: string
       chatId?: string
@@ -162,19 +163,496 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('addReact', true)
   }
 
+  /**
+   *
+   * @param data :{
+   * name: string,
+   * members: string[] // array of userId
+   * isPublic: boolean
+   * }
+   * @param req: token
+   * @returns: channel
+   */
   @SubscribeMessage('createChannel')
   async handleCreateChannel(
     @MessageBody() data: any,
     @Req() req: any,
   ): Promise<void> {
-    const members = [...new Set([...data.members, req.user.id])]
-    const channelCreateDto = {
-      name: data.name,
-      isPublic: data.isPublic,
-      userCreated: req.user.id,
-      members,
+    if (req.error) {
+      this.server.emit('channelWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      const members = [...new Set([...data.members, req.user.id])]
+      const channelCreateDto = {
+        name: data.name,
+        isPublic: data.isPublic,
+        userCreated: req.user.id,
+        members,
+      }
+      const rs = await this.channelService.createChannel(channelCreateDto)
+
+      if (rs) {
+        this.server.emit('channelWS', {
+          status: HttpStatus.CREATED,
+          message: 'Create channel success',
+          data: rs,
+        })
+      } else {
+        this.server.emit('channelWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Create channel fail',
+        })
+      }
     }
-    const rs = await this.channelService.createChannel(channelCreateDto)
-    this.server.emit('createChannel', rs)
+  }
+
+  /**
+   * @param data :{
+   * channelId: string
+   * channelUpdate: {
+   * name: string,
+   * isPublic: boolean
+   * }
+   * }
+   * @param req: token
+   * @returns channel
+   */
+  @SubscribeMessage('updateChannel')
+  async handleUpdateChannel(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('channelWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      const rs = await this.channelService.updateChannel(
+        data.channelId,
+        req.user.id,
+        data.channelUpdate,
+      )
+      if (rs) {
+        this.server.emit('channelWS', {
+          status: HttpStatus.OK,
+          message: 'Update channel success',
+          data: rs,
+        })
+      } else {
+        this.server.emit('channelWS', {
+          status: HttpStatus.NOT_FOUND,
+          message: 'Channel not found',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{channelId:string}
+   * @param req:token
+   * @returns: users:string[]
+   */
+
+  @SubscribeMessage('deleteChannel')
+  async handleDeleteChannel(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('channelWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not authorized to delete this channel',
+      })
+    } else {
+      const rs = await this.channelService.deleteChannel(
+        data.channelId,
+        req.user.id,
+      )
+      if (rs) {
+        this.server.emit('channelWS', {
+          status: HttpStatus.OK,
+          message: 'Delete channel success',
+          data: rs,
+        })
+      } else {
+        this.server.emit('channelWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Failed to delete channel',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{
+   * channelId:string,
+   * users:UserOfChannel[{
+   * id:string,
+   * role:string
+   * }]
+   * }
+   * @param req: token
+   * @returns users:string[]
+   */
+
+  @SubscribeMessage('addUserToChannel')
+  async handleAddUserToChannel(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('channelWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not authorized to add user to this channel',
+      })
+    } else {
+      const rs = await this.channelService.addUserToChannel(
+        data.channelId,
+        data.users,
+        req.user.id,
+      )
+      if (rs) {
+        this.server.emit('channelWS', {
+          status: HttpStatus.OK,
+          message: 'Add user to channel success',
+          data: rs,
+        })
+      } else {
+        this.server.emit('channelWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Add user to channel fail',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{
+   * channelId:string,
+   * users:string[]
+   * }
+   * @param req:token
+   * @returns users:string[]
+   */
+  @SubscribeMessage('removeUserFromChannel')
+  async handleRemoveUserFromChannel(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('channelWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not authorized to remove user from this channel',
+      })
+    } else {
+      const rs = await this.channelService.removeUserFromChannel(
+        data.channelId,
+        data.users,
+      )
+      if (rs) {
+        this.server.emit('channelWS', {
+          status: HttpStatus.OK,
+          message: 'Remove user from channel success',
+          data: rs,
+        })
+      } else {
+        this.server.emit('channelWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Remove user from channel fail',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{
+   * channelId:string,
+   * user:UserOfChannel
+   * }
+   * @param req:token
+   *
+   */
+  @SubscribeMessage('updateRoleUserInChannel')
+  async handleUpdateRoleUserInChannel(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('channelWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not authorized to update role of this user',
+      })
+    } else {
+      const rs = await this.channelService.updateRoleUserInChannel(
+        data.channelId,
+        data.user,
+      )
+      if (rs) {
+        this.server.emit('channelWS', {
+          status: HttpStatus.OK,
+          message: 'Update role user in channel success',
+        })
+      } else {
+        this.server.emit('channelWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Update role user in channel fail',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{
+   * channelId:string,
+   * transferOwner?:string
+   * }
+   * @param req: token
+   * @return userId:string
+   */
+  @SubscribeMessage('leaveChannel')
+  async handleLeaveChannel(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('channelWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'You are not authorized to leave this channel',
+      })
+    } else {
+      const rs = await this.channelService.leaveChannel(
+        data.channelId,
+        req.user.id,
+        data.transferOwner,
+      )
+      if (rs) {
+        this.server.emit('channelWS', {
+          status: HttpStatus.OK,
+          message: 'Leave channel success',
+          data: rs ? req.user.id : null,
+        })
+      } else {
+        this.server.emit('channelWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Leave channel fail',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{
+   * receiveId:string
+   * }
+   * @param req: token
+   * @returns chat
+   */
+  @SubscribeMessage('createChat')
+  async handleCreateChat(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('chatWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      const rs = await this.chatService.createChat(req.user.id, data.receiveId)
+
+      if (rs) {
+        this.server.emit('chatWS', {
+          status: HttpStatus.CREATED,
+          message: 'Create chat success',
+          data: rs,
+        })
+      } else {
+        this.server.emit('chatWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Create chat fail',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{
+   * receiveId:string
+   * }
+   * @param req: token
+   * @returns receiverId:string
+   */
+  @SubscribeMessage('reqAddFriend')
+  async handleReqAddFriend(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('chatWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      const rs = await this.chatService.reqAddFriend(
+        data.receiveId,
+        req.user.id,
+      )
+      if (rs) {
+        this.server.emit('chatWS', {
+          status: HttpStatus.OK,
+          message: 'Request friend success',
+          data: rs ? data.receiveId : null,
+        })
+      } else {
+        this.server.emit('chatWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Request friend fail',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{
+   * chatId:string
+   * }
+   * @param req: token
+   * @returns
+   * @description: Unrequest add friend
+   */
+  @SubscribeMessage('unReqAddFriend')
+  async handleUnReqAddFriend(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('chatWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      const rs = await this.chatService.unReqAddFriend(data.chatId, req.user.id)
+      if (rs) {
+        this.server.emit('chatWS', {
+          status: HttpStatus.OK,
+          message: 'Unrequest friend success',
+        })
+      } else {
+        this.server.emit('chatWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Unrequest friend fail',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{
+   * chatId:string
+   * receiveId:string
+   * }
+   * @param req: token
+   * @returns
+   */
+  @SubscribeMessage('reqAddFriendHaveChat')
+  async handleReqAddFriendHaveChat(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('chatWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      const rs = await this.chatService.reqAddFriendHaveChat(
+        data.chatId,
+        data.receiveId,
+      )
+      if (rs) {
+        this.server.emit('chatWS', {
+          status: HttpStatus.OK,
+          message: 'Request friend success',
+          data: rs ? data.receiveId : null,
+        })
+      } else {
+        this.server.emit('chatWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Request friend fail',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{
+   * chatId:string
+   * }
+   * @param req: token
+   * @returns
+   */
+  @SubscribeMessage('acceptAddFriend')
+  async handleAcceptAddFriend(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('chatWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      const rs = await this.chatService.acceptAddFriend(
+        data.chatId,
+        req.user.id,
+      )
+      if (rs) {
+        this.server.emit('chatWS', {
+          status: HttpStatus.OK,
+          message: 'Accept friend success',
+        })
+      } else {
+        this.server.emit('chatWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Accept friend fail',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{
+   * chatId:string
+   * }
+   * @param req: token
+   * @returns
+   */
+  @SubscribeMessage('unfriend')
+  async handleUnfriend(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('chatWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      const rs = await this.chatService.unfriend(data.chatId, req.user.id)
+      if (rs) {
+        this.server.emit('chatWS', {
+          status: HttpStatus.OK,
+          message: 'Unfriend success',
+        })
+      } else {
+        this.server.emit('chatWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Unfriend fail',
+        })
+      }
+    }
   }
 }
