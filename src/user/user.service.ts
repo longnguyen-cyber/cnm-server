@@ -64,7 +64,7 @@ export class UserService implements OnModuleInit {
         )
       })
 
-      return this.commonService.deleteField(userFilter, [])
+      return this.commonService.deleteField(userFilter, ['channels'])
     }
   }
 
@@ -108,7 +108,14 @@ export class UserService implements OnModuleInit {
   async createUser(userCreateDto: UserCreateDto, clientUrl: string) {
     const userClean = { ...userCreateDto }
 
-    const { email } = userClean
+    const { email, name } = userClean
+    const existingName = await this.checkUserName(name)
+    if (existingName) {
+      throw new HttpExceptionCustom(
+        'name already exists',
+        HttpStatus.BAD_REQUEST,
+      )
+    }
 
     await this.checkUniqueUser(email)
     const emailExist = await this.cacheManager.get(email)
@@ -118,6 +125,7 @@ export class UserService implements OnModuleInit {
         HttpStatus.BAD_REQUEST,
       )
     }
+
     this.cacheManager.set(email, true)
 
     const accessToken = this.authService.generateJWTRegisterAndLogin(email) //expires in 15 minutes
@@ -413,6 +421,13 @@ export class UserService implements OnModuleInit {
     const userExists = await this.userRepository.findOneByEmail(email)
 
     this.userCheck.isUniqueUser(!!userExists) //alway convert to boolean if value defined like null, undefined, 0, "" => false else true
+  }
+
+  private async checkUserName(name: string): Promise<boolean> {
+    const userExists = await this.userRepository.findOneByName(name)
+
+    //alway convert to boolean if value defined like null, undefined, 0, "" => false else true
+    return this.userCheck.isUniqueUser(!!userExists)
   }
 
   private generateStructureUpdateUser(

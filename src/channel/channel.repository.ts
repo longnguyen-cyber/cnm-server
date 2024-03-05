@@ -15,7 +15,9 @@ export class ChannelRepository {
   constructor(private prisma: PrismaService) {}
 
   async getAllChannel(userId: string, prisma: Tx = this.prisma) {
-    const channels = await prisma.channels.findMany({
+    let channels: any
+
+    channels = await prisma.channels.findMany({
       where: {
         userCreated: userId,
       },
@@ -27,6 +29,20 @@ export class ChannelRepository {
       },
     })
 
+    if (channels.length === 0) {
+      const all = await prisma.channels.findMany({
+        include: {
+          thread: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+
+      channels = all.filter((channel) =>
+        channel.users.some((user: { id: string }) => user.id === userId),
+      )
+    }
     const userOfChannel = await Promise.all(
       channels.map(async (channel) => {
         const userOfChannel = channel.users
@@ -110,8 +126,9 @@ export class ChannelRepository {
     }
   }
 
-  async getChannelById(id: string, userId: string, prisma: Tx = this.prisma) {
-    const channel = await prisma.channels.findFirst({
+  async getChannelById(id: string, userId?: string, prisma: Tx = this.prisma) {
+    let channel: any
+    channel = await prisma.channels.findFirst({
       where: {
         id: id,
         userCreated: userId,
@@ -120,6 +137,21 @@ export class ChannelRepository {
         thread: true,
       },
     })
+    if (!channel) {
+      const current = await prisma.channels.findUnique({
+        where: {
+          id: id,
+        },
+        include: {
+          thread: true,
+        },
+      })
+
+      const isChannel = current?.users.some(
+        (user: { id: string }) => user.id === userId,
+      )
+      channel = isChannel ? current : null
+    }
 
     if (!channel) {
       return null
@@ -183,7 +215,7 @@ export class ChannelRepository {
   async createChannel(
     ChannelCreateDto: ChannelCreateDto,
     prisma: Tx = this.prisma,
-  ): Promise<boolean> {
+  ): Promise<string> {
     const members = ChannelCreateDto.members
     const newChannel = await prisma.channels.create({
       data: {
@@ -194,22 +226,28 @@ export class ChannelRepository {
     })
 
     if (newChannel) {
-      await prisma.channels.update({
+      const final = await prisma.channels.update({
         where: {
           id: newChannel.id,
         },
         data: {
           users: members.map((member) => {
-            return {
-              id: member,
-              role: 'MEMBER',
-            }
+            if (member === ChannelCreateDto.userCreated) {
+              return {
+                id: member,
+                role: 'ADMIN',
+              }
+            } else
+              return {
+                id: member,
+                role: 'MEMBER',
+              }
           }),
         },
       })
+      return final.id
     }
-
-    return true
+    return null
   }
 
   async updateChannel(

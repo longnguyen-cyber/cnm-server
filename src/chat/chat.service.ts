@@ -28,8 +28,19 @@ export class ChatService {
     return chat
   }
 
-  async reqAddFriend(chatId: string, receiveId: string) {
-    return this.chatRepository.reqAddFriend(chatId, receiveId)
+  async reqAddFriendHaveChat(chatId: string, receiveId: string) {
+    return this.chatRepository.reqAddFriendHaveChat(chatId, receiveId)
+  }
+
+  async reqAddFriend(receiveId: string, senderId: string) {
+    return this.chatRepository.reqAddFriend(receiveId, senderId)
+  }
+  async unReqAddFriend(chatId: string, userId: string) {
+    return this.chatRepository.unReqAddFriend(chatId, userId)
+  }
+
+  async getFriendChatWaittingAccept(receiveId: string, userId: string) {
+    return this.chatRepository.getFriendChatWaittingAccept(receiveId, userId)
   }
 
   async acceptAddFriend(chatId: string, userId: string) {
@@ -45,7 +56,11 @@ export class ChatService {
   }
 
   async waitlistFriendAccept(userId: string) {
-    return this.chatRepository.waitlistFriendAccept(userId)
+    return (await this.chatRepository.waitlistFriendAccept(userId)).map(
+      (chat) => {
+        return this.buildChatResponse(chat, ['threads'])
+      },
+    )
   }
 
   async unfriend(chatId: string, userId: string) {

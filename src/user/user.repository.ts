@@ -84,6 +84,15 @@ export class UserRepository {
     })
     return user
   }
+
+  async findOneByName(name: string, prisma: Tx = this.prisma) {
+    const user = await prisma.users.findUnique({
+      where: {
+        name: name,
+      },
+    })
+    return user
+  }
 }
 const findChannelOfUser = async (userId: string, prisma: any) => {
   const channels = await prisma.channels.findMany({

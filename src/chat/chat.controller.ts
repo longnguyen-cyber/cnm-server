@@ -1,3 +1,4 @@
+import { users } from './../../node_modules/.prisma/client/index.d'
 import {
   Body,
   Controller,
@@ -89,8 +90,87 @@ export class ChatController {
     }
   }
 
-  @Put(':chatId/reqAddFriend')
+  @Put('reqAddFriend')
   async reqAddFriend(
+    @Body('receiveId') receiveId: string,
+    @Req() req: any,
+  ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
+    const data = await this.chatService.reqAddFriend(receiveId, req.user.id)
+    if (data) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Request friend success',
+      }
+    } else {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Request friend fail',
+      }
+    }
+  }
+
+  @Put(':chatId/unReqAddFriend')
+  async unReqAddFriend(
+    @Param('chatId') chatId: string,
+    @Req() req: any,
+  ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
+    const data = await this.chatService.unReqAddFriend(chatId, req.user.id)
+    if (data) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Unrequest friend success',
+      }
+    } else {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Unrequest friend fail',
+      }
+    }
+  }
+
+  @Get(':receiveId/friendChatWaittingAccept')
+  async getFriendChatWaittingAccept(
+    @Param('receiveId') receiveId: string,
+    @Req() req: any,
+  ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      }
+    }
+    const data = await this.chatService.getFriendChatWaittingAccept(
+      receiveId,
+      req.user.id,
+    )
+    if (data) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Get friend chat success',
+        data,
+      }
+    } else {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Get friend chat fail',
+      }
+    }
+  }
+
+  @Put(':chatId/reqAddFriend')
+  async reqAddFriendHaveChat(
     @Param('chatId') chatId: string,
     @Body('receiveId') receiveId: string,
     @Req() req: any,
@@ -101,7 +181,7 @@ export class ChatController {
         message: 'Access to this resource is denied',
       }
     }
-    const data = await this.chatService.reqAddFriend(chatId, receiveId)
+    const data = await this.chatService.reqAddFriendHaveChat(chatId, receiveId)
     if (data) {
       return {
         status: HttpStatus.OK,

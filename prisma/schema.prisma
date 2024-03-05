@@ -14,7 +14,7 @@ model users {
   password                         String
   displayName                      String?
   status                           String
-  phone                            String?
+  phone                            String?     @unique
   email                            String      @unique
   avatar                           String?
   isTwoFactorAuthenticationEnabled Boolean     @default(false)
@@ -51,7 +51,7 @@ model chats {
   deletedAt  DateTime?
   // bookmark   bookmarks[]
   thread     threads[]
-  receiveId  String    @unique @db.ObjectId
+  receiveId  String    @db.ObjectId
   senderId   String?   @db.ObjectId
   isFriend   Boolean?  @default(false)
   requestAdd Boolean?  @default(false)

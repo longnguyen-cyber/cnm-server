@@ -56,7 +56,7 @@ export class ChatRepository {
 
           return {
             ...chat,
-            userReceive,
+            user: userReceive,
             lastedThread: null,
           }
         }),
@@ -85,7 +85,7 @@ export class ChatRepository {
 
           return {
             ...chat,
-            userReceive,
+            user: userReceive,
             lastedThread,
           }
         }),
@@ -193,7 +193,7 @@ export class ChatRepository {
     return true
   }
 
-  async reqAddFriend(
+  async reqAddFriendHaveChat(
     chatId: string,
     receiveId: string,
     prisma: Tx = this.prisma,
@@ -209,6 +209,75 @@ export class ChatRepository {
     })
 
     return reqAddFriend !== null
+  }
+
+  async reqAddFriend(
+    receiveId: string,
+    senderId: string,
+    prisma: Tx = this.prisma,
+  ) {
+    const reqAddFriend = await prisma.chats.create({
+      data: {
+        requestAdd: true,
+        receiveId,
+        senderId,
+      },
+    })
+
+    return reqAddFriend !== null
+  }
+
+  async unReqAddFriend(
+    chatId: string,
+    userId: string,
+    prisma: Tx = this.prisma,
+  ) {
+    const chat = await prisma.chats.findUnique({
+      where: {
+        id: chatId,
+      },
+      include: {
+        thread: true,
+      },
+    })
+
+    if (chat?.thread.length === 0) {
+      const unReqAddFriend = await prisma.chats.delete({
+        where: {
+          id: chatId,
+        },
+      })
+      return unReqAddFriend !== null
+    } else {
+      const unReqAddFriend = await prisma.chats.update({
+        where: {
+          id: chatId,
+          senderId: userId,
+        },
+        data: {
+          requestAdd: false,
+        },
+      })
+
+      return unReqAddFriend !== null
+    }
+  }
+
+  async getFriendChatWaittingAccept(
+    receiveId: string,
+    userId: string,
+    prisma: Tx = this.prisma,
+  ) {
+    const friendChatWaittingAccept = await prisma.chats.findFirst({
+      where: {
+        receiveId,
+        senderId: userId,
+        requestAdd: true,
+      },
+    })
+    console.log(friendChatWaittingAccept)
+
+    return friendChatWaittingAccept
   }
 
   async acceptAddFriend(
@@ -274,11 +343,10 @@ export class ChatRepository {
 
         return {
           ...chat,
-          userReceive,
+          user: userReceive,
         }
       }),
     )
-    console.log(final)
     return final
   }
 

@@ -11,13 +11,20 @@ import { Server, Socket } from 'socket.io'
 import { FileCreateDto } from '../thread/dto/fileCreate.dto'
 import { MessageCreateDto } from '../thread/dto/messageCreate.dto'
 import { ThreadService } from '../thread/thread.service'
+import { ChannelService } from '../channel/channel.service'
+import { Req, UseGuards } from '@nestjs/common'
+import { AuthGuard } from '../auth/guard/auth.guard'
 @WebSocketGateway({
   cors: {
     origin: '*',
   },
 })
+@UseGuards(AuthGuard)
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private threadService: ThreadService) {}
+  constructor(
+    private threadService: ThreadService,
+    private channelService: ChannelService,
+  ) {}
   user = []
   @WebSocketServer() server: Server
 
@@ -153,5 +160,21 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } = data
     await this.threadService.addReact(react, quantity, threadId, senderId)
     this.server.emit('addReact', true)
+  }
+
+  @SubscribeMessage('createChannel')
+  async handleCreateChannel(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    const members = [...new Set([...data.members, req.user.id])]
+    const channelCreateDto = {
+      name: data.name,
+      isPublic: data.isPublic,
+      userCreated: req.user.id,
+      members,
+    }
+    const rs = await this.channelService.createChannel(channelCreateDto)
+    this.server.emit('createChannel', rs)
   }
 }

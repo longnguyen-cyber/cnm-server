@@ -27,7 +27,6 @@ import { Request } from 'express'
 
 @ApiTags('users')
 @Controller('users')
-@UseGuards(AuthGuard)
 export class UserController {
   constructor(
     private readonly userService: UserService,
@@ -54,7 +53,7 @@ export class UserController {
       }
     }
   }
-
+  @UseGuards(AuthGuard)
   @Get('verify-email')
   async verify(@Req() req: any): Promise<Respon> {
     if (req.error) {
@@ -81,6 +80,7 @@ export class UserController {
   }
 
   // 2fa
+  @UseGuards(AuthGuard)
   @Post('2fa/generate')
   @UseGuards(AuthGuard)
   async register(@Req() request: any): Promise<Respon> {
@@ -134,6 +134,7 @@ export class UserController {
   }
 
   @Post('login')
+  @UseGuards(AuthGuard)
   async login(@Body() userLoginDto: any, @Req() req: any): Promise<Respon> {
     if (req.error) {
       const user = await this.userService.login(userLoginDto)
@@ -168,6 +169,7 @@ export class UserController {
   }
 
   //seen profile
+  @UseGuards(AuthGuard)
   @Get(':id')
   async getUser(@Param('id') id: string, @Req() req: any): Promise<Respon> {
     if (req.error) {
@@ -193,6 +195,7 @@ export class UserController {
   }
 
   @Put('update')
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('avatar'))
   async updateCurrentUser(
     @Body() userUpdateDto: UserUpdateDto,
@@ -241,9 +244,26 @@ export class UserController {
   }
 
   @Get('/search/:name')
-  async search(@Param('name') name: string, @Req() req: any): Promise<any> {
-    const user = await this.userService.searchUser(name, req.user.id)
-    return user
+  @UseGuards(AuthGuard)
+  async search(@Param('name') name: string, @Req() req: any): Promise<Respon> {
+    if (req.error) {
+      return {
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Please login again',
+        errors: req.error,
+      }
+    }
+    const users = await this.userService.searchUser(name, req.user.id)
+    if (users.length === 0)
+      return {
+        status: HttpStatus.NOT_FOUND,
+        message: 'User not found',
+      }
+    return {
+      status: HttpStatus.OK,
+      message: 'Search user success',
+      data: users,
+    }
   }
 
   @Post('logout')
@@ -257,6 +277,7 @@ export class UserController {
   }
 
   @Post('forgot-password')
+  @UseGuards(AuthGuard)
   async forgotPassword(@Body() body: any): Promise<Respon> {
     const rs = await this.userService.forgotPassword(body.email)
     if (rs) {

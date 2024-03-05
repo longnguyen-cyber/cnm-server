@@ -33,7 +33,16 @@ export class ChannelService {
   }
 
   async createChannel(channelCreateDto: ChannelCreateDto) {
-    return this.channelRepository.createChannel(channelCreateDto)
+    const channelCreate =
+      await this.channelRepository.createChannel(channelCreateDto)
+    const findChannel =
+      await this.channelRepository.getChannelById(channelCreate)
+
+    return this.commonService.deleteField(
+      findChannel,
+      ['userId', 'thread'],
+      ['updatedAt'],
+    )
   }
 
   async updateChannel(
