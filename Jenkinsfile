@@ -16,6 +16,11 @@ pipeline {
                 sh 'echo "Hello, World! This is a Jenkins pipeline with a declarative syntax."'
             }
         }
+        stage('Deploy') {
+            steps {
+                sh 'echo "Deploying..."'
+            }
+        }
 
     }
 }
