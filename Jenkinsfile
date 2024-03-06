@@ -1,26 +1,18 @@
-pipeline {
-    agent any
-    stages {
-        stage('Hello') {
-            steps {
-                sh "whoami"
-            }
-        }
-        stage('l') {
-            steps {
-                sh "pwd"
-            }
-        }
-        stage('Build') {
-            steps {
-                sh 'echo "Hello, World! This is a Jenkins pipeline with a declarative syntax."'
-            }
-        }
-        stage('Deploy') {
-            steps {
-                sh 'echo "Deploying..."'
-            }
-        }
-
+node{
+    def mvnHome
+    stage('Preparation') {
+      println("Preparation")
+      sh "sleep 1000"
+      println("Preparation done")
+    }
+    stage('Build') {
+      println("Build")
+      sh "sleep 1000"
+      println("Build done")
+    }
+    stage('Test') {
+      println("Test")
+      sh "sleep 1000"
+      println("Test done")
     }
 }
