@@ -14,7 +14,7 @@ model users {
   password                         String
   displayName                      String?
   status                           String
-  phone                            String?     @unique
+  phone                            String?
   email                            String      @unique
   avatar                           String?
   isTwoFactorAuthenticationEnabled Boolean     @default(false)

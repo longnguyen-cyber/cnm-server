@@ -56,6 +56,15 @@ export class UserRepository {
   }
 
   async updateUser(id: string, userUpdateDto: any, prisma: Tx = this.prisma) {
+    const phoneUnique = await prisma.users.findFirst({
+      where: {
+        phone: userUpdateDto.phone,
+      },
+    })
+
+    if (phoneUnique) {
+      return null
+    }
     const user = await prisma.users.update({
       where: {
         id: id,

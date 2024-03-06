@@ -41,16 +41,16 @@ export class UserService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // const users = await this.userRepository.findAll()
-    // users.map((user) => {
-    //   this.commonService.deleteField(user, [])
-    // })
-    // const userInCache = (await this.cacheManager.get('user')) as any
-    // if (!userInCache) {
-    //   this.cacheManager.set('user', JSON.stringify(users))
-    // } else if (users.length !== JSON.parse(userInCache).length) {
-    //   this.cacheManager.set('user', JSON.stringify(users))
-    // }
+    const users = await this.userRepository.findAll()
+    users.map((user) => {
+      this.commonService.deleteField(user, [])
+    })
+    const userInCache = (await this.cacheManager.get('user')) as any
+    if (!userInCache) {
+      this.cacheManager.set('user', JSON.stringify(users))
+    } else if (users.length !== JSON.parse(userInCache).length) {
+      this.cacheManager.set('user', JSON.stringify(users))
+    }
   }
 
   async searchUser(query: string, id: string) {
@@ -174,52 +174,6 @@ export class UserService implements OnModuleInit {
     }
     return false
   }
-
-  //old
-  // async createUser(userCreateDto: UserCreateDto) {
-  //   const userClean = { ...userCreateDto }
-
-  //   const { avatar: _, email } = userClean
-  //   const avatar = JSON.parse(_ as any)
-
-  //   await this.checkUniqueUser(email)
-  //   const passwordHashed = await this.authService.hashPassword(
-  //     userClean.password,
-  //   )
-  //   const uploadFile = await this.rabbitMQService.addToQueue(
-  //     Queue.Upload,
-  //     UploadMethod.UploadSingle,
-  //     {
-  //       fileName: avatar.fileName,
-  //       file: avatar.file,
-  //     },
-  //   )
-  //   const data = {
-  //     ...userClean,
-  //     password: passwordHashed,
-  //     status: 'active',
-  //     avatar: uploadFile ? this.commonService.pathUpload(avatar.fileName) : '',
-  //   }
-
-  //   const { accessToken } = this.generateToken(email)
-  //   const user = await this.userRepository.createUser(data)
-
-  //   if (user) {
-  //     this.cacheManager.set(accessToken, JSON.stringify(user))
-  //     await this.mailQueue.add(
-  //       'register',
-  //       {
-  //         to: data.email,
-  //         name: data.name,
-  //       },
-  //       {
-  //         removeOnComplete: true,
-  //       },
-  //     )
-  //   }
-
-  //   return this.buildUserResponse(user)
-  // }
 
   async updateUser(userUpdateDto: UserUpdateDto, req: any): Promise<any> {
     const userClean = { ...userUpdateDto }
