@@ -47,6 +47,10 @@ export class ChatService {
     return this.chatRepository.acceptAddFriend(chatId, userId)
   }
 
+  async rejectAddFriend(chatId: string, userId: string) {
+    return this.chatRepository.rejectAddFriend(chatId, userId)
+  }
+
   async whitelistFriendAccept(userId: string) {
     return (await this.chatRepository.whitelistFriendAccept(userId)).map(
       (chat) => {
@@ -63,8 +67,8 @@ export class ChatService {
     )
   }
 
-  async unfriend(chatId: string, userId: string) {
-    return this.chatRepository.unfriend(chatId, userId)
+  async unfriend(chatId: string) {
+    return this.chatRepository.unfriend(chatId)
   }
 
   private compareToCreateChat(

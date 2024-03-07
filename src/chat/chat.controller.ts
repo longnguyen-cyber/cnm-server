@@ -229,6 +229,7 @@ export class ChatController {
       }
     }
     const data = await this.chatService.whitelistFriendAccept(req.user.id)
+    console.log(data)
     if (data) {
       return {
         status: HttpStatus.OK,
@@ -277,7 +278,7 @@ export class ChatController {
         message: 'Access to this resource is denied',
       }
     }
-    const data = await this.chatService.unfriend(chatId, req.user.id)
+    const data = await this.chatService.unfriend(chatId)
     if (data) {
       return {
         status: HttpStatus.OK,

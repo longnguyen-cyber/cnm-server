@@ -14,6 +14,7 @@ export class ThreadRepository {
     let newThread: any
     let newMsg: any
     let newFile: any
+    let dataReturn: any
     if (threadToDB.chatId === undefined || threadToDB.receiveId === null) {
       newThread = await prisma.threads.create({
         data: {
@@ -27,7 +28,7 @@ export class ThreadRepository {
         },
       })
       threadId = newThread.id
-      await prisma.channels.update({
+      const channel = await prisma.channels.update({
         where: {
           id: threadToDB.channelId,
         },
@@ -35,6 +36,7 @@ export class ThreadRepository {
           timeThread: new Date(),
         },
       })
+      dataReturn = channel
     } else {
       newThread = await prisma.threads.create({
         data: {
@@ -51,7 +53,7 @@ export class ThreadRepository {
           messages: true,
         },
       })
-      await prisma.chats.update({
+      const chat = await prisma.chats.update({
         where: {
           id: threadToDB.chatId,
         },
@@ -59,6 +61,7 @@ export class ThreadRepository {
           timeThread: new Date(),
         },
       })
+      dataReturn = chat
       threadId = newThread.id
     }
 
@@ -109,6 +112,7 @@ export class ThreadRepository {
       files: {
         ...newFile,
       },
+      dataReturn,
     }
   }
 
@@ -179,6 +183,7 @@ export class ThreadRepository {
     const files = threadToDB.file
     let newMsg: any
     let newFile: any
+    let dataReturn: any
     const newMsgReply = await prisma.threads.create({
       data: {
         senderId: senderId,
@@ -245,7 +250,19 @@ export class ThreadRepository {
         },
       })
     }
-
+    if (threadToDB.chatId === undefined || threadToDB.receiveId === null) {
+      dataReturn = await prisma.channels.findUnique({
+        where: {
+          id: threadToDB.channelId,
+        },
+      })
+    } else {
+      dataReturn = await prisma.chats.findUnique({
+        where: {
+          id: threadToDB.chatId,
+        },
+      })
+    }
     return {
       messages: {
         ...newMsg,
@@ -253,6 +270,7 @@ export class ThreadRepository {
       files: {
         ...newFile,
       },
+      dataReturn,
     }
   }
 

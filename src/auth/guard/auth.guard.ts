@@ -18,6 +18,7 @@ export class AuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext) {
     const url = context.switchToHttp().getRequest().url
     const request = context.switchToHttp().getRequest()
+
     if (url === '/api/users/login') {
       request.error = {
         message: 'Token expired or incorrect',
@@ -30,6 +31,8 @@ export class AuthGuard implements CanActivate {
           ? request.headers.authorization !== undefined &&
             request.headers.authorization.split(' ')[1]
           : request.handshake.headers.authorization
+            ? request.handshake.headers.authorization
+            : request.handshake.auth.Authorization.split(' ')[1]
 
       const whiteList = [
         '/api/users/login',

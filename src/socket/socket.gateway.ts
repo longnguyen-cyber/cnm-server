@@ -48,15 +48,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('online', this.user)
   }
 
-  @SubscribeMessage('test')
-  async handleTest(@MessageBody() data: any): Promise<void> {
-    console.log(data)
-    this.server.emit('test', {
-      data,
-      message: 'test success',
-    })
-  }
-
+  /**
+   * @param data:{
+   * messages:MessageCreateDto
+   * fileCreateDto:FileCreateDto[]
+   * receiveId:string
+   * channelId:string
+   * chatId:string
+   * }
+   * @param req: token
+   * @returns
+   * status: 200
+   */
   @SubscribeMessage('sendThread')
   @UseGuards(AuthGuard)
   async handleSendThread(
@@ -64,31 +67,60 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: any,
     @Req() req: any,
   ): Promise<void> {
-    const userId = req.user.id
-    const {
-      messages,
-      fileCreateDto,
-      receiveId,
-      channelId,
-      chatId,
-    }: {
-      messages?: MessageCreateDto
-      fileCreateDto?: FileCreateDto[]
-      receiveId?: string
-      channelId?: string
-      chatId?: string
-    } = data
-    const rs = await this.threadService.createThread(
-      messages,
-      fileCreateDto,
-      userId,
-      receiveId,
-      channelId,
-      chatId,
-    )
-    this.server.emit('updatedSendThread', { ...data, id: rs.id })
+    if (req.error) {
+      this.server.emit('updatedSendThread', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      const userId = req.user.id
+      const {
+        messages,
+        fileCreateDto,
+        receiveId,
+        channelId,
+        chatId,
+      }: {
+        messages?: MessageCreateDto
+        fileCreateDto?: FileCreateDto[]
+        receiveId?: string
+        channelId?: string
+        chatId?: string
+      } = data
+      const rs = await this.threadService.createThread(
+        messages,
+        fileCreateDto,
+        userId,
+        receiveId,
+        channelId,
+        chatId,
+      )
+
+      if (chatId) {
+        this.server.emit('updatedSendThread', { ...data, id: rs.id })
+      } else {
+        this.server.emit('updatedSendThread', {
+          ...data,
+          id: rs.id,
+          members: rs.dataReturn.users,
+        })
+      }
+    }
   }
 
+  /**
+   * @param data:{
+   * threadId:string
+   * messages:MessageCreateDto
+   * fileCreateDto:FileCreateDto[]
+   * receiveId:string
+   * channelId:string
+   * chatId:string
+   * }
+   * @param req: token
+   * @returns
+   * status: 200
+   */
   @SubscribeMessage('updateThread')
   @UseGuards(AuthGuard)
   async handleSendUpdateThread(@MessageBody() data: any): Promise<void> {
@@ -118,6 +150,19 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('updatedSendThread', data)
   }
 
+  /**
+   * @param data:{
+   * threadId:string
+   * userId:string
+   * messages:MessageCreateDto
+   * fileCreateDto:FileCreateDto[]
+   * chatId:string
+   * channelId:string
+   * }
+   * @param req: token
+   * @returns
+   * status: 200
+   */
   @SubscribeMessage('replyThread')
   @UseGuards(AuthGuard)
   async handleReplyThread(@MessageBody() data: any): Promise<void> {
@@ -136,7 +181,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       chatId?: string
       channelId?: string
     } = data
-    await this.threadService.createReplyThread(
+    const rs = await this.threadService.createReplyThread(
       threadId,
       userId,
       messages,
@@ -144,9 +189,28 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       channelId,
       chatId,
     )
-    this.server.emit('updatedSendThread', data)
+
+    if (chatId) {
+      this.server.emit('updatedSendThread', { ...data, id: rs.id })
+    } else {
+      this.server.emit('updatedSendThread', {
+        ...data,
+        id: rs.id,
+        members: rs.dataReturn.users,
+      })
+    }
   }
 
+  /**
+   * @param data:{
+   * threadId:string
+   * senderId:string
+   * receiveId:string
+   * }
+   * @param req: token
+   * @returns
+   * status: 200
+   */
   @SubscribeMessage('deleteThread')
   @UseGuards(AuthGuard)
   async handleDeleteThread(@MessageBody() data: any): Promise<void> {
@@ -158,6 +222,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     )
     this.server.emit('updatedSendThread', rs)
   }
+
+  /**
+   * @param data:{
+   * react:string
+   * quantity:number
+   * threadId:string
+   * senderId:string
+   * }
+   * @param req: token
+   * @returns
+   * status: 200
+   */
   @SubscribeMessage('addReact')
   @UseGuards(AuthGuard)
   async handleAddReact(@MessageBody() data: any): Promise<void> {
@@ -452,7 +528,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('channelWS', {
           status: HttpStatus.OK,
           message: 'Leave channel success',
-          data: rs ? req.user.id : null,
+          data: req.user.id,
         })
       } else {
         this.server.emit('channelWS', {
@@ -469,6 +545,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns chat
+   * status: 200
    */
   @SubscribeMessage('createChat')
   @UseGuards(AuthGuard)
@@ -504,7 +581,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * receiveId:string
    * }
    * @param req: token
-   * @returns receiverId:string
+   * @returns: { receiveId: data.receiveId, chat: rs }
+   * status: 200
    */
   @SubscribeMessage('reqAddFriend')
   @UseGuards(AuthGuard)
@@ -522,11 +600,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.receiveId,
         req.user.id,
       )
+
       if (rs) {
         this.server.emit('chatWS', {
           status: HttpStatus.OK,
           message: 'Request friend success',
-          data: rs ? data.receiveId : null,
+          data: { receiveId: data.receiveId, chat: rs },
         })
       } else {
         this.server.emit('chatWS', {
@@ -543,6 +622,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
+   * status: 200
    * @description: Unrequest add friend
    */
   @SubscribeMessage('unReqAddFriend')
@@ -562,6 +642,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('chatWS', {
           status: HttpStatus.OK,
           message: 'Unrequest friend success',
+          data: { type: 'unReqAddFriend', chat: rs },
         })
       } else {
         this.server.emit('chatWS', {
@@ -578,8 +659,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * receiveId:string
    * }
    * @param req: token
-   * @returns
+   * @returns:{ receiveId: data.receiveId, user: rs }
+   * status: 200
    */
+
   @SubscribeMessage('reqAddFriendHaveChat')
   @UseGuards(AuthGuard)
   async handleReqAddFriendHaveChat(
@@ -600,7 +683,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('chatWS', {
           status: HttpStatus.OK,
           message: 'Request friend success',
-          data: rs ? data.receiveId : null,
+          data: { receiveId: data.receiveId, user: rs },
         })
       } else {
         this.server.emit('chatWS', {
@@ -617,6 +700,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
+   * status: 200
    */
   @SubscribeMessage('acceptAddFriend')
   @UseGuards(AuthGuard)
@@ -638,6 +722,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('chatWS', {
           status: HttpStatus.OK,
           message: 'Accept friend success',
+          data: { type: 'acceptAddFriend', chat: rs },
         })
       } else {
         this.server.emit('chatWS', {
@@ -654,10 +739,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
+   * status: 200
    */
-  @SubscribeMessage('unfriend')
+  @SubscribeMessage('rejectAddFriend')
   @UseGuards(AuthGuard)
-  async handleUnfriend(
+  async handleRejectAddFriend(
     @MessageBody() data: any,
     @Req() req: any,
   ): Promise<void> {
@@ -667,11 +753,52 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'Access to this resource is denied',
       })
     } else {
-      const rs = await this.chatService.unfriend(data.chatId, req.user.id)
+      const rs = await this.chatService.rejectAddFriend(
+        data.chatId,
+        req.user.id,
+      )
+      if (rs) {
+        this.server.emit('chatWS', {
+          status: HttpStatus.OK,
+          message: 'Reject friend success',
+          data: { type: 'rejectAddFriend', chat: rs },
+        })
+      } else {
+        this.server.emit('chatWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Reject friend fail',
+        })
+      }
+    }
+  }
+
+  /**
+   * @param data:{
+   * chatId:string
+   * }
+   * @param req: token
+   * @returns
+   * status: 200
+   */
+  @SubscribeMessage('unfriend')
+  @UseGuards(AuthGuard)
+  async handleUnfriend(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    console.log(data)
+    if (req.error) {
+      this.server.emit('chatWS', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      const rs = await this.chatService.unfriend(data.chatId)
       if (rs) {
         this.server.emit('chatWS', {
           status: HttpStatus.OK,
           message: 'Unfriend success',
+          data: { type: 'unfriend', chat: rs },
         })
       } else {
         this.server.emit('chatWS', {
