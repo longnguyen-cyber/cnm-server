@@ -20,7 +20,6 @@ import { ChatService } from '../chat/chat.service'
     origin: '*',
   },
 })
-@UseGuards(AuthGuard)
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private threadService: ThreadService,
@@ -49,7 +48,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('online', this.user)
   }
 
+  @SubscribeMessage('test')
+  async handleTest(@MessageBody() data: any): Promise<void> {
+    console.log(data)
+    this.server.emit('test', {
+      data,
+      message: 'test success',
+    })
+  }
+
   @SubscribeMessage('sendThread')
+  @UseGuards(AuthGuard)
   async handleSendThread(
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: any,
@@ -81,6 +90,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('updateThread')
+  @UseGuards(AuthGuard)
   async handleSendUpdateThread(@MessageBody() data: any): Promise<void> {
     const {
       threadId,
@@ -109,6 +119,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('replyThread')
+  @UseGuards(AuthGuard)
   async handleReplyThread(@MessageBody() data: any): Promise<void> {
     const {
       threadId,
@@ -137,6 +148,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('deleteThread')
+  @UseGuards(AuthGuard)
   async handleDeleteThread(@MessageBody() data: any): Promise<void> {
     const { threadId, senderId, receiveId } = data
     const rs = await this.threadService.deleteThread(
@@ -147,6 +159,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('updatedSendThread', rs)
   }
   @SubscribeMessage('addReact')
+  @UseGuards(AuthGuard)
   async handleAddReact(@MessageBody() data: any): Promise<void> {
     const {
       react,
@@ -160,7 +173,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       senderId: string
     } = data
     await this.threadService.addReact(react, quantity, threadId, senderId)
-    this.server.emit('addReact', true)
+    this.server.emit('updatedSendThread', true)
   }
 
   /**
@@ -174,6 +187,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns: channel
    */
   @SubscribeMessage('createChannel')
+  @UseGuards(AuthGuard)
   async handleCreateChannel(
     @MessageBody() data: any,
     @Req() req: any,
@@ -220,6 +234,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns channel
    */
   @SubscribeMessage('updateChannel')
+  @UseGuards(AuthGuard)
   async handleUpdateChannel(
     @MessageBody() data: any,
     @Req() req: any,
@@ -257,6 +272,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
 
   @SubscribeMessage('deleteChannel')
+  @UseGuards(AuthGuard)
   async handleDeleteChannel(
     @MessageBody() data: any,
     @Req() req: any,
@@ -299,6 +315,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
 
   @SubscribeMessage('addUserToChannel')
+  @UseGuards(AuthGuard)
   async handleAddUserToChannel(
     @MessageBody() data: any,
     @Req() req: any,
@@ -338,6 +355,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns users:string[]
    */
   @SubscribeMessage('removeUserFromChannel')
+  @UseGuards(AuthGuard)
   async handleRemoveUserFromChannel(
     @MessageBody() data: any,
     @Req() req: any,
@@ -376,6 +394,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    *
    */
   @SubscribeMessage('updateRoleUserInChannel')
+  @UseGuards(AuthGuard)
   async handleUpdateRoleUserInChannel(
     @MessageBody() data: any,
     @Req() req: any,
@@ -413,6 +432,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @return userId:string
    */
   @SubscribeMessage('leaveChannel')
+  @UseGuards(AuthGuard)
   async handleLeaveChannel(
     @MessageBody() data: any,
     @Req() req: any,
@@ -451,6 +471,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns chat
    */
   @SubscribeMessage('createChat')
+  @UseGuards(AuthGuard)
   async handleCreateChat(
     @MessageBody() data: any,
     @Req() req: any,
@@ -462,7 +483,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     } else {
       const rs = await this.chatService.createChat(req.user.id, data.receiveId)
-
+      console.log(rs)
       if (rs) {
         this.server.emit('chatWS', {
           status: HttpStatus.CREATED,
@@ -486,6 +507,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns receiverId:string
    */
   @SubscribeMessage('reqAddFriend')
+  @UseGuards(AuthGuard)
   async handleReqAddFriend(
     @MessageBody() data: any,
     @Req() req: any,
@@ -524,6 +546,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @description: Unrequest add friend
    */
   @SubscribeMessage('unReqAddFriend')
+  @UseGuards(AuthGuard)
   async handleUnReqAddFriend(
     @MessageBody() data: any,
     @Req() req: any,
@@ -558,6 +581,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns
    */
   @SubscribeMessage('reqAddFriendHaveChat')
+  @UseGuards(AuthGuard)
   async handleReqAddFriendHaveChat(
     @MessageBody() data: any,
     @Req() req: any,
@@ -595,6 +619,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns
    */
   @SubscribeMessage('acceptAddFriend')
+  @UseGuards(AuthGuard)
   async handleAcceptAddFriend(
     @MessageBody() data: any,
     @Req() req: any,
@@ -631,6 +656,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns
    */
   @SubscribeMessage('unfriend')
+  @UseGuards(AuthGuard)
   async handleUnfriend(
     @MessageBody() data: any,
     @Req() req: any,

@@ -18,14 +18,14 @@ export class ChatService {
   async getChatById(chatId: string, userId: string) {
     return this.buildChatResponse(
       await this.chatRepository.getChatById(chatId, userId),
-      ['thread'],
+      ['thread', 'channel'],
     )
   }
 
   async createChat(senderId: string, receiveId: string) {
     const chatToDb = this.compareToCreateChat(senderId, receiveId)
     const chat = await this.chatRepository.createChat(chatToDb)
-    return chat
+    return this.commonService.deleteField(chat, ['thread'])
   }
 
   async reqAddFriendHaveChat(chatId: string, receiveId: string) {

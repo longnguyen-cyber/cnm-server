@@ -32,7 +32,8 @@ export class AppController {
         status: HttpStatus.FORBIDDEN,
         message: 'Access to this resource is denied',
       }
+    } else {
+      return await this.appService.getAll(req.user.id)
     }
-    return this.appService.getAll(req.user.id)
   }
 }

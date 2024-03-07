@@ -1,4 +1,4 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common'
+import { CACHE_MANAGER, Inject, Injectable, UseGuards } from '@nestjs/common'
 import { ChannelService } from './channel/channel.service'
 import { ChatService } from './chat/chat.service'
 import { Cache } from 'cache-manager'
@@ -17,6 +17,8 @@ export class AppService {
   async getAll(userId: string) {
     const channels = await this.channelService.getAllChannel(userId)
     const chats = await this.chatService.getAllChat(userId)
+    console.log(chats, 'chats')
+    console.log(channels, 'channels')
     const rs = [...channels, ...chats]
     rs.sort((a, b) => {
       return new Date(b.timeThread).getTime() - new Date(a.timeThread).getTime()

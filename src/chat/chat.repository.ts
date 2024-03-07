@@ -9,7 +9,14 @@ export class ChatRepository {
   async getAllChat(userId: string, prisma: Tx = this.prisma) {
     const chats = await prisma.chats.findMany({
       where: {
-        senderId: userId,
+        OR: [
+          {
+            senderId: userId,
+          },
+          {
+            receiveId: userId,
+          },
+        ],
       },
       include: {
         thread: true,
@@ -188,6 +195,9 @@ export class ChatRepository {
             id: chatToDB.senderId,
           },
         },
+      },
+      include: {
+        user: true,
       },
     })
     if (chat === null) return null
