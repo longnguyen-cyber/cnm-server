@@ -229,7 +229,6 @@ export class ChatController {
       }
     }
     const data = await this.chatService.whitelistFriendAccept(req.user.id)
-    console.log(data)
     if (data) {
       return {
         status: HttpStatus.OK,

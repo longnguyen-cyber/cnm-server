@@ -72,7 +72,7 @@ export class ThreadService {
     if (thread) {
       this.appService.getAll(senderId)
     }
-    return this.commonService.deleteField(thread, [''])
+    return this.commonService.deleteField(thread, [''], ['updatedAt'])
   }
 
   async updateThread(

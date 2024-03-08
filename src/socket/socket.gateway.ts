@@ -95,7 +95,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         channelId,
         chatId,
       )
-
       if (chatId) {
         this.server.emit('updatedSendThread', {
           ...data,
@@ -106,10 +105,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       } else {
         this.server.emit('updatedSendThread', {
           ...data,
-          id: rs.id,
+          id: rs.thread.id,
           members: rs.dataReturn.users,
           timeThread: rs.dataReturn.timeThread,
           user: rs.sender,
+          thread: rs.thread,
+          // get all rs except sender and dataReturn will be remove
         })
       }
     }
@@ -283,28 +284,40 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     } else {
       const members = [...new Set([...data.members, req.user.id])]
-      const channelCreateDto = {
-        name: data.name,
-        isPublic: data.isPublic,
-        userCreated: req.user.id,
-        members,
-      }
-      const rs = await this.channelService.createChannel(
-        channelCreateDto,
-        req.user.id,
-      )
-
-      if (rs) {
-        this.server.emit('channelWS', {
-          status: HttpStatus.CREATED,
-          message: 'Create channel success',
-          data: rs,
-        })
-      } else {
+      if (members.length < 2) {
         this.server.emit('channelWS', {
           status: HttpStatus.BAD_REQUEST,
-          message: 'Create channel fail',
+          message: 'Nhóm phải có ít nhất 2 người',
         })
+      } else if (data.name === '') {
+        this.server.emit('channelWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Tên nhóm không được để trống',
+        })
+      } else {
+        const channelCreateDto = {
+          name: data.name,
+          isPublic: data.isPublic,
+          userCreated: req.user.id,
+          members,
+        }
+        const rs = await this.channelService.createChannel(
+          channelCreateDto,
+          req.user.id,
+        )
+
+        if (rs) {
+          this.server.emit('channelWS', {
+            status: HttpStatus.CREATED,
+            message: 'Create channel success',
+            data: rs,
+          })
+        } else {
+          this.server.emit('channelWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Create channel fail',
+          })
+        }
       }
     }
   }
@@ -458,7 +471,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * users:string[]
    * }
    * @param req:token
-   * @returns users:string[]
+   * @returns {channel:Channel, type:string}
+   * status: pass
    */
   @SubscribeMessage('removeUserFromChannel')
   @UseGuards(AuthGuard)
@@ -474,19 +488,30 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else {
       const rs = await this.channelService.removeUserFromChannel(
         data.channelId,
+        req.user.id,
         data.users,
       )
-      if (rs) {
+      if (rs.error) {
         this.server.emit('channelWS', {
-          status: HttpStatus.OK,
-          message: 'Remove user from channel success',
-          data: rs,
+          status: HttpStatus.UNAUTHORIZED,
+          message: rs.error,
         })
       } else {
-        this.server.emit('channelWS', {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Remove user from channel fail',
-        })
+        if (rs) {
+          this.server.emit('channelWS', {
+            status: HttpStatus.OK,
+            message: 'Remove user from channel success',
+            data: {
+              type: 'removeUserFromChannel',
+              channel: rs,
+            },
+          })
+        } else {
+          this.server.emit('channelWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Remove user from channel fail',
+          })
+        }
       }
     }
   }
@@ -494,9 +519,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * @param data:{
    * channelId:string,
-   * user:UserOfChannel
+   * user:{id, role}:UserOfChannel
    * }
    * @param req:token
+   * stuck: dont have ui test
    *
    */
   @SubscribeMessage('updateRoleUserInChannel')
@@ -514,6 +540,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const rs = await this.channelService.updateRoleUserInChannel(
         data.channelId,
         data.user,
+        req.user.id,
       )
       if (rs) {
         this.server.emit('channelWS', {
@@ -535,7 +562,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * transferOwner?:string
    * }
    * @param req: token
-   * @return userId:string
+   * @return {channel:Channel, type:string}
+   * status: pass
    */
   @SubscribeMessage('leaveChannel')
   @UseGuards(AuthGuard)
@@ -558,7 +586,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('channelWS', {
           status: HttpStatus.OK,
           message: 'Leave channel success',
-          data: req.user.id,
+          data: {
+            type: 'leaveChannel',
+            channel: rs,
+          },
         })
       } else {
         this.server.emit('channelWS', {
@@ -596,19 +627,26 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       //   fileCreateDto,
       //   receiveId,
       // } = data
+
       const rs = await this.chatService.createChat(req.user.id, data)
-      console.log(rs)
-      if (rs) {
-        this.server.emit('chatWS', {
-          status: HttpStatus.CREATED,
-          message: 'Create chat success',
-          data: rs,
-        })
-      } else {
+      if (rs.error) {
         this.server.emit('chatWS', {
           status: HttpStatus.BAD_REQUEST,
-          message: 'Create chat fail',
+          message: rs.error,
         })
+      } else {
+        if (rs) {
+          this.server.emit('chatWS', {
+            status: HttpStatus.CREATED,
+            message: 'Create chat success',
+            data: rs,
+          })
+        } else {
+          this.server.emit('chatWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Create chat fail',
+          })
+        }
       }
     }
   }
@@ -637,18 +675,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.receiveId,
         req.user.id,
       )
-
-      if (rs) {
+      if (rs.error) {
         this.server.emit('chatWS', {
-          status: HttpStatus.OK,
-          message: 'Request friend success',
-          data: { receiveId: data.receiveId, chat: rs },
+          status: rs.status,
+          message: rs.error,
         })
       } else {
-        this.server.emit('chatWS', {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Request friend fail',
-        })
+        if (rs) {
+          this.server.emit('chatWS', {
+            status: HttpStatus.OK,
+            message: 'Request friend success',
+            data: { receiveId: data.receiveId, chat: rs },
+          })
+        } else {
+          this.server.emit('chatWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Request friend fail',
+          })
+        }
       }
     }
   }
@@ -675,17 +719,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     } else {
       const rs = await this.chatService.unReqAddFriend(data.chatId, req.user.id)
-      if (rs) {
+      if (rs.error) {
         this.server.emit('chatWS', {
-          status: HttpStatus.OK,
-          message: 'Unrequest friend success',
-          data: { type: 'unReqAddFriend', chat: rs },
+          status: rs.status,
+          message: rs.error,
         })
       } else {
-        this.server.emit('chatWS', {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Unrequest friend fail',
-        })
+        if (rs) {
+          this.server.emit('chatWS', {
+            status: HttpStatus.OK,
+            message: 'Unrequest friend success',
+            data: { type: 'unReqAddFriend', chat: rs },
+          })
+        } else {
+          this.server.emit('chatWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Unrequest friend fail',
+          })
+        }
       }
     }
   }
@@ -716,17 +767,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.chatId,
         data.receiveId,
       )
-      if (rs) {
+      if (rs.error) {
         this.server.emit('chatWS', {
-          status: HttpStatus.OK,
-          message: 'Request friend success',
-          data: { receiveId: data.receiveId, user: rs },
+          status: rs.status,
+          message: rs.error,
         })
       } else {
-        this.server.emit('chatWS', {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Request friend fail',
-        })
+        if (rs) {
+          this.server.emit('chatWS', {
+            status: HttpStatus.OK,
+            message: 'Request friend success',
+            data: { receiveId: data.receiveId, user: rs },
+          })
+        } else {
+          this.server.emit('chatWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Request friend fail',
+          })
+        }
       }
     }
   }
@@ -755,17 +813,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.chatId,
         req.user.id,
       )
-      if (rs) {
+      if (rs.error) {
         this.server.emit('chatWS', {
-          status: HttpStatus.OK,
-          message: 'Accept friend success',
-          data: { type: 'acceptAddFriend', chat: rs },
+          status: rs.status,
+          message: rs.error,
         })
       } else {
-        this.server.emit('chatWS', {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Accept friend fail',
-        })
+        if (rs) {
+          this.server.emit('chatWS', {
+            status: HttpStatus.OK,
+            message: 'Accept friend success',
+            data: { type: 'acceptAddFriend', chat: rs },
+          })
+        } else {
+          this.server.emit('chatWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Accept friend fail',
+          })
+        }
       }
     }
   }
@@ -794,17 +859,25 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.chatId,
         req.user.id,
       )
-      if (rs) {
+
+      if (rs.error) {
         this.server.emit('chatWS', {
-          status: HttpStatus.OK,
-          message: 'Reject friend success',
-          data: { type: 'rejectAddFriend', chat: rs },
+          status: rs.status,
+          message: rs.error,
         })
       } else {
-        this.server.emit('chatWS', {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Reject friend fail',
-        })
+        if (rs) {
+          this.server.emit('chatWS', {
+            status: HttpStatus.OK,
+            message: 'Reject friend success',
+            data: { type: 'rejectAddFriend', chat: rs },
+          })
+        } else {
+          this.server.emit('chatWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Reject friend fail',
+          })
+        }
       }
     }
   }
@@ -823,7 +896,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: any,
     @Req() req: any,
   ): Promise<void> {
-    console.log(data)
     if (req.error) {
       this.server.emit('chatWS', {
         status: HttpStatus.FORBIDDEN,
@@ -831,17 +903,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     } else {
       const rs = await this.chatService.unfriend(data.chatId)
-      if (rs) {
+      if (rs.error) {
         this.server.emit('chatWS', {
-          status: HttpStatus.OK,
-          message: 'Unfriend success',
-          data: { type: 'unfriend', chat: rs },
+          status: rs.status,
+          message: rs.error,
         })
       } else {
-        this.server.emit('chatWS', {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Unfriend fail',
-        })
+        if (rs) {
+          this.server.emit('chatWS', {
+            status: HttpStatus.OK,
+            message: 'Unfriend success',
+            data: { type: 'unfriend', chat: rs },
+          })
+        } else {
+          this.server.emit('chatWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Unfriend fail',
+          })
+        }
       }
     }
   }

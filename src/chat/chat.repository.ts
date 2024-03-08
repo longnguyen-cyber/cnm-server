@@ -73,9 +73,13 @@ export class ChatRepository {
     } else {
       const final = await Promise.all(
         chats.map(async (chat) => {
+          const userRevice =
+            chat.senderId === userId
+              ? chat.receiveId // if user is sender, will return user receive
+              : chat.senderId // if user is receiver, will return user sender
           const userReceive = await prisma.users.findUnique({
             where: {
-              id: chat.receiveId,
+              id: userRevice,
             },
           })
           let lastedThread = null
@@ -88,7 +92,6 @@ export class ChatRepository {
                 messages: true,
               },
             })
-            console.log(lastedThread)
           }
 
           return {
@@ -103,15 +106,31 @@ export class ChatRepository {
     }
   }
 
-  async getChatById(id: string, senderId: string, prisma: Tx = this.prisma) {
+  async getChatById(id: string, userId: string, prisma: Tx = this.prisma) {
     const chat = await prisma.chats.findUnique({
       where: {
         id: id,
-        senderId,
+        OR: [
+          {
+            senderId: userId,
+          },
+          {
+            receiveId: userId,
+          },
+        ],
       },
       include: {
         thread: true,
         user: true,
+      },
+    })
+    const userRevice =
+      chat.senderId === userId
+        ? chat.receiveId // if user is sender, will return user receive
+        : chat.senderId // if user is receiver, will return user sender
+    const userReceive = await prisma.users.findUnique({
+      where: {
+        id: userRevice,
       },
     })
 
@@ -144,7 +163,7 @@ export class ChatRepository {
       if (receiveID !== senderId) {
         const userReceive = await prisma.users.findUnique({
           where: {
-            id: receiveId,
+            id: senderId,
           },
         })
         return {
@@ -154,12 +173,12 @@ export class ChatRepository {
       } else {
         const userSender = await prisma.users.findUnique({
           where: {
-            id: senderId,
+            id: receiveID,
           },
         })
         return {
           ...thread,
-          userSender,
+          user: userSender,
         }
       }
     }
@@ -172,17 +191,18 @@ export class ChatRepository {
       chat.thread.map(async (thread) => {
         const threads = await getAllMessageOfThread(
           thread.id,
-          senderId,
+          chat.senderId,
           chat.receiveId,
         )
         return threads
       }),
     ).then((rs) =>
-      rs.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
+      rs.sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime()),
     )
 
     return {
       ...chat,
+      user: userReceive,
       threads,
     }
   }
@@ -191,76 +211,87 @@ export class ChatRepository {
     const { receiveId, senderId, file, messages } = chatToDB
     let newMsg: any
     let newFile: any
-    if (file !== undefined || messages !== undefined) {
-      const chat = await prisma.chats.create({
-        data: {
-          receiveId: chatToDB.receiveId,
-          user: {
-            connect: {
-              id: chatToDB.senderId,
-            },
-          },
-        },
-        include: {
-          user: true,
-        },
-      })
 
-      if (chat === null) return null
-
-      const thread = await prisma.threads.create({
-        data: {
-          isReply: false,
-          receiveId,
-          chats: {
-            connect: {
-              id: chat.id,
-            },
-          },
-        },
-        include: {
-          user: true,
-          messages: true,
-        },
-      })
-      if (messages && messages.message !== undefined) {
-        newMsg = await prisma.messages.create({
+    const chatExist = await prisma.chats.findFirst({
+      where: {
+        senderId: senderId,
+        receiveId: receiveId,
+      },
+    })
+    if (chatExist) {
+      return { error: 'Chat already exist', status: HttpStatus.BAD_REQUEST }
+    } else {
+      if (file !== undefined || messages !== undefined) {
+        const chat = await prisma.chats.create({
           data: {
-            threadId: thread.id,
-            message: messages.message,
+            receiveId: chatToDB.receiveId,
+            user: {
+              connect: {
+                id: chatToDB.senderId,
+              },
+            },
+          },
+          include: {
+            user: true,
           },
         })
-      }
-      if (file !== undefined && file !== null) {
-        newFile = file.map(async (file) => {
-          return await prisma.files.create({
+
+        if (chat === null) return null
+
+        const thread = await prisma.threads.create({
+          data: {
+            isReply: false,
+            receiveId,
+            chats: {
+              connect: {
+                id: chat.id,
+              },
+            },
+          },
+          include: {
+            user: true,
+            messages: true,
+          },
+        })
+        if (messages && messages.message !== undefined) {
+          newMsg = await prisma.messages.create({
             data: {
-              filename: file.fileName,
-              size: file.size,
-              path: file.path,
               threadId: thread.id,
+              message: messages.message,
             },
           })
-        })
-        if (!newFile) {
-          throw new HttpException(
-            {
-              status: HttpStatus.BAD_REQUEST,
-              message: 'File error. Please check again',
-            },
-            HttpStatus.BAD_REQUEST,
-          )
         }
-      }
+        if (file !== undefined && file !== null) {
+          newFile = file.map(async (file) => {
+            return await prisma.files.create({
+              data: {
+                filename: file.fileName,
+                size: file.size,
+                path: file.path,
+                threadId: thread.id,
+              },
+            })
+          })
+          if (!newFile) {
+            throw new HttpException(
+              {
+                status: HttpStatus.BAD_REQUEST,
+                message: 'File error. Please check again',
+              },
+              HttpStatus.BAD_REQUEST,
+            )
+          }
+        }
 
-      return {
-        ...chat,
-        lastedThread: {
-          ...thread,
-          messages: newMsg,
-          files: newFile,
-        },
-        type: 'chat',
+        return {
+          ...chat,
+          lastedThread: {
+            ...thread,
+            messages: newMsg,
+            files: newFile,
+          },
+          type: 'chat',
+        }
       }
     }
   }
@@ -270,6 +301,16 @@ export class ChatRepository {
     receiveId: string,
     prisma: Tx = this.prisma,
   ) {
+    const reqAddExist = await prisma.chats.findFirst({
+      where: {
+        id: chatId,
+        receiveId,
+        requestAdd: true,
+      },
+    })
+    if (reqAddExist)
+      return { error: 'Đã gửi lời mời kết bạn', status: HttpStatus.BAD_REQUEST }
+
     const reqAddFriend = await prisma.chats.update({
       where: {
         id: chatId,
@@ -298,6 +339,17 @@ export class ChatRepository {
     senderId: string,
     prisma: Tx = this.prisma,
   ) {
+    const reqAddExist = await prisma.chats.findFirst({
+      where: {
+        receiveId,
+        senderId,
+        requestAdd: true,
+      },
+    })
+
+    if (reqAddExist)
+      return { error: 'Đã gửi lời mời kết bạn', status: HttpStatus.BAD_REQUEST }
+
     const reqAddFriend = await prisma.chats.create({
       data: {
         requestAdd: true,
@@ -306,7 +358,7 @@ export class ChatRepository {
       },
     })
 
-    if (reqAddFriend === null) return null
+    if (reqAddFriend === null) return { error: 'Request add friend fail' }
 
     const sender = await prisma.users.findUnique({
       where: {
@@ -324,7 +376,7 @@ export class ChatRepository {
     chatId: string,
     userId: string,
     prisma: Tx = this.prisma,
-  ) {
+  ): Promise<any> {
     const chat = await prisma.chats.findUnique({
       where: {
         id: chatId,
@@ -334,25 +386,29 @@ export class ChatRepository {
       },
     })
 
-    if (chat?.thread.length === 0) {
-      const unReqAddFriend = await prisma.chats.delete({
-        where: {
-          id: chatId,
-        },
-      })
-      return unReqAddFriend
-    } else {
-      const unReqAddFriend = await prisma.chats.update({
-        where: {
-          id: chatId,
-          senderId: userId,
-        },
-        data: {
-          requestAdd: false,
-        },
-      })
+    if (chat === null)
+      return { error: 'Không tìm thấy chat', status: HttpStatus.NOT_FOUND }
+    else {
+      if (chat?.thread.length === 0) {
+        const unReqAddFriend = await prisma.chats.delete({
+          where: {
+            id: chatId,
+          },
+        })
+        return unReqAddFriend
+      } else {
+        const unReqAddFriend = await prisma.chats.update({
+          where: {
+            id: chatId,
+            senderId: userId,
+          },
+          data: {
+            requestAdd: false,
+          },
+        })
 
-      return unReqAddFriend
+        return unReqAddFriend
+      }
     }
   }
 
@@ -368,7 +424,6 @@ export class ChatRepository {
         requestAdd: true,
       },
     })
-    console.log(friendChatWaittingAccept)
 
     return friendChatWaittingAccept
   }
@@ -377,7 +432,29 @@ export class ChatRepository {
     chatId: string,
     userId: string,
     prisma: Tx = this.prisma,
-  ) {
+  ): Promise<any> {
+    const existing = await prisma.chats.findUnique({
+      where: {
+        id: chatId,
+      },
+    })
+    if (!existing)
+      return {
+        error: 'Không tìm thấy chat',
+        status: HttpStatus.NOT_FOUND,
+      }
+
+    const accepted = await prisma.chats.findFirst({
+      where: {
+        id: chatId,
+        isFriend: true,
+      },
+    })
+    if (accepted)
+      return {
+        error: 'Đã là bạn bè',
+        status: HttpStatus.BAD_REQUEST,
+      }
     const acceptAddFriend = await prisma.chats.update({
       where: {
         id: chatId,
@@ -405,7 +482,33 @@ export class ChatRepository {
     chatId: string,
     userId: string,
     prisma: Tx = this.prisma,
-  ) {
+  ): Promise<any> {
+    const existing = await prisma.chats.findUnique({
+      where: {
+        id: chatId,
+      },
+    })
+
+    if (!existing)
+      return {
+        error: 'Không tìm thấy chat',
+        status: HttpStatus.NOT_FOUND,
+      }
+
+    const rejected = await prisma.chats.findFirst({
+      where: {
+        id: chatId,
+        isFriend: true,
+        requestAdd: false,
+      },
+    })
+
+    if (rejected)
+      return {
+        error: 'Đã từ chối lời mời kết bạn',
+        status: HttpStatus.BAD_REQUEST,
+      }
+
     const rejectAddFriend = await prisma.chats.update({
       where: {
         id: chatId,
@@ -488,7 +591,7 @@ export class ChatRepository {
     return final
   }
 
-  async unfriend(chatId: string, prisma: Tx = this.prisma) {
+  async unfriend(chatId: string, prisma: Tx = this.prisma): Promise<any> {
     const unfriend = await prisma.chats.findUnique({
       where: {
         id: chatId,
@@ -497,6 +600,12 @@ export class ChatRepository {
         thread: true,
       },
     })
+
+    if (unfriend === null)
+      return {
+        error: 'Không tìm thấy chat',
+        status: HttpStatus.NOT_FOUND,
+      }
 
     if (unfriend?.thread.length === 0) {
       const unfriend = await prisma.chats.delete({

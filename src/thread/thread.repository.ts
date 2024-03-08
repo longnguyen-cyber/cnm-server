@@ -65,6 +65,8 @@ export class ThreadRepository {
       threadId = newThread.id
     }
 
+    console.log('threadId', newThread)
+
     if (messages && messages.message !== undefined) {
       newMsg = await prisma.messages.create({
         data: {
@@ -102,13 +104,13 @@ export class ThreadRepository {
     })
 
     return {
-      ...newThread,
+      thread: {
+        ...newThread,
 
-      messages: {
-        ...newMsg,
-      },
-      files: {
-        ...newFile,
+        messages: {
+          ...newMsg,
+        },
+        files: newFile,
       },
       dataReturn,
       sender,

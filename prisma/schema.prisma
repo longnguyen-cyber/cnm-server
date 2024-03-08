@@ -102,6 +102,7 @@ model threads {
 model messages {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   message   String
+  type      String    @default("text")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?

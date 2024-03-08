@@ -23,7 +23,7 @@ export class ChannelRepository {
         thread: true,
       },
       orderBy: {
-        createdAt: 'desc',
+        timeThread: 'desc',
       },
     })
     channels = channels.filter((channel) =>
@@ -36,7 +36,7 @@ export class ChannelRepository {
           thread: true,
         },
         orderBy: {
-          createdAt: 'desc',
+          timeThread: 'desc',
         },
       })
 
@@ -137,6 +137,7 @@ export class ChannelRepository {
         thread: true,
       },
     })
+
     if (channel) {
       //check user have in channel or not
       const isChannel = channel?.users.some(
@@ -187,7 +188,7 @@ export class ChannelRepository {
         }
       }),
     ).then((rs) =>
-      rs.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
+      rs.sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime()),
     )
 
     return {
@@ -256,6 +257,7 @@ export class ChannelRepository {
         ...channelUpdateDto,
       },
     })
+
     return rs.id
   }
 
@@ -319,6 +321,8 @@ export class ChannelRepository {
     personAddedId: string,
     prisma: Tx = this.prisma,
   ) {
+    console.log('channelId', channelId)
+    console.log('users', personAddedId)
     const channel = await prisma.channels.findUnique({
       where: {
         id: channelId,
@@ -326,87 +330,92 @@ export class ChannelRepository {
       },
     })
     if (!channel) {
-      throw new NotFoundException('Channel not found')
+      return { error: 'Channel not found' }
     }
 
-    const roleOfPersonAdded = (
-      channel?.users.find(
-        (user: { id: string; role: string }) => user.id === personAddedId,
-      ) as { role: string }
-    ).role
+    const roleOfPersonAdded = this.getRoleOfPersonAdded(channel, personAddedId)
+    console.log('roleOfPersonAdded', roleOfPersonAdded)
 
     if (roleOfPersonAdded == 'MEMBER') {
       return { error: "You don't have permission to add user to this channel" }
-    } else {
-      const userInChannel = channel?.users.map(
-        (user: { id: string }) => user.id,
-      )
+    }
+
+    if (this.checkUserExistInChannel(channel.users, users)) {
+      return { error: 'Have some user in the channel' }
+    }
+    const add = await prisma.channels.update({
+      where: {
+        id: channelId,
+        userCreated: personAddedId,
+      },
+      data: {
+        users: {
+          push: users.map((user) => {
+            return {
+              id: user.id,
+              role: user.role,
+            }
+          }),
+        },
+      },
+    })
+    if (add) {
       const userAdded = users.map((user) => user.id)
-      const check = userInChannel?.some((id) => userAdded.includes(id))
-
-      if (check) {
-        return { error: 'Have some user in the channel' }
-      } else {
-        const add = await prisma.channels.update({
-          where: {
-            id: channelId,
-            userCreated: personAddedId,
-          },
-          data: {
-            users: {
-              push: users.map((user) => {
-                return {
-                  id: user.id,
-                  role: user.role,
-                }
-              }),
-            },
-          },
-        })
-        if (add) {
-          const rs = await this.getChannelById(channelId, personAddedId)
-
-          const thread = await prisma.threads.create({
-            data: {
-              channelId,
-              isReply: false,
-            },
-            include: {
-              user: true,
-              messages: true,
-            },
-          })
-          const usersAdded = await prisma.users.findMany({
-            where: {
-              id: {
-                in: userAdded,
-              },
-            },
-          })
-          const messages = await prisma.messages.create({
-            data: {
-              threadId: thread.id,
-              message:
-                usersAdded.map((user) => user.name).join(', ') +
-                ' has been added to the channel',
-            },
-          })
-
-          return {
-            ...rs,
-            lastedThread: {
-              ...thread,
-              messages,
-            },
-          }
-        }
-      }
+      return await this.handleSuccessful(
+        channelId,
+        personAddedId,
+        'add',
+        userAdded,
+      )
     }
   }
 
-  async removeUserFromChannel(
+  async removeUsersFromChannel(
     channelId: string,
+    userId: string,
     usersRemoved: string[],
+    prisma: Tx = this.prisma,
+  ) {
+    const channel = await prisma.channels.findUnique({
+      where: { id: channelId },
+    })
+
+    if (!channel) {
+      return { error: 'Channel not found' }
+    }
+
+    const roleOfPersonAdded = this.getRoleOfPersonAdded(channel, userId)
+
+    if (roleOfPersonAdded == 'MEMBER') {
+      return { error: "You don't have permission to add user to this channel" }
+    }
+
+    const remainingUsers = this.getRemainingUsers(channel, usersRemoved)
+
+    if (remainingUsers.length === channel.users.length) {
+      return { error: 'User not found in the channel' }
+    }
+
+    const removed = await prisma.channels.update({
+      where: { id: channelId },
+      data: { users: remainingUsers },
+    })
+
+    if (removed) {
+      return await this.handleSuccessful(
+        channelId,
+        userId,
+        'remove',
+        usersRemoved,
+      )
+    }
+  }
+
+  //missing if user not in users
+  async updateRoleUserInChannel(
+    channelId: string,
+    user: UserOfChannel,
+    userId: string,
     prisma: Tx = this.prisma,
   ) {
     const channel = await prisma.channels.findUnique({
@@ -416,41 +425,8 @@ export class ChannelRepository {
     })
 
     if (!channel) {
-      throw new NotFoundException('Channel not found')
+      return { error: 'Channel not found' }
     }
-
-    const remainingUsers = channel?.users?.filter(
-      (user: { id: string }) => !usersRemoved.includes(user.id),
-    )
-
-    const removed = await prisma.channels.update({
-      where: {
-        id: channelId,
-      },
-      data: {
-        users: remainingUsers,
-      },
-    })
-
-    if (removed) {
-      return remainingUsers.map((user: { id: string }) => user.id)
-    }
-
-    return []
-  }
-
-  //missing if user not in users
-  async updateRoleUserInChannel(
-    channelId: string,
-    user: UserOfChannel,
-    prisma: Tx = this.prisma,
-  ) {
-    const channel = await prisma.channels.findUnique({
-      where: {
-        id: channelId,
-      },
-    })
-
     const userUpdate = channel.users.map((u: { id: string }) => {
       if (u.id === user.id) {
         return {
@@ -504,7 +480,15 @@ export class ChannelRepository {
         },
         data: {
           userCreated: transferOwner,
-          users: remainingUsers,
+          users: remainingUsers.map((user: { id: string }) => {
+            if (user.id === transferOwner) {
+              return {
+                ...user,
+                role: 'ADMIN',
+              }
+            }
+            return user
+          }),
         },
       })
     } else {
@@ -516,8 +500,92 @@ export class ChannelRepository {
           users: remainingUsers,
         },
       })
+      console.log('leave', leave)
     }
 
-    return leave ? true : false
+    return await this.handleSuccessful(
+      channelId,
+      userId,
+      'leave',
+      null,
+      transferOwner,
+    )
+  }
+
+  getRoleOfPersonAdded(channel: any, userId: string) {
+    return (
+      channel?.users.find(
+        (user: { id: string; role: string }) => user.id === userId,
+      ) as { role: string }
+    ).role
+  }
+
+  getRemainingUsers(channel: any, usersRemoved: string[]) {
+    return channel?.users?.filter(
+      (user: { id: string }) => !usersRemoved.includes(user.id),
+    )
+  }
+
+  checkUserExistInChannel(usersInChannel: any[], usersAdded: UserOfChannel[]) {
+    const usersExistInChannel = usersInChannel.map(
+      (user: { id: string }) => user.id,
+    )
+    const userAdded = usersAdded.map((user) => user.id)
+    const check = usersExistInChannel?.some((id) => userAdded.includes(id))
+    return !!check
+  }
+
+  async handleSuccessful(
+    channelId: string,
+    userId: string,
+    type: string,
+    users?: string[],
+    transferOwner?: string,
+  ) {
+    const rs = await this.getChannelById(
+      channelId,
+      transferOwner !== undefined ? transferOwner : userId,
+    )
+
+    let usersChange: any[] = []
+    if (transferOwner) {
+      usersChange = await this.prisma.users.findMany({
+        where: {
+          id: {
+            in: [userId, transferOwner],
+          },
+        },
+      })
+    } else {
+      usersChange = await this.prisma.users.findMany({
+        where: { id: { in: users } },
+      })
+    }
+
+    if (rs) {
+      const thread = await this.prisma.threads.create({
+        data: { channelId, isReply: false },
+        include: { user: true, messages: true },
+      })
+      const messages = await this.prisma.messages.create({
+        data: {
+          threadId: thread.id,
+          message:
+            transferOwner !== undefined
+              ? `The channel has been transferred to ${usersChange[1].name} by ${usersChange[0].name}`
+              : usersChange.map((user) => user.name).join(', ') +
+                ` has been ${type == 'remove' ? 'removed' : 'added'} to the channel`,
+          type: 'system',
+        },
+      })
+
+      return {
+        ...rs,
+        lastedThread: {
+          ...thread,
+          messages,
+        },
+      }
+    }
   }
 }

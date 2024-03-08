@@ -24,12 +24,15 @@ export class ChannelService {
       channelId,
       userId,
     )
-
-    return this.commonService.deleteField(
-      channel,
-      ['userId', 'thread'],
-      ['updatedAt'],
-    )
+    if (!channel) {
+      return null
+    } else {
+      return this.commonService.deleteField(
+        channel,
+        ['userId', 'thread'],
+        ['updatedAt'],
+      )
+    }
   }
 
   async createChannel(channelCreateDto: ChannelCreateDto, userId?: string) {
@@ -87,20 +90,35 @@ export class ChannelService {
       personAddedId,
     )
 
-    return this.commonService.deleteField(added, ['userId'])
+    return this.commonService.deleteField(added, [
+      'userId',
+      'thread',
+      'threads',
+    ])
   }
 
-  async removeUserFromChannel(channelId: string, personRemovedId: string[]) {
-    return this.channelRepository.removeUserFromChannel(
+  async removeUserFromChannel(
+    channelId: string,
+    userId: string,
+    personRemovedId: string[],
+  ) {
+    const remove = await this.channelRepository.removeUsersFromChannel(
       channelId,
+      userId,
       personRemovedId,
     )
+    return this.commonService.deleteField(remove, ['thread', 'threads'])
   }
 
-  async updateRoleUserInChannel(channelId: string, user: UserOfChannel) {
+  async updateRoleUserInChannel(
+    channelId: string,
+    user: UserOfChannel,
+    userId: string,
+  ) {
     const updated = await this.channelRepository.updateRoleUserInChannel(
       channelId,
       user,
+      userId,
     )
     return this.commonService.deleteField(updated, ['userId'])
   }
@@ -110,6 +128,15 @@ export class ChannelService {
     userId: string,
     transferOwner?: string,
   ) {
-    return this.channelRepository.leaveChannel(channelId, userId, transferOwner)
+    const leavteChannel = await this.channelRepository.leaveChannel(
+      channelId,
+      userId,
+      transferOwner,
+    )
+    return this.commonService.deleteField(leavteChannel, [
+      'userId',
+      'thread',
+      'threads',
+    ])
   }
 }

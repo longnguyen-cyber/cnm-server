@@ -29,14 +29,20 @@ export class ChatService {
   }
 
   async reqAddFriendHaveChat(chatId: string, receiveId: string) {
-    return this.chatRepository.reqAddFriendHaveChat(chatId, receiveId)
+    const req = await this.chatRepository.reqAddFriendHaveChat(
+      chatId,
+      receiveId,
+    )
+    return this.commonService.deleteField(req, ['thread'])
   }
 
   async reqAddFriend(receiveId: string, senderId: string) {
-    return this.chatRepository.reqAddFriend(receiveId, senderId)
+    const req = await this.chatRepository.reqAddFriend(receiveId, senderId)
+    return this.commonService.deleteField(req, ['thread'])
   }
   async unReqAddFriend(chatId: string, userId: string) {
-    return this.chatRepository.unReqAddFriend(chatId, userId)
+    const req = await this.chatRepository.unReqAddFriend(chatId, userId)
+    return this.commonService.deleteField(req, ['thread'])
   }
 
   async getFriendChatWaittingAccept(receiveId: string, userId: string) {
@@ -44,11 +50,13 @@ export class ChatService {
   }
 
   async acceptAddFriend(chatId: string, userId: string) {
-    return this.chatRepository.acceptAddFriend(chatId, userId)
+    const accept = await this.chatRepository.acceptAddFriend(chatId, userId)
+    return this.commonService.deleteField(accept, ['thread'])
   }
 
   async rejectAddFriend(chatId: string, userId: string) {
-    return this.chatRepository.rejectAddFriend(chatId, userId)
+    const req = await this.chatRepository.rejectAddFriend(chatId, userId)
+    return this.commonService.deleteField(req, ['thread'])
   }
 
   async whitelistFriendAccept(userId: string) {
@@ -68,7 +76,8 @@ export class ChatService {
   }
 
   async unfriend(chatId: string) {
-    return this.chatRepository.unfriend(chatId)
+    const req = await this.chatRepository.unfriend(chatId)
+    return this.commonService.deleteField(req, ['thread'])
   }
 
   private compareToCreateChat(senderId: string, data: any): ChatToDBDto {
