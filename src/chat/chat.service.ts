@@ -22,8 +22,8 @@ export class ChatService {
     )
   }
 
-  async createChat(senderId: string, receiveId: string) {
-    const chatToDb = this.compareToCreateChat(senderId, receiveId)
+  async createChat(senderId: string, data: any) {
+    const chatToDb = this.compareToCreateChat(senderId, data)
     const chat = await this.chatRepository.createChat(chatToDb)
     return this.commonService.deleteField(chat, ['thread'])
   }
@@ -71,13 +71,10 @@ export class ChatService {
     return this.chatRepository.unfriend(chatId)
   }
 
-  private compareToCreateChat(
-    senderId: string,
-    receiveId: string,
-  ): ChatToDBDto {
+  private compareToCreateChat(senderId: string, data: any): ChatToDBDto {
     return {
       senderId,
-      receiveId,
+      ...data,
     }
   }
 

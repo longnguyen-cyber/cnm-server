@@ -32,11 +32,13 @@ export class ChannelService {
     )
   }
 
-  async createChannel(channelCreateDto: ChannelCreateDto) {
+  async createChannel(channelCreateDto: ChannelCreateDto, userId?: string) {
     const channelCreate =
       await this.channelRepository.createChannel(channelCreateDto)
-    const findChannel =
-      await this.channelRepository.getChannelById(channelCreate)
+    const findChannel = await this.channelRepository.getChannelById(
+      channelCreate,
+      userId,
+    )
 
     return this.commonService.deleteField(
       findChannel,
@@ -55,11 +57,23 @@ export class ChannelService {
       userId,
       channelUpdateDto,
     )
-    return this.commonService.deleteField(updated, ['userId'])
+    const findChannel = await this.channelRepository.getChannelById(
+      updated,
+      userId,
+    )
+
+    return this.commonService.deleteField(
+      findChannel,
+      ['userId', 'thread'],
+      ['updatedAt'],
+    )
   }
 
   async deleteChannel(channelId: string, userId: string) {
-    return this.channelRepository.deleteChannel(channelId, userId)
+    return this.commonService.deleteField(
+      this.channelRepository.deleteChannel(channelId, userId),
+      ['userId'],
+    )
   }
 
   async addUserToChannel(

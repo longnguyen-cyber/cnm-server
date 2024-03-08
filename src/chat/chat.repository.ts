@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
 import { Tx } from '../common/common.type'
 import { PrismaService } from '../prisma/prisma.service'
 import { ChatToDBDto } from './dto/relateDB/ChatToDB.dto'
@@ -88,6 +88,7 @@ export class ChatRepository {
                 messages: true,
               },
             })
+            console.log(lastedThread)
           }
 
           return {
@@ -187,21 +188,81 @@ export class ChatRepository {
   }
 
   async createChat(chatToDB: ChatToDBDto, prisma: Tx = this.prisma) {
-    const chat = await prisma.chats.create({
-      data: {
-        receiveId: chatToDB.receiveId,
-        user: {
-          connect: {
-            id: chatToDB.senderId,
+    const { receiveId, senderId, file, messages } = chatToDB
+    let newMsg: any
+    let newFile: any
+    if (file !== undefined || messages !== undefined) {
+      const chat = await prisma.chats.create({
+        data: {
+          receiveId: chatToDB.receiveId,
+          user: {
+            connect: {
+              id: chatToDB.senderId,
+            },
           },
         },
-      },
-      include: {
-        user: true,
-      },
-    })
-    if (chat === null) return null
-    return chat
+        include: {
+          user: true,
+        },
+      })
+
+      if (chat === null) return null
+
+      const thread = await prisma.threads.create({
+        data: {
+          isReply: false,
+          receiveId,
+          chats: {
+            connect: {
+              id: chat.id,
+            },
+          },
+        },
+        include: {
+          user: true,
+          messages: true,
+        },
+      })
+      if (messages && messages.message !== undefined) {
+        newMsg = await prisma.messages.create({
+          data: {
+            threadId: thread.id,
+            message: messages.message,
+          },
+        })
+      }
+      if (file !== undefined && file !== null) {
+        newFile = file.map(async (file) => {
+          return await prisma.files.create({
+            data: {
+              filename: file.fileName,
+              size: file.size,
+              path: file.path,
+              threadId: thread.id,
+            },
+          })
+        })
+        if (!newFile) {
+          throw new HttpException(
+            {
+              status: HttpStatus.BAD_REQUEST,
+              message: 'File error. Please check again',
+            },
+            HttpStatus.BAD_REQUEST,
+          )
+        }
+      }
+
+      return {
+        ...chat,
+        lastedThread: {
+          ...thread,
+          messages: newMsg,
+          files: newFile,
+        },
+        type: 'chat',
+      }
+    }
   }
 
   async reqAddFriendHaveChat(

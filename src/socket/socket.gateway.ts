@@ -59,7 +59,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
-   * status: 200
+   * status: pass
    */
   @SubscribeMessage('sendThread')
   @UseGuards(AuthGuard)
@@ -126,7 +126,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
-   * status: 200
+   * status: pass
    */
   @SubscribeMessage('updateThread')
   @UseGuards(AuthGuard)
@@ -168,7 +168,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
-   * status: 200
+   * status: pass
    */
   @SubscribeMessage('replyThread')
   @UseGuards(AuthGuard)
@@ -216,7 +216,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
-   * status: 200
+   * status: pass
    */
   @SubscribeMessage('deleteThread')
   @UseGuards(AuthGuard)
@@ -239,7 +239,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
-   * status: 200
+   * status: pass
    */
   @SubscribeMessage('addReact')
   @UseGuards(AuthGuard)
@@ -268,6 +268,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns: channel
+   * status: pass
    */
   @SubscribeMessage('createChannel')
   @UseGuards(AuthGuard)
@@ -288,7 +289,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userCreated: req.user.id,
         members,
       }
-      const rs = await this.channelService.createChannel(channelCreateDto)
+      const rs = await this.channelService.createChannel(
+        channelCreateDto,
+        req.user.id,
+      )
 
       if (rs) {
         this.server.emit('channelWS', {
@@ -315,6 +319,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns channel
+   * status: pass
    */
   @SubscribeMessage('updateChannel')
   @UseGuards(AuthGuard)
@@ -337,7 +342,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('channelWS', {
           status: HttpStatus.OK,
           message: 'Update channel success',
-          data: rs,
+          data: {
+            type: 'updateChannel',
+            channel: rs,
+          },
         })
       } else {
         this.server.emit('channelWS', {
@@ -351,7 +359,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * @param data:{channelId:string}
    * @param req:token
-   * @returns: users:string[]
+   * @returns: users:string[], type:string
+   * status: pass
    */
 
   @SubscribeMessage('deleteChannel')
@@ -374,7 +383,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('channelWS', {
           status: HttpStatus.OK,
           message: 'Delete channel success',
-          data: rs,
+          data: {
+            type: 'deleteChannel',
+            channel: rs,
+          },
         })
       } else {
         this.server.emit('channelWS', {
@@ -394,7 +406,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }]
    * }
    * @param req: token
-   * @returns users:string[]
+   * @returns {users:string[], type:string, usersAdded:User[]}
+   * status: pass
    */
 
   @SubscribeMessage('addUserToChannel')
@@ -414,17 +427,27 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.users,
         req.user.id,
       )
-      if (rs) {
+      if (rs.error) {
         this.server.emit('channelWS', {
-          status: HttpStatus.OK,
-          message: 'Add user to channel success',
-          data: rs,
+          status: HttpStatus.UNAUTHORIZED,
+          message: rs.error,
         })
       } else {
-        this.server.emit('channelWS', {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Add user to channel fail',
-        })
+        if (rs) {
+          this.server.emit('channelWS', {
+            status: HttpStatus.OK,
+            message: 'Add user to channel success',
+            data: {
+              type: 'addUserToChannel',
+              channel: rs,
+            },
+          })
+        } else {
+          this.server.emit('channelWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Add user to channel fail',
+          })
+        }
       }
     }
   }
@@ -549,10 +572,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * @param data:{
    * receiveId:string
+   * messages?:MessageCreateDto
+   * fileCreateDto?:FileCreateDto[]
    * }
    * @param req: token
    * @returns chat
-   * status: 200
+   * status: pass
    */
   @SubscribeMessage('createChat')
   @UseGuards(AuthGuard)
@@ -566,7 +591,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'Access to this resource is denied',
       })
     } else {
-      const rs = await this.chatService.createChat(req.user.id, data.receiveId)
+      // const {
+      //   messages,
+      //   fileCreateDto,
+      //   receiveId,
+      // } = data
+      const rs = await this.chatService.createChat(req.user.id, data)
       console.log(rs)
       if (rs) {
         this.server.emit('chatWS', {
@@ -589,7 +619,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns: { receiveId: data.receiveId, chat: rs }
-   * status: 200
+   * status: pass
    */
   @SubscribeMessage('reqAddFriend')
   @UseGuards(AuthGuard)
@@ -629,7 +659,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
-   * status: 200
+   * status: pass
    * @description: Unrequest add friend
    */
   @SubscribeMessage('unReqAddFriend')
@@ -667,7 +697,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns:{ receiveId: data.receiveId, user: rs }
-   * status: 200
+   * status: pass
    */
 
   @SubscribeMessage('reqAddFriendHaveChat')
@@ -707,7 +737,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
-   * status: 200
+   * status: pass
    */
   @SubscribeMessage('acceptAddFriend')
   @UseGuards(AuthGuard)
@@ -746,7 +776,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
-   * status: 200
+   * status: pass
    */
   @SubscribeMessage('rejectAddFriend')
   @UseGuards(AuthGuard)
@@ -785,7 +815,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * }
    * @param req: token
    * @returns
-   * status: 200
+   * status: pass
    */
   @SubscribeMessage('unfriend')
   @UseGuards(AuthGuard)
