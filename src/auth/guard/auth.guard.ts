@@ -62,6 +62,7 @@ export class AuthGuard implements CanActivate {
       if (token) {
         const user = await this.cacheManager.get(token)
         const parsedUser = JSON.parse(user as any)
+        console.log('parsedUser', parsedUser)
         try {
           if (!parsedUser) {
             request.error = {

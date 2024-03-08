@@ -29,6 +29,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   user = []
   @WebSocketServer() server: Server
 
+  @UseGuards(AuthGuard)
   handleConnection(@ConnectedSocket() socket: Socket) {
     const isAuthenticated = socket.handshake.auth
     console.log('connected')
@@ -63,7 +64,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('sendThread')
   @UseGuards(AuthGuard)
   async handleSendThread(
-    @ConnectedSocket() socket: Socket,
     @MessageBody() data: any,
     @Req() req: any,
   ): Promise<void> {
@@ -97,12 +97,19 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       )
 
       if (chatId) {
-        this.server.emit('updatedSendThread', { ...data, id: rs.id })
+        this.server.emit('updatedSendThread', {
+          ...data,
+          id: rs.id,
+          timeThread: rs.dataReturn.timeThread,
+          user: rs.sender,
+        })
       } else {
         this.server.emit('updatedSendThread', {
           ...data,
           id: rs.id,
           members: rs.dataReturn.users,
+          timeThread: rs.dataReturn.timeThread,
+          user: rs.sender,
         })
       }
     }

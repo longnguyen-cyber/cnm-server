@@ -65,12 +65,6 @@ export class ThreadRepository {
       threadId = newThread.id
     }
 
-    const user = await prisma.users.findMany({
-      where: {
-        OR: [{ id: threadToDB.senderId }, { id: threadToDB.receiveId }],
-      },
-    })
-
     if (messages && messages.message !== undefined) {
       newMsg = await prisma.messages.create({
         data: {
@@ -101,11 +95,15 @@ export class ThreadRepository {
       }
     }
 
+    const sender = await prisma.users.findUnique({
+      where: {
+        id: threadToDB.senderId,
+      },
+    })
+
     return {
       ...newThread,
-      user: {
-        ...user,
-      },
+
       messages: {
         ...newMsg,
       },
@@ -113,6 +111,7 @@ export class ThreadRepository {
         ...newFile,
       },
       dataReturn,
+      sender,
     }
   }
 
