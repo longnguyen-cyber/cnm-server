@@ -9,6 +9,7 @@ export class ThreadToDBDto extends ThreadCreateDto {
   chatId: string
   channelId: string
   threadId?: string
+  replyId?: string
   messages: MessageCreateDto
   file: FileToDB[]
 }

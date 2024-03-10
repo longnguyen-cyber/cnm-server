@@ -26,10 +26,12 @@ export class ThreadService {
     receiveId?: string,
     channelId?: string,
     chatId?: string,
+    replyId?: string,
   ) {
     const threadToDb = this.compareToCreateThread(
       messageCreateDto,
       fileCreateDto,
+      replyId,
       senderId,
       receiveId,
       channelId,
@@ -178,6 +180,7 @@ export class ThreadService {
     const thread = this.compareToCreateThread(
       messageCreateDto,
       fileCreateDto,
+      null,
       senderId,
       null,
       channelId,
@@ -286,6 +289,7 @@ export class ThreadService {
   private compareToCreateThread(
     messageCreateDto?: MessageCreateDto,
     fileCreateDto?: FileCreateDto[],
+    replyId?: string,
     senderId?: string,
     receiveId?: string,
     channelId?: string,
@@ -308,6 +312,7 @@ export class ThreadService {
       channelId,
       chatId,
       threadId,
+      replyId,
     }
   }
 

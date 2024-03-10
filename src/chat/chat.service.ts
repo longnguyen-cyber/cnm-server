@@ -93,7 +93,7 @@ export class ChatService {
     addFields?: string[],
   ) {
     const buildChat = this.commonService.deleteField(chat, removeFields, [
-      'updatedAt',
+      'createdAt',
     ])
     return buildChat
   }

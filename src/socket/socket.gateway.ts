@@ -43,6 +43,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log('disconnected')
 
     const isAuthenticated = socket.handshake.auth
+
     this.user = this.user.filter(
       (item) => item.userId !== isAuthenticated.userId,
     )
@@ -80,12 +81,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         receiveId,
         channelId,
         chatId,
+        replyId,
       }: {
         messages?: MessageCreateDto
         fileCreateDto?: FileCreateDto[]
         receiveId?: string
         channelId?: string
         chatId?: string
+        replyId?: string
       } = data
       const rs = await this.threadService.createThread(
         messages,
@@ -94,6 +97,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         receiveId,
         channelId,
         chatId,
+        replyId,
       )
       if (chatId) {
         this.server.emit('updatedSendThread', {

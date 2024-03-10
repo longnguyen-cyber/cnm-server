@@ -94,6 +94,10 @@ model threads {
   reply    threads?  @relation("replys", fields: [threadId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   replys   threads[] @relation("replys")
 
+  replyToId String?   @db.ObjectId
+  replysTo  threads?  @relation("replysTo", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replysTos threads[] @relation("replysTo")
+
   messages  messages?
   reactions reactions[]
   files     files[]

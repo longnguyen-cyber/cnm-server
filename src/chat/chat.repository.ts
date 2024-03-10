@@ -38,7 +38,7 @@ export class ChatRepository {
         latestThread.set(chat.id, '')
       } else {
         const lastThread = thread.sort(
-          (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
         )
 
         latestThread.set(chat.id, lastThread[0].id)
@@ -148,6 +148,14 @@ export class ChatRepository {
           user: true,
           files: true,
           reactions: true,
+          replysTo: {
+            include: {
+              user: true,
+              files: true,
+              reactions: true,
+              messages: true,
+            },
+          },
           replys: {
             include: {
               user: true,
@@ -158,15 +166,19 @@ export class ChatRepository {
           },
         },
       })
+      //find all user of replys and replysTo
+      if (thread === null) return null
+
       const receiveID = thread?.receiveId
       if (receiveID === null) return thread
+      let threadReturn = null
       if (receiveID !== senderId) {
         const userReceive = await prisma.users.findUnique({
           where: {
             id: senderId,
           },
         })
-        return {
+        threadReturn = {
           ...thread,
           user: userReceive,
         }
@@ -176,11 +188,28 @@ export class ChatRepository {
             id: receiveID,
           },
         })
-        return {
+        threadReturn = {
           ...thread,
           user: userSender,
         }
       }
+
+      if (thread.replysTo === null) return threadReturn
+
+      // thread.replysTo.map(async (reply) => {
+      //   console.log('reply', reply)
+      //   const userReply = await prisma.users.findUnique({
+      //     where: {
+      //       id: reply.userId,
+      //     },
+      //   })
+      //   return {
+      //     ...reply,
+      //     user: userReply,
+      //   }
+      // }),
+
+      return threadReturn
     }
 
     if (chat === null) {
@@ -194,16 +223,47 @@ export class ChatRepository {
           chat.senderId,
           chat.receiveId,
         )
+
         return threads
       }),
     ).then((rs) =>
-      rs.sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime()),
+      rs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
     )
+
+    //find userReply of replysTo and replys
+    const final = threads.map((thread) => {
+      let replysTo
+      if (thread.replysTo !== null) {
+        const userOfReplysTo = threads.find(
+          (t) => t.id === thread.replyToId,
+        ).user
+        replysTo = {
+          ...thread.replysTo,
+          user: userOfReplysTo,
+        }
+      }
+      let replys
+      if (thread.replys !== null) {
+        replys = thread.replys.map((reply) => {
+          const user = threads.find((t) => t.id === reply.threadId).user
+          return {
+            ...reply,
+            user,
+          }
+        })
+      }
+
+      return {
+        ...thread,
+        replysTo,
+        replys,
+      }
+    })
 
     return {
       ...chat,
       user: userReceive,
-      threads,
+      threads: final,
     }
   }
 

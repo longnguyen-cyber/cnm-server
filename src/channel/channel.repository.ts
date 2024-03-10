@@ -81,7 +81,7 @@ export class ChannelRepository {
           latestThread.set(chat.id, '')
         } else {
           const lastThread = thread.sort(
-            (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+            (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
           )
 
           latestThread.set(chat.id, lastThread[0].id)
@@ -188,7 +188,7 @@ export class ChannelRepository {
         }
       }),
     ).then((rs) =>
-      rs.sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime()),
+      rs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
     )
 
     return {

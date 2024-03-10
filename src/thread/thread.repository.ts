@@ -10,110 +10,129 @@ export class ThreadRepository {
 
   async createThread(threadToDB: ThreadToDBDto, prisma: Tx = this.prisma) {
     const messages = threadToDB.messages
-    let threadId = ''
-    let newThread: any
-    let newMsg: any
-    let newFile: any
-    let dataReturn: any
-    if (threadToDB.chatId === undefined || threadToDB.receiveId === null) {
-      newThread = await prisma.threads.create({
-        data: {
-          senderId: threadToDB.senderId,
-          channelId: threadToDB.channelId,
-          isReply: false,
-        },
-        include: {
-          user: true,
-          messages: true,
-        },
-      })
-      threadId = newThread.id
-      const channel = await prisma.channels.update({
-        where: {
-          id: threadToDB.channelId,
-        },
-        data: {
-          timeThread: new Date(),
-        },
-      })
-      dataReturn = channel
-    } else {
-      newThread = await prisma.threads.create({
-        data: {
-          isReply: false,
-          receiveId: threadToDB.receiveId,
-          chats: {
-            connect: {
-              id: threadToDB.chatId,
-            },
-          },
-        },
-        include: {
-          user: true,
-          messages: true,
-        },
-      })
-      const chat = await prisma.chats.update({
-        where: {
-          id: threadToDB.chatId,
-        },
-        data: {
-          timeThread: new Date(),
-        },
-      })
-      dataReturn = chat
-      threadId = newThread.id
-    }
-
-    console.log('threadId', newThread)
-
-    if (messages && messages.message !== undefined) {
-      newMsg = await prisma.messages.create({
-        data: {
-          threadId,
-          message: messages.message,
-        },
-      })
-    }
-    if (threadToDB.file !== undefined && threadToDB.file !== null) {
-      newFile = threadToDB.file.map(async (file) => {
-        return await prisma.files.create({
-          data: {
-            threadId,
-            filename: file.fileName,
-            size: file.size,
-            path: file.path,
-          },
-        })
-      })
-      if (!newFile) {
-        throw new HttpException(
-          {
-            status: HttpStatus.BAD_REQUEST,
-            message: 'File error. Please check again',
-          },
-          HttpStatus.BAD_REQUEST,
-        )
-      }
-    }
-
-    const sender = await prisma.users.findUnique({
+    const replyId = threadToDB.replyId
+    const replyTo = await prisma.threads.findUnique({
       where: {
-        id: threadToDB.senderId,
+        id: replyId,
       },
     })
+    if (!replyTo) {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        error: 'Reply to thread not found',
+      }
+    } else {
+      let threadId = ''
+      let newThread: any
+      let newMsg: any
+      let newFile: any
+      let dataReturn: any
+      if (threadToDB.chatId === undefined || threadToDB.receiveId === null) {
+        newThread = await prisma.threads.create({
+          data: {
+            senderId: threadToDB.senderId,
+            channelId: threadToDB.channelId,
+            isReply: false,
+            replyToId: replyId || null,
+          },
+          include: {
+            user: true,
+            messages: true,
+          },
+        })
+        threadId = newThread.id
+        const channel = await prisma.channels.update({
+          where: {
+            id: threadToDB.channelId,
+          },
+          data: {
+            timeThread: new Date(),
+          },
+        })
+        dataReturn = channel
+      } else {
+        newThread = await prisma.threads.create({
+          data: {
+            isReply: false,
+            receiveId: threadToDB.receiveId,
+            chats: {
+              connect: {
+                id: threadToDB.chatId,
+              },
+            },
+            replysTo: {
+              connect: {
+                id: replyId,
+              },
+            },
+          },
+          include: {
+            user: true,
+            messages: true,
+          },
+        })
+        const chat = await prisma.chats.update({
+          where: {
+            id: threadToDB.chatId,
+          },
+          data: {
+            timeThread: new Date(),
+          },
+        })
+        dataReturn = chat
+        threadId = newThread.id
+      }
 
-    return {
-      thread: {
-        ...newThread,
+      console.log('threadId', newThread)
 
-        messages: {
-          ...newMsg,
+      if (messages && messages.message !== undefined) {
+        newMsg = await prisma.messages.create({
+          data: {
+            threadId,
+            message: messages.message,
+          },
+        })
+      }
+      if (threadToDB.file !== undefined && threadToDB.file !== null) {
+        newFile = threadToDB.file.map(async (file) => {
+          return await prisma.files.create({
+            data: {
+              threadId,
+              filename: file.fileName,
+              size: file.size,
+              path: file.path,
+            },
+          })
+        })
+        if (!newFile) {
+          throw new HttpException(
+            {
+              status: HttpStatus.BAD_REQUEST,
+              message: 'File error. Please check again',
+            },
+            HttpStatus.BAD_REQUEST,
+          )
+        }
+      }
+
+      const sender = await prisma.users.findUnique({
+        where: {
+          id: threadToDB.senderId,
         },
-        files: newFile,
-      },
-      dataReturn,
-      sender,
+      })
+
+      return {
+        thread: {
+          ...newThread,
+
+          messages: {
+            ...newMsg,
+          },
+          files: newFile,
+        },
+        dataReturn,
+        sender,
+      }
     }
   }
 
@@ -251,7 +270,7 @@ export class ThreadRepository {
         },
       })
     }
-    if (threadToDB.chatId === undefined || threadToDB.receiveId === null) {
+    if (threadToDB.chatId === undefined) {
       dataReturn = await prisma.channels.findUnique({
         where: {
           id: threadToDB.channelId,
