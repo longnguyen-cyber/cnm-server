@@ -30,7 +30,7 @@ export class ChannelService {
       return this.commonService.deleteField(
         channel,
         ['userId', 'thread'],
-        ['updatedAt'],
+        ['createdAt'],
       )
     }
   }
@@ -46,7 +46,7 @@ export class ChannelService {
     return this.commonService.deleteField(
       findChannel,
       ['userId', 'thread'],
-      ['updatedAt'],
+      ['createdAt'],
     )
   }
 
@@ -68,7 +68,7 @@ export class ChannelService {
     return this.commonService.deleteField(
       findChannel,
       ['userId', 'thread'],
-      ['updatedAt'],
+      ['createdAt'],
     )
   }
 

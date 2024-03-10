@@ -105,6 +105,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           id: rs.id,
           timeThread: rs.dataReturn.timeThread,
           user: rs.sender,
+          thread: rs.thread,
         })
       } else {
         this.server.emit('updatedSendThread', {
