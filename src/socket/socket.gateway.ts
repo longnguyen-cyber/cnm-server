@@ -50,6 +50,22 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('online', this.user)
   }
 
+  @SubscribeMessage('joinRoom')
+  async handleJoinRoom(
+    @MessageBody() data: any,
+    @ConnectedSocket() socket: Socket,
+  ) {
+    await this.handleLeaveRoom(data, socket)
+  }
+
+  @SubscribeMessage('leaveRoom')
+  async handleLeaveRoom(
+    @MessageBody() data: any,
+    @ConnectedSocket() socket: Socket,
+  ) {
+    console.log('leaveRoom')
+  }
+
   /**
    * @param data:{
    * messages:MessageCreateDto
@@ -68,6 +84,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: any,
     @Req() req: any,
   ): Promise<void> {
+    console.log('sendThread', req)
     if (req.error) {
       this.server.emit('updatedSendThread', {
         status: HttpStatus.FORBIDDEN,
@@ -90,6 +107,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         chatId?: string
         replyId?: string
       } = data
+
+      const chatExist = await this.chatService.getChatById(chatId, userId)
+      console.log(chatExist)
+      if (!chatExist) {
+        this.handleCreateChat({ receiveId, messages, fileCreateDto }, req)
+        return
+      }
+
       const rs = await this.threadService.createThread(
         messages,
         fileCreateDto,
@@ -633,7 +658,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       //   receiveId,
       // } = data
 
+      console.log(data)
       const rs = await this.chatService.createChat(req.user.id, data)
+      console.log(rs)
       if (rs.error) {
         this.server.emit('chatWS', {
           status: HttpStatus.BAD_REQUEST,

@@ -107,6 +107,7 @@ export class ChatRepository {
   }
 
   async getChatById(id: string, userId: string, prisma: Tx = this.prisma) {
+    if (id === undefined) return null
     const chat = await prisma.chats.findUnique({
       where: {
         id: id,
@@ -124,6 +125,10 @@ export class ChatRepository {
         user: true,
       },
     })
+    if (chat === null) {
+      return null
+    }
+
     const userRevice =
       chat.senderId === userId
         ? chat.receiveId // if user is sender, will return user receive
@@ -168,7 +173,6 @@ export class ChatRepository {
       })
       //find all user of replys and replysTo
       if (thread === null) return null
-
       const receiveID = thread?.receiveId
       if (receiveID === null) return thread
       let threadReturn = null
@@ -185,7 +189,7 @@ export class ChatRepository {
       } else {
         const userSender = await prisma.users.findUnique({
           where: {
-            id: receiveID,
+            id: receiveId,
           },
         })
         threadReturn = {

@@ -1,15 +1,17 @@
-import { Injectable } from '@nestjs/common'
+import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common'
 import { ChannelRepository } from './channel.repository'
 import { ChannelCreateDto } from './dto/ChannelCreate.dto'
 import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
 import { CommonService } from '../common/common.service'
 import { UserOfChannel } from './dto/UserOfChannel.dto'
+import { Cache } from 'cache-manager'
 
 @Injectable()
 export class ChannelService {
   constructor(
     private channelRepository: ChannelRepository,
     private readonly commonService: CommonService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async getAllChannel(userId: string) {
@@ -20,19 +22,43 @@ export class ChannelService {
   }
 
   async getChannelById(channelId: string, userId: string) {
+    console.time('time start')
     const channel = await this.channelRepository.getChannelById(
       channelId,
       userId,
     )
-    if (!channel) {
-      return null
-    } else {
-      return this.commonService.deleteField(
-        channel,
-        ['userId', 'thread'],
-        ['createdAt'],
-      )
-    }
+    console.timeEnd('time start')
+    // this.cacheManager.set('channel', channel)
+    const channelcache = (await this.cacheManager.get('channel')) as any
+
+    // if (channelcache) {
+    //   console.log('cache')
+    //   return this.commonService.deleteField(
+    //     channelcache,
+    //     ['userId', 'thread'],
+    //     ['createdAt'],
+    //   )
+    // } else {
+    //   console.log('not cache')
+    //   if (!channel) {
+    //     return null
+    //   } else {
+    //     return this.commonService.deleteField(
+    //       channel,
+    //       ['userId', 'thread'],
+    //       ['createdAt'],
+    //     )
+    //   }
+    // }
+    // if (!channel) {
+    //   return null
+    // } else {
+    return this.commonService.deleteField(
+      channelcache,
+      ['userId', 'thread'],
+      ['createdAt'],
+    )
+    // }
   }
 
   async createChannel(channelCreateDto: ChannelCreateDto, userId?: string) {

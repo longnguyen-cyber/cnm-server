@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
   HttpStatus,
   Param,
   Post,
@@ -83,10 +84,11 @@ export class ChatController {
         data: chat,
       }
     } else {
-      return {
-        status: HttpStatus.BAD_REQUEST,
-        message: 'Not found chat',
-      }
+      throw new HttpException('Not found chat', HttpStatus.NOT_FOUND)
+      // return {
+      //   status: HttpStatus.BAD_REQUEST,
+      //   message: 'Not found chat',
+      // }
     }
   }
 

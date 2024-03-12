@@ -321,8 +321,6 @@ export class ChannelRepository {
     personAddedId: string,
     prisma: Tx = this.prisma,
   ) {
-    console.log('channelId', channelId)
-    console.log('users', personAddedId)
     const channel = await prisma.channels.findUnique({
       where: {
         id: channelId,
@@ -334,7 +332,6 @@ export class ChannelRepository {
     }
 
     const roleOfPersonAdded = this.getRoleOfPersonAdded(channel, personAddedId)
-    console.log('roleOfPersonAdded', roleOfPersonAdded)
 
     if (roleOfPersonAdded == 'MEMBER') {
       return { error: "You don't have permission to add user to this channel" }
@@ -500,7 +497,6 @@ export class ChannelRepository {
           users: remainingUsers,
         },
       })
-      console.log('leave', leave)
     }
 
     return await this.handleSuccessful(
