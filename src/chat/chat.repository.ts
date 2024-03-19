@@ -413,34 +413,68 @@ export class ChatRepository {
   ) {
     const reqAddExist = await prisma.chats.findFirst({
       where: {
-        receiveId,
-        senderId,
-        requestAdd: true,
+        OR: [
+          {
+            senderId,
+            receiveId,
+          },
+          {
+            senderId: receiveId,
+            receiveId: senderId,
+          },
+        ],
+      },
+      include: {
+        thread: true,
       },
     })
-
-    if (reqAddExist)
+    console.log('reqAddExist', reqAddExist)
+    let updateReqAddFriend
+    let reqAddFriend
+    if (reqAddExist.requestAdd === true) {
       return { error: 'Đã gửi lời mời kết bạn', status: HttpStatus.BAD_REQUEST }
+    } else if (reqAddExist.requestAdd === false) {
+      updateReqAddFriend = await prisma.chats.update({
+        where: {
+          id: reqAddExist.id,
+        },
+        data: {
+          requestAdd: true,
+        },
+      })
+      if (updateReqAddFriend === null)
+        return { error: 'Request add friend fail' }
 
-    const reqAddFriend = await prisma.chats.create({
-      data: {
-        requestAdd: true,
-        receiveId,
-        senderId,
-      },
-    })
+      const sender = await prisma.users.findUnique({
+        where: {
+          id: senderId,
+        },
+      })
 
-    if (reqAddFriend === null) return { error: 'Request add friend fail' }
+      return {
+        ...updateReqAddFriend,
+        user: sender,
+      }
+    } else {
+      reqAddFriend = await prisma.chats.create({
+        data: {
+          requestAdd: true,
+          receiveId,
+          senderId,
+        },
+      })
+      if (reqAddFriend === null) return { error: 'Request add friend fail' }
 
-    const sender = await prisma.users.findUnique({
-      where: {
-        id: senderId,
-      },
-    })
+      const sender = await prisma.users.findUnique({
+        where: {
+          id: senderId,
+        },
+      })
 
-    return {
-      ...reqAddFriend,
-      user: sender,
+      return {
+        ...reqAddFriend,
+        user: sender,
+      }
     }
   }
 
