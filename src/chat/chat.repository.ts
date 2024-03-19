@@ -278,8 +278,16 @@ export class ChatRepository {
 
     const chatExist = await prisma.chats.findFirst({
       where: {
-        senderId: senderId,
-        receiveId: receiveId,
+        OR: [
+          {
+            senderId: senderId,
+            receiveId: receiveId,
+          },
+          {
+            senderId: receiveId,
+            receiveId: senderId,
+          },
+        ],
       },
     })
     if (chatExist) {
