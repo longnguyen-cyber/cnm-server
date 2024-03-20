@@ -836,6 +836,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: any,
     @Req() req: any,
   ): Promise<void> {
+    console.log(req.user)
     if (req.error) {
       this.server.emit('chatWS', {
         status: HttpStatus.FORBIDDEN,

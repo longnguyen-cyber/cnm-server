@@ -550,37 +550,33 @@ export class ChatRepository {
         status: HttpStatus.NOT_FOUND,
       }
 
-    const accepted = await prisma.chats.findFirst({
-      where: {
-        id: chatId,
-        isFriend: true,
-      },
-    })
-    if (accepted)
+    if (existing.isFriend === true)
       return {
         error: 'Đã là bạn bè',
         status: HttpStatus.BAD_REQUEST,
       }
-    const acceptAddFriend = await prisma.chats.update({
-      where: {
-        id: chatId,
-        receiveId: userId,
-      },
-      data: {
-        requestAdd: false,
-        isFriend: true,
-      },
-    })
+    else {
+      const acceptAddFriend = await prisma.chats.update({
+        where: {
+          id: chatId,
+          receiveId: userId,
+        },
+        data: {
+          requestAdd: false,
+          isFriend: true,
+        },
+      })
 
-    const sender = await prisma.users.findUnique({
-      where: {
-        id: acceptAddFriend.senderId,
-      },
-    })
+      const sender = await prisma.users.findUnique({
+        where: {
+          id: acceptAddFriend.senderId,
+        },
+      })
 
-    return {
-      ...acceptAddFriend,
-      user: sender,
+      return {
+        ...acceptAddFriend,
+        user: sender,
+      }
     }
   }
 
