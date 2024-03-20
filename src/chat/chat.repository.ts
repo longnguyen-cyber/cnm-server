@@ -200,19 +200,6 @@ export class ChatRepository {
 
       if (thread.replysTo === null) return threadReturn
 
-      // thread.replysTo.map(async (reply) => {
-      //   console.log('reply', reply)
-      //   const userReply = await prisma.users.findUnique({
-      //     where: {
-      //       id: reply.userId,
-      //     },
-      //   })
-      //   return {
-      //     ...reply,
-      //     user: userReply,
-      //   }
-      // }),
-
       return threadReturn
     }
 
@@ -271,11 +258,11 @@ export class ChatRepository {
     }
   }
 
-  async createChat(chatToDB: ChatToDBDto, prisma: Tx = this.prisma) {
-    const { receiveId, senderId, file, messages } = chatToDB
-    let newMsg: any
-    let newFile: any
-
+  async chatExist(
+    senderId: string,
+    receiveId: string,
+    prisma: Tx = this.prisma,
+  ) {
     const chatExist = await prisma.chats.findFirst({
       where: {
         OR: [
@@ -289,7 +276,20 @@ export class ChatRepository {
           },
         ],
       },
+      include: {
+        thread: true,
+      },
     })
+
+    return chatExist
+  }
+
+  async createChat(chatToDB: ChatToDBDto, prisma: Tx = this.prisma) {
+    const { receiveId, senderId, file, messages } = chatToDB
+    let newMsg: any
+    let newFile: any
+
+    const chatExist = this.chatExist(senderId, receiveId)
     if (chatExist) {
       return { error: 'Chat already exist', status: HttpStatus.BAD_REQUEST }
     } else {
@@ -376,11 +376,17 @@ export class ChatRepository {
     const reqAddExist = await prisma.chats.findFirst({
       where: {
         id: chatId,
-        receiveId,
-        requestAdd: true,
+        OR: [
+          {
+            senderId: receiveId,
+          },
+          {
+            receiveId: receiveId,
+          },
+        ],
       },
     })
-    if (reqAddExist)
+    if (reqAddExist.requestAdd === true)
       return { error: 'Đã gửi lời mời kết bạn', status: HttpStatus.BAD_REQUEST }
 
     const reqAddFriend = await prisma.chats.update({
@@ -411,70 +417,28 @@ export class ChatRepository {
     senderId: string,
     prisma: Tx = this.prisma,
   ) {
-    const reqAddExist = await prisma.chats.findFirst({
-      where: {
-        OR: [
-          {
-            senderId,
-            receiveId,
-          },
-          {
-            senderId: receiveId,
-            receiveId: senderId,
-          },
-        ],
-      },
-      include: {
-        thread: true,
-      },
-    })
-    console.log('reqAddExist', reqAddExist)
-    let updateReqAddFriend
-    let reqAddFriend
+    const reqAddExist = await this.chatExist(senderId, receiveId)
     if (reqAddExist.requestAdd === true) {
       return { error: 'Đã gửi lời mời kết bạn', status: HttpStatus.BAD_REQUEST }
-    } else if (reqAddExist.requestAdd === false) {
-      updateReqAddFriend = await prisma.chats.update({
-        where: {
-          id: reqAddExist.id,
-        },
-        data: {
-          requestAdd: true,
-        },
-      })
-      if (updateReqAddFriend === null)
-        return { error: 'Request add friend fail' }
+    }
+    const reqAddFriend = await prisma.chats.create({
+      data: {
+        requestAdd: true,
+        receiveId,
+        senderId,
+      },
+    })
+    if (reqAddFriend === null) return { error: 'Request add friend fail' }
 
-      const sender = await prisma.users.findUnique({
-        where: {
-          id: senderId,
-        },
-      })
+    const sender = await prisma.users.findUnique({
+      where: {
+        id: senderId,
+      },
+    })
 
-      return {
-        ...updateReqAddFriend,
-        user: sender,
-      }
-    } else {
-      reqAddFriend = await prisma.chats.create({
-        data: {
-          requestAdd: true,
-          receiveId,
-          senderId,
-        },
-      })
-      if (reqAddFriend === null) return { error: 'Request add friend fail' }
-
-      const sender = await prisma.users.findUnique({
-        where: {
-          id: senderId,
-        },
-      })
-
-      return {
-        ...reqAddFriend,
-        user: sender,
-      }
+    return {
+      ...reqAddFriend,
+      user: sender,
     }
   }
 
