@@ -41,6 +41,9 @@ import { AppService } from './app.service'
       useFactory: async (config: ConfigService) => ({
         // transport: config.get('MAIL_TRANSPORT'),
         transport: {
+          tls: {
+            rejectUnauthorized: false,
+          },
           host: config.get('MAIL_HOST'),
           secure: false,
           auth: {
@@ -48,6 +51,7 @@ import { AppService } from './app.service'
             pass: config.get('MAIL_PASSWORD'),
           },
         },
+
         defaults: {
           from: `"No Reply" <${config.get('MAIL_FROM')}>`,
         },

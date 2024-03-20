@@ -41,6 +41,7 @@ export class UserService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    // await this.cacheManager.del('01635080905l@gmail.com')
     // const users = await this.userRepository.findAll()
     // users.map((user) => {
     //   this.commonService.deleteField(user, [])
@@ -110,13 +111,12 @@ export class UserService implements OnModuleInit {
 
     const { email, name } = userClean
     const existingName = await this.checkUserName(name)
-    if (existingName) {
+    if (!existingName) {
       throw new HttpExceptionCustom(
         'name already exists',
         HttpStatus.BAD_REQUEST,
       )
     }
-
     await this.checkUniqueUser(email)
     const emailExist = await this.cacheManager.get(email)
     if (emailExist) {
@@ -144,10 +144,8 @@ export class UserService implements OnModuleInit {
           removeOnComplete: true,
         },
       )
-      return true
     }
-
-    return false
+    return true
   }
 
   async verifyUser(token: string) {
