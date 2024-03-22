@@ -87,6 +87,12 @@ export class AuthService {
     })
   }
 
+  generateJWTConfirm(email: string): string {
+    return sign({ email }, process.env.JWT_CONFIRM_SECRET, {
+      expiresIn: '15m',
+    })
+  }
+
   generateJWT(email: string): string {
     return sign({ email }, process.env.JWT_SECRET, { expiresIn: '30d' })
   }

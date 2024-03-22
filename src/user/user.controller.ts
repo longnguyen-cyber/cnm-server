@@ -277,18 +277,49 @@ export class UserController {
   }
 
   @Post('forgot-password')
-  @UseGuards(AuthGuard)
-  async forgotPassword(@Body() body: any): Promise<Respon> {
-    const rs = await this.userService.forgotPassword(body.email)
+  // @UseGuards(AuthGuard)
+  async forgotPassword(@Body() body: any, @Req() req: any): Promise<Respon> {
+    const clientUrl = req.get('Referer')
+
+    const rs = await this.userService.forgotPassword(body.email, clientUrl)
     if (rs) {
       return {
         status: HttpStatus.OK,
-        message: 'Forgot password success',
+        message: 'Please check your email to reset password',
       }
     } else {
       return {
         status: HttpStatus.NOT_FOUND,
         message: 'Forgot password fail',
+      }
+    }
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('change-password')
+  async changePass(@Req() req: any): Promise<Respon> {
+    if (req.error) {
+      return {
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Token expired or invalid',
+        errors: req.error,
+      }
+    }
+
+    const rs = await this.userService.resetPassword(
+      req.token,
+      req.body.newPassword,
+    )
+    if (rs) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Change password success. Please login again',
+        data: rs,
+      }
+    } else {
+      return {
+        status: HttpStatus.NOT_FOUND,
+        message: 'Change password fail',
       }
     }
   }

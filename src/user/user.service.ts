@@ -173,10 +173,30 @@ export class UserService implements OnModuleInit {
     return false
   }
 
+  async resetPassword(token: string, newPassword: string) {
+    const user = await this.cacheManager.get(token)
+    if (user) {
+      const userParsed = JSON.parse(user as any)
+      const passwordHashed = await this.authService.hashPassword(newPassword)
+
+      const userUpdate = await this.userRepository.updateUser(userParsed.id, {
+        password: passwordHashed,
+      })
+      if (userUpdate) {
+        this.cacheManager.del(token)
+        this.cacheManager.del(userParsed.email)
+        return true
+      }
+    }
+    return false
+  }
+
   async updateUser(userUpdateDto: UserUpdateDto, req: any): Promise<any> {
     const userClean = { ...userUpdateDto }
     const { id, password, avatar: oldAvatar } = req.user
     const token = req.token
+    console.log('password', password)
+    console.log('userClean', userClean)
 
     const isNotEmptyObject = this.commonService.isNotEmptyObject(userClean)
     this.userCheck.isNotEmptyUpdate(isNotEmptyObject)
@@ -221,17 +241,28 @@ export class UserService implements OnModuleInit {
     await this.cacheManager.del(token)
   }
 
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string, clientUrl: string) {
+    const emailExist = await this.cacheManager.get(email)
+    console.log(emailExist)
+
+    if (emailExist) {
+      throw new HttpExceptionCustom(
+        'email already exists. Please check your email to reset password',
+        HttpStatus.BAD_REQUEST,
+      )
+    }
+
     const user = await this.userRepository.getUserByEmail(email)
     if (user) {
-      const token = this.authService.generateJWT(email)
-      this.cacheManager.set(token, JSON.stringify(user))
+      const token = this.authService.generateJWTConfirm(email)
+      this.cacheManager.set(email, true, { ttl: 900 })
+      this.cacheManager.set(token, JSON.stringify(user), { ttl: 900 })
       await this.mailQueue.add(
         'forgot-password',
         {
           to: email,
           name: user.name,
-          token,
+          link: `${clientUrl}/auth/reset-password?token=${token}`,
         },
         {
           removeOnComplete: true,
