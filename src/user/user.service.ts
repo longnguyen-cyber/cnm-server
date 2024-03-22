@@ -41,17 +41,17 @@ export class UserService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // await this.cacheManager.del('01635080905l@gmail.com')
-    // const users = await this.userRepository.findAll()
-    // users.map((user) => {
-    //   this.commonService.deleteField(user, [])
-    // })
-    // const userInCache = (await this.cacheManager.get('user')) as any
-    // if (!userInCache) {
-    //   this.cacheManager.set('user', JSON.stringify(users))
-    // } else if (users.length !== JSON.parse(userInCache).length) {
-    //   this.cacheManager.set('user', JSON.stringify(users))
-    // }
+    await this.cacheManager.del('01635080905l@gmail.com')
+    const users = await this.userRepository.findAll()
+    users.map((user) => {
+      this.commonService.deleteField(user, [])
+    })
+    const userInCache = (await this.cacheManager.get('user')) as any
+    if (!userInCache) {
+      this.cacheManager.set('user', JSON.stringify(users))
+    } else if (users.length !== JSON.parse(userInCache).length) {
+      this.cacheManager.set('user', JSON.stringify(users))
+    }
   }
 
   async searchUser(query: string, id: string) {

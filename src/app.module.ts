@@ -25,6 +25,7 @@ import { SocketGateway } from './socket/socket.gateway'
 import { CommonService } from './common/common.service'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
+import { Valid } from './utils/validUser'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -94,11 +95,19 @@ import { AppService } from './app.service'
 
     UploadModule,
   ],
-  providers: [SocketGateway, CommonService, AppService],
+  providers: [
+    SocketGateway,
+    CommonService,
+    AppService,
+    {
+      provide: 'VALID',
+      useClass: Valid,
+    },
+  ],
   controllers: [UserController, AppController],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(Middleware).forRoutes('api/threads')
+    consumer.apply(Middleware).forRoutes('users')
   }
 }
