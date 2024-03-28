@@ -289,7 +289,7 @@ export class ChatRepository {
     let newMsg: any
     let newFile: any
 
-    const chatExist = this.chatExist(senderId, receiveId)
+    const chatExist = await this.chatExist(senderId, receiveId)
     if (chatExist) {
       return { error: 'Chat already exist', status: HttpStatus.BAD_REQUEST }
     } else {
@@ -523,7 +523,6 @@ export class ChatRepository {
       const acceptAddFriend = await prisma.chats.update({
         where: {
           id: chatId,
-          receiveId: userId,
         },
         data: {
           requestAdd: false,

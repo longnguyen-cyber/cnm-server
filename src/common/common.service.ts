@@ -76,8 +76,6 @@ export class CommonService {
     const fieldDefaultRemove = [
       'password',
       'createdAt',
-      'isTwoFactorAuthenticationEnabled',
-      'twoFactorAuthenticationSecret',
       'channel',
       'status',
       'updatedAt',

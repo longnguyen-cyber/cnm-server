@@ -72,19 +72,13 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 
 Nest is [MIT licensed](LICENSE).
 
-## before lunch deploy
+## Time of cache:
 
-```
-docker network create cnm-network
-docker network connect cnm-network rabbitmq
-docker network connect cnm-network redis
-```
+- token login will expire in 15 days
+- 2fa code will expire in 5 minutes
+- create new account(email, token) amd create 2fa will expire in 15 minutes
 
-after run docker without server service:
+## Time of jwt token:
 
-```
-docker network inspect cnm-network
-```
-
-copy ip and change ip in .env file
-run again docker with server service
+- jwt token will expire in 15 minutes with register, login(2fa) and confirm email
+- jwt token will expire in 30 days with login

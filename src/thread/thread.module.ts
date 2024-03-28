@@ -44,7 +44,7 @@ import { ThreadService } from './thread.service'
     RabbitMQModule,
     UploadModule,
     BullModule.registerQueue({
-      name: 'send-mail',
+      name: 'queue',
     }),
   ],
   exports: [ThreadService],

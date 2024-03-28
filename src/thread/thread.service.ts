@@ -1,13 +1,16 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common'
 import { AppService } from '../app.service'
 import { CommonService } from '../common/common.service'
-import { Queue, UploadMethod } from '../enums'
+import { Queue as QueueEnum, UploadMethod } from '../enums'
 import { RabbitMQService } from '../rabbitmq/rabbitmq.service'
 import { FileCreateDto } from './dto/fileCreate.dto'
 import { MessageCreateDto } from './dto/messageCreate.dto'
 import { ReactToDBDto } from './dto/relateDB/reactToDB.dto'
 import { ThreadToDBDto } from './dto/relateDB/threadToDB.dto'
 import { ThreadRepository } from './thread.repository'
+import { Queue as QueueThread } from 'bull'
+import { InjectQueue } from '@nestjs/bull'
+import { Interval } from '@nestjs/schedule'
 
 @Injectable()
 export class ThreadService {
@@ -17,17 +20,52 @@ export class ThreadService {
     @Inject('RabbitMQUploadService')
     private readonly rabbitMQService: RabbitMQService,
     @Inject(AppService) private appService: AppService,
+    @InjectQueue('queue') private readonly threadQueue: QueueThread,
   ) {}
+  // QUEUE
 
-  async createThread(
-    messageCreateDto?: MessageCreateDto,
-    fileCreateDto?: FileCreateDto[],
-    senderId?: string,
-    receiveId?: string,
-    channelId?: string,
-    chatId?: string,
-    replyId?: string,
-  ) {
+  @Interval(1000 * 10) // Chạy 5s 1 lần
+  async handleInterval() {
+    const jobs = await this.threadQueue.getJobs([
+      'active',
+      'waiting',
+      'completed',
+      'failed',
+      'delayed',
+      'paused',
+    ])
+
+    const filteredJobs = jobs
+      .filter((job) => job.name === 'send-thread' && job.opts.lifo === true)
+      .sort((a, b) => {
+        return a.timestamp - b.timestamp
+      })
+
+    if (filteredJobs.length > 0) {
+      filteredJobs.forEach(async (job) => {
+        const data = job.data
+        // job.remove()
+        const result = await this.sendQueue(data)
+        if (result) {
+          console.log('Send thread success')
+          job.remove()
+        }
+      })
+    } else {
+      console.log('No job')
+    }
+  }
+
+  private async sendQueue(threadRaw: any) {
+    const {
+      messageCreateDto,
+      fileCreateDto,
+      replyId,
+      senderId,
+      receiveId,
+      channelId,
+      chatId,
+    } = threadRaw
     const threadToDb = this.compareToCreateThread(
       messageCreateDto,
       fileCreateDto,
@@ -37,6 +75,7 @@ export class ThreadService {
       channelId,
       chatId,
     )
+
     if (fileCreateDto) {
       const limitFileSize = fileCreateDto.some((file) => {
         return this.commonService.limitFileSize(file.size)
@@ -54,7 +93,7 @@ export class ThreadService {
           }
         })
         const uploadFile = await this.rabbitMQService.addToQueue(
-          Queue.Upload,
+          QueueEnum.Upload,
           UploadMethod.UploadMultiple,
           payload,
         )
@@ -71,10 +110,31 @@ export class ThreadService {
     }
 
     const thread = await this.threadRepository.createThread(threadToDb)
-    if (thread) {
-      this.appService.getAll(senderId)
+    return thread
+  }
+
+  async createThread(
+    messageCreateDto?: MessageCreateDto,
+    fileCreateDto?: FileCreateDto[],
+    senderId?: string,
+    receiveId?: string,
+    channelId?: string,
+    chatId?: string,
+    replyId?: string,
+  ) {
+    const threadToDb = {
+      messageCreateDto,
+      fileCreateDto,
+      replyId,
+      senderId,
+      receiveId,
+      channelId,
+      chatId,
     }
-    return this.commonService.deleteField(thread, [''], ['createdAt'])
+
+    await this.threadQueue.add('send-thread', threadToDb, {
+      lifo: true,
+    })
   }
 
   async updateThread(
@@ -112,7 +172,7 @@ export class ThreadService {
           }
         })
         const uploadFile = await this.rabbitMQService.addToQueue(
-          Queue.Upload,
+          QueueEnum.Upload,
           UploadMethod.UploadMultiple,
           payload,
         )
@@ -133,7 +193,7 @@ export class ThreadService {
         return this.commonService.getFileName(file.path)
       })
       await this.rabbitMQService.addToQueue(
-        Queue.Upload,
+        QueueEnum.Upload,
         UploadMethod.DeleteMultiple,
         files,
       )
@@ -153,7 +213,7 @@ export class ThreadService {
         return this.commonService.getFileName(file.path)
       })
       await this.rabbitMQService.addToQueue(
-        Queue.Upload,
+        QueueEnum.Upload,
         UploadMethod.DeleteMultiple,
         files,
       )

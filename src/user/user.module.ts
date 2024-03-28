@@ -6,7 +6,7 @@ import { UserRepository } from './user.repository'
 import { BullModule } from '@nestjs/bull'
 import { AuthModule } from '../auth/auth.module'
 import { CommonModule } from '../common/common.module'
-import { EmailConsumer } from '../consumers/email.consummer'
+import { EmailConsumer } from '../consumers/queue.consummer'
 import { PrismaModule } from '../prisma/prisma.module'
 import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { ConfigModule, ConfigService } from '@nestjs/config'
@@ -39,7 +39,7 @@ import { JwtModule } from '@nestjs/jwt'
       }),
     }),
     BullModule.registerQueue({
-      name: 'send-mail',
+      name: 'queue',
     }),
   ],
   exports: [UserService, UserCheck],

@@ -30,7 +30,7 @@ import { CommonService } from '../common/common.service'
     }),
     RabbitMQModule,
     BullModule.registerQueue({
-      name: 'send-mail',
+      name: 'queue',
     }),
   ],
   exports: [ChannelService],

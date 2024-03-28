@@ -36,22 +36,22 @@ export class UserService implements OnModuleInit {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @Inject('RabbitMQUploadService')
     private readonly rabbitMQService: RabbitMQService,
-    @InjectQueue('send-mail') private readonly mailQueue: QueueEmail,
+    @InjectQueue('queue') private readonly mailQueue: QueueEmail,
     private readonly configService: ConfigService,
   ) {}
 
   async onModuleInit() {
-    await this.cacheManager.del('01635080905l@gmail.com')
-    const users = await this.userRepository.findAll()
-    users.map((user) => {
-      this.commonService.deleteField(user, [])
-    })
-    const userInCache = (await this.cacheManager.get('user')) as any
-    if (!userInCache) {
-      this.cacheManager.set('user', JSON.stringify(users))
-    } else if (users.length !== JSON.parse(userInCache).length) {
-      this.cacheManager.set('user', JSON.stringify(users))
-    }
+    // await this.cacheManager.del('01635080905l@gmail.com')
+    // const users = await this.userRepository.findAll()
+    // users.map((user) => {
+    //   this.commonService.deleteField(user, [])
+    // })
+    // const userInCache = (await this.cacheManager.get('user')) as any
+    // if (!userInCache) {
+    //   this.cacheManager.set('user', JSON.stringify(users))
+    // } else if (users.length !== JSON.parse(userInCache).length) {
+    //   this.cacheManager.set('user', JSON.stringify(users))
+    // }
   }
 
   async searchUser(query: string, id: string) {
@@ -73,7 +73,9 @@ export class UserService implements OnModuleInit {
     const user = await this.checkLoginData(email, password)
     if (user.isTwoFactorAuthenticationEnabled) {
       const token = this.authService.generateJWTRegisterAndLogin(email)
-      await this.cacheManager.set(token, JSON.stringify(user))
+      await this.cacheManager.set(token, JSON.stringify(user), {
+        ttl: 60 * 5,
+      }) // 5 minutes for 2fa
       throw new HttpException(
         {
           message: 'Please provide two factor authentication code',
@@ -84,7 +86,9 @@ export class UserService implements OnModuleInit {
     }
 
     const token = this.authService.generateJWT(email)
-    await this.cacheManager.set(token, JSON.stringify(user))
+    await this.cacheManager.set(token, JSON.stringify(user), {
+      ttl: 60 * 60 * 24 * 30,
+    }) // 30 days
     this.commonService.deleteField(user, [])
     return {
       ...user,
@@ -106,45 +110,53 @@ export class UserService implements OnModuleInit {
     return this.commonService.deleteField(user, [])
   }
 
-  async createUser(userCreateDto: UserCreateDto, clientUrl: string) {
-    const userClean = { ...userCreateDto }
+  async createUser(userCreateDto: UserCreateDto) {
+    //log all cache in cache manager
+    const keys = await this.cacheManager.store.ttl()
+    console.log(keys)
 
-    const { email, name } = userClean
-    const existingName = await this.checkUserName(name)
-    if (!existingName) {
-      throw new HttpExceptionCustom(
-        'name already exists',
-        HttpStatus.BAD_REQUEST,
-      )
-    }
-    await this.checkUniqueUser(email)
-    const emailExist = await this.cacheManager.get(email)
-    if (emailExist) {
-      throw new HttpExceptionCustom(
-        'email already exists',
-        HttpStatus.BAD_REQUEST,
-      )
-    }
+    // const userClean = { ...userCreateDto }
+    // this.cacheManager.del(userClean.email)
+    // const { email, name } = userClean
+    // const existingName = await this.checkUserName(name)
+    // if (!existingName) {
+    //   throw new HttpExceptionCustom(
+    //     'name already exists',
+    //     HttpStatus.BAD_REQUEST,
+    //   )
+    // }
 
-    this.cacheManager.set(email, true)
+    // await this.checkUniqueUser(email)
+    // const emailExist = await this.cacheManager.get(email)
+    // console.log(emailExist)
+    // if (emailExist) {
+    //   throw new HttpExceptionCustom(
+    //     'email already exists',
+    //     HttpStatus.BAD_REQUEST,
+    //   )
+    // }
 
-    const accessToken = this.authService.generateJWTRegisterAndLogin(email) //expires in 15 minutes
-    // const user = await this.userRepository.createUser(data)
+    // this.cacheManager.set(email, true, { ttl: 900 }) //expires in 15 minutes
 
-    if (userClean) {
-      this.cacheManager.set(accessToken, JSON.stringify(userClean))
-      await this.mailQueue.add(
-        'register',
-        {
-          to: userClean.email,
-          name: userClean.name,
-          link: `${clientUrl}/auth/verify-email?token=${accessToken}`,
-        },
-        {
-          removeOnComplete: true,
-        },
-      )
-    }
+    // const accessToken = this.authService.generateJWTRegisterAndLogin(email) //expires in 15 minutes
+    // // const user = await this.userRepository.createUser(data)
+    //max time to verify email is 30 minutes
+    // if (userClean) {
+    // this.cacheManager.set(accessToken, JSON.stringify(userClean), {
+    //   ttl: 900,
+    // })
+    //   await this.mailQueue.add(
+    //     'register',
+    //     {
+    //       to: userClean.email,
+    //       name: userClean.name,
+    //       link: `${this.configService.get('HOST')}/auth/verify-email?token=${accessToken}`,
+    //     },
+    //     {
+    //       removeOnComplete: true,
+    //     },
+    //   )
+    // }
     return true
   }
 
@@ -166,8 +178,16 @@ export class UserService implements OnModuleInit {
         this.cacheManager.del(token)
         this.cacheManager.del(userParsed.email)
         const accessToken = this.authService.generateJWT(userCreated.email)
-        this.cacheManager.set(accessToken, JSON.stringify(userCreated))
-        return userCreated
+        this.cacheManager.set(accessToken, JSON.stringify(userCreated), {
+          ttl: 60 * 60 * 24 * 30,
+        }) // 30 days
+        return this.commonService.deleteField(
+          {
+            ...userCreated,
+            accessToken,
+          },
+          [],
+        )
       }
     }
     return false
@@ -194,9 +214,8 @@ export class UserService implements OnModuleInit {
   async updateUser(userUpdateDto: UserUpdateDto, req: any): Promise<any> {
     const userClean = { ...userUpdateDto }
     const { id, password, avatar: oldAvatar } = req.user
+    //token of user when login
     const token = req.token
-    console.log('password', password)
-    console.log('userClean', userClean)
 
     const isNotEmptyObject = this.commonService.isNotEmptyObject(userClean)
     this.userCheck.isNotEmptyUpdate(isNotEmptyObject)
@@ -241,7 +260,7 @@ export class UserService implements OnModuleInit {
     await this.cacheManager.del(token)
   }
 
-  async forgotPassword(email: string, clientUrl: string) {
+  async forgotPassword(email: string) {
     const emailExist = await this.cacheManager.get(email)
     console.log(emailExist)
 
@@ -262,7 +281,7 @@ export class UserService implements OnModuleInit {
         {
           to: email,
           name: user.name,
-          link: `${clientUrl}/auth/reset-password?token=${token}`,
+          link: `${this.configService.get('HOST')}/auth/reset-password?token=${token}`,
         },
         {
           removeOnComplete: true,
@@ -287,7 +306,7 @@ export class UserService implements OnModuleInit {
 
     const isSet = await this.setTwoFactorAuthenticationSecret(secret, user.id)
     if (isSet) {
-      this.cacheManager.set(token, JSON.stringify(isSet))
+      this.cacheManager.set(token, JSON.stringify(isSet), { ttl: 60 * 15 }) //15 minutes
     }
 
     return {

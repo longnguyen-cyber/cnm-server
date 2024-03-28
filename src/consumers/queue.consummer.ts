@@ -1,11 +1,12 @@
 import { Process, Processor } from '@nestjs/bull'
 import { Job } from 'bull'
 import { MailerService } from '@nest-modules/mailer'
+import { Logger } from '@nestjs/common'
 
-@Processor('send-mail')
+@Processor('queue')
 export class EmailConsumer {
   constructor(private mailerService: MailerService) {}
-
+  private readonly logger = new Logger(EmailConsumer.name)
   @Process('register')
   async registerEmail(job: Job<unknown>) {
     const time1 = new Date()
@@ -34,6 +35,14 @@ export class EmailConsumer {
         link: job.data['link'],
       },
     })
+    const time2 = new Date()
+    console.log('Send Success: ', time2.getTime() - time1.getTime(), 'ms')
+  }
+
+  @Process('send-thread')
+  async sendThread(job: Job<unknown>) {
+    const time1 = new Date()
+    this.logger.log(`Send thread: ${job.data} success`)
     const time2 = new Date()
     console.log('Send Success: ', time2.getTime() - time1.getTime(), 'ms')
   }

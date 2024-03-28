@@ -26,6 +26,7 @@ import { CommonService } from './common/common.service'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { Valid } from './utils/validUser'
+import { ScheduleModule } from '@nestjs/schedule'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -84,7 +85,7 @@ import { Valid } from './utils/validUser'
 
       useFactory: async (config: ConfigService) => ({
         redis: {
-          // host: config.get('REDIS_HOST'),
+          host: config.get('REDIS_HOST'),
           port: config.get('REDIS_PORT'),
           password: config.get('REDIS_PASSWORD'),
         },
@@ -92,7 +93,7 @@ import { Valid } from './utils/validUser'
       inject: [ConfigService],
     }),
     AuthModule,
-
+    ScheduleModule.forRoot(),
     UploadModule,
   ],
   providers: [
@@ -108,6 +109,6 @@ import { Valid } from './utils/validUser'
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(Middleware).forRoutes('users')
+    consumer.apply(Middleware).forRoutes('')
   }
 }

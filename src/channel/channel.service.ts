@@ -27,9 +27,6 @@ export class ChannelService {
       channelId,
       userId,
     )
-    console.timeEnd('time start')
-    // this.cacheManager.set('channel', channel)
-    const channelcache = (await this.cacheManager.get('channel')) as any
 
     // if (channelcache) {
     //   console.log('cache')
@@ -49,16 +46,16 @@ export class ChannelService {
     //       ['createdAt'],
     //     )
     //   }
-    // }
-    // if (!channel) {
-    //   return null
-    // } else {
-    return this.commonService.deleteField(
-      channelcache,
-      ['userId', 'thread'],
-      ['createdAt'],
-    )
-    // }
+    //   }
+    if (!channel) {
+      return null
+    } else {
+      return this.commonService.deleteField(
+        channel,
+        ['userId', 'thread'],
+        ['createdAt'],
+      )
+    }
   }
 
   async createChannel(channelCreateDto: ChannelCreateDto, userId?: string) {

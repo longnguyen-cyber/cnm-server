@@ -1,3 +1,4 @@
+import { HttpStatus, Req, UseGuards } from '@nestjs/common'
 import {
   ConnectedSocket,
   MessageBody,
@@ -8,13 +9,13 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
+import { AuthGuard } from '../auth/guard/auth.guard'
+import { ChannelService } from '../channel/channel.service'
+import { ChatService } from '../chat/chat.service'
+import { CommonService } from '../common/common.service'
 import { FileCreateDto } from '../thread/dto/fileCreate.dto'
 import { MessageCreateDto } from '../thread/dto/messageCreate.dto'
 import { ThreadService } from '../thread/thread.service'
-import { ChannelService } from '../channel/channel.service'
-import { HttpStatus, Req, UseGuards } from '@nestjs/common'
-import { AuthGuard } from '../auth/guard/auth.guard'
-import { ChatService } from '../chat/chat.service'
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -25,6 +26,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private threadService: ThreadService,
     private channelService: ChannelService,
     private readonly chatService: ChatService,
+    private commonService: CommonService,
   ) {}
   user = []
   @WebSocketServer() server: Server
@@ -84,7 +86,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: any,
     @Req() req: any,
   ): Promise<void> {
-    console.log('sendThread', req)
+    console.log(req)
     if (req.error) {
       this.server.emit('updatedSendThread', {
         status: HttpStatus.FORBIDDEN,
@@ -99,6 +101,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         channelId,
         chatId,
         replyId,
+        members,
       }: {
         messages?: MessageCreateDto
         fileCreateDto?: FileCreateDto[]
@@ -106,42 +109,43 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         channelId?: string
         chatId?: string
         replyId?: string
+        members?: string[]
       } = data
 
-      const chatExist = await this.chatService.getChatById(chatId, userId)
-      console.log(chatExist)
-      if (!chatExist) {
-        this.handleCreateChat({ receiveId, messages, fileCreateDto }, req)
-        return
-      }
-
-      const rs = await this.threadService.createThread(
-        messages,
-        fileCreateDto,
-        userId,
-        receiveId,
-        channelId,
-        chatId,
-        replyId,
-      )
-      if (chatId) {
+      const sender = this.commonService.deleteField(req.user, [])
+      //retrun data immediately
+      if (receiveId) {
         this.server.emit('updatedSendThread', {
           ...data,
-          id: rs.id,
-          timeThread: rs.dataReturn.timeThread,
-          user: rs.sender,
-          thread: rs.thread,
+          timeThread: new Date(),
+          user: sender,
         })
       } else {
         this.server.emit('updatedSendThread', {
           ...data,
-          id: rs.thread.id,
-          members: rs.dataReturn.users,
-          timeThread: rs.dataReturn.timeThread,
-          user: rs.sender,
-          thread: rs.thread,
-          // get all rs except sender and dataReturn will be remove
+          members: members,
+          timeThread: new Date(),
+          user: sender,
         })
+      }
+
+      //handle after return data
+      if (!chatId && receiveId) {
+        const chatExist = await this.chatService.getChatById(chatId, userId)
+        if (!chatExist) {
+          this.handleCreateChat({ receiveId, messages, fileCreateDto }, req)
+          return
+        }
+      } else {
+        await this.threadService.createThread(
+          messages,
+          fileCreateDto,
+          userId,
+          receiveId,
+          channelId,
+          chatId,
+          replyId,
+        )
       }
     }
   }

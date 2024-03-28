@@ -19,7 +19,7 @@ import { FileInterceptor } from '@nestjs/platform-express'
 import { ApiTags } from '@nestjs/swagger'
 import { AuthGuard } from '../auth/guard/auth.guard'
 import { CommonService } from '../common/common.service'
-import { Response as Respon } from '../common/common.type'
+import { Response } from '../common/common.type'
 import { UserCreateDto } from './dto/userCreate.dto'
 import { UserUpdateDto } from './dto/userUpdate.dto'
 import { UserService } from './user.service'
@@ -38,9 +38,8 @@ export class UserController {
   async createUsers(
     @Body() userCreateDto: UserCreateDto,
     @Req() req: Request,
-  ): Promise<Respon> {
-    const clientUrl = req.get('Referer')
-    const rs = await this.userService.createUser(userCreateDto, clientUrl)
+  ): Promise<Response | any> {
+    const rs = await this.userService.createUser(userCreateDto)
     if (rs) {
       return {
         status: HttpStatus.CREATED,
@@ -55,7 +54,7 @@ export class UserController {
   }
   @UseGuards(AuthGuard)
   @Get('verify-email')
-  async verify(@Req() req: any): Promise<Respon> {
+  async verify(@Req() req: any): Promise<Response> {
     if (req.error) {
       return {
         status: HttpStatus.UNAUTHORIZED,
@@ -83,7 +82,7 @@ export class UserController {
   @UseGuards(AuthGuard)
   @Post('2fa/generate')
   @UseGuards(AuthGuard)
-  async register(@Req() request: any): Promise<Respon> {
+  async register(@Req() request: any): Promise<Response> {
     const { otpAuthUrl } =
       await this.userService.generateTwoFactorAuthenticationSecret(request)
 
@@ -99,7 +98,7 @@ export class UserController {
   async turnOnTwoFactorAuthentication(
     @Req() request: any,
     @Body() body: any,
-  ): Promise<Respon> {
+  ): Promise<Response> {
     const isCodeValid = this.userService.isTwoFactorAuthenticationCodeValid(
       body.twoFactorAuthenticationCode,
       request.user,
@@ -116,7 +115,10 @@ export class UserController {
 
   @Post('2fa/authenticate')
   @UseGuards(AuthGuard)
-  async authenticate(@Req() request: any, @Body() body: any): Promise<Respon> {
+  async authenticate(
+    @Req() request: any,
+    @Body() body: any,
+  ): Promise<Response> {
     const isCodeValid = this.userService.isTwoFactorAuthenticationCodeValid(
       body.twoFactorAuthenticationCode,
       request.user,
@@ -135,8 +137,11 @@ export class UserController {
 
   @Post('login')
   @UseGuards(AuthGuard)
-  async login(@Body() userLoginDto: any, @Req() req: any): Promise<Respon> {
+  async login(@Body() userLoginDto: any, @Req() req: any): Promise<Response> {
+    console.log('req', req.error)
+    console.log('req', req.user)
     if (req.error) {
+      console.log('user', userLoginDto)
       const user = await this.userService.login(userLoginDto)
       if (user) {
         return {
@@ -171,7 +176,7 @@ export class UserController {
   //seen profile
   @UseGuards(AuthGuard)
   @Get(':id')
-  async getUser(@Param('id') id: string, @Req() req: any): Promise<Respon> {
+  async getUser(@Param('id') id: string, @Req() req: any): Promise<Response> {
     if (req.error) {
       return {
         status: HttpStatus.UNAUTHORIZED,
@@ -202,7 +207,7 @@ export class UserController {
     @Req() req: any,
     @UploadedFile()
     file: Express.Multer.File,
-  ): Promise<Respon> {
+  ): Promise<Response> {
     if (req.error) {
       return {
         status: HttpStatus.UNAUTHORIZED,
@@ -245,7 +250,10 @@ export class UserController {
 
   @Get('/search/:name')
   @UseGuards(AuthGuard)
-  async search(@Param('name') name: string, @Req() req: any): Promise<Respon> {
+  async search(
+    @Param('name') name: string,
+    @Req() req: any,
+  ): Promise<Response> {
     if (req.error) {
       return {
         status: HttpStatus.UNAUTHORIZED,
@@ -268,7 +276,7 @@ export class UserController {
 
   @Post('logout')
   @UseGuards(AuthGuard)
-  async logout(@Req() request: any): Promise<Respon> {
+  async logout(@Req() request: any): Promise<Response> {
     await this.userService.logout(request)
     return {
       status: HttpStatus.OK,
@@ -278,10 +286,8 @@ export class UserController {
 
   @Post('forgot-password')
   // @UseGuards(AuthGuard)
-  async forgotPassword(@Body() body: any, @Req() req: any): Promise<Respon> {
-    const clientUrl = req.get('Referer')
-
-    const rs = await this.userService.forgotPassword(body.email, clientUrl)
+  async forgotPassword(@Body() body: any, @Req() req: any): Promise<Response> {
+    const rs = await this.userService.forgotPassword(body.email)
     if (rs) {
       return {
         status: HttpStatus.OK,
@@ -296,8 +302,8 @@ export class UserController {
   }
 
   @UseGuards(AuthGuard)
-  @Post('change-password')
-  async changePass(@Req() req: any): Promise<Respon> {
+  @Post('reset-password')
+  async changePass(@Req() req: any): Promise<Response> {
     if (req.error) {
       return {
         status: HttpStatus.UNAUTHORIZED,
@@ -305,7 +311,6 @@ export class UserController {
         errors: req.error,
       }
     }
-
     const rs = await this.userService.resetPassword(
       req.token,
       req.body.newPassword,

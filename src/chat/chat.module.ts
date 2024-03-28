@@ -32,7 +32,7 @@ import { ChatService } from './chat.service'
       }),
     }),
     BullModule.registerQueue({
-      name: 'send-mail',
+      name: 'queue',
     }),
   ],
   exports: [ChatService],
