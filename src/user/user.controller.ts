@@ -143,7 +143,6 @@ export class UserController {
   @UseGuards(AuthGuard)
   async login(@Body() userLoginDto: any, @Req() req: any): Promise<Response> {
     if (req.error) {
-      console.log('user', userLoginDto)
       const user = await this.userService.login(userLoginDto)
       if (user) {
         return {
@@ -289,7 +288,6 @@ export class UserController {
   @Post('forgot-password')
   async forgotPassword(@Body() body: any, @Req() req: any): Promise<Response> {
     const rs = await this.userService.forgotPassword(body.email)
-    console.log('rs', rs)
     if (rs) {
       return {
         status: HttpStatus.OK,

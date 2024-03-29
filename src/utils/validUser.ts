@@ -55,7 +55,6 @@ export class Valid {
     if (!this.validatePassword(userCreateDto.password)) {
       return 'Password must have first letter is uppercase, at least 1 number, at least 1 special character'
     }
-
     return true
   }
 

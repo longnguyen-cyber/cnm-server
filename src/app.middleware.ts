@@ -25,7 +25,7 @@ export class Middleware implements NestMiddleware {
         }
         break
     }
-
+    console.log('next')
     next()
   }
 }

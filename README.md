@@ -74,7 +74,7 @@ Nest is [MIT licensed](LICENSE).
 
 ## Time of cache:
 
-- token login will expire in 15 days
+- token login will expire in 30 days
 - 2fa code will expire in 5 minutes
 - create new account(email, token) amd create 2fa will expire in 15 minutes
 

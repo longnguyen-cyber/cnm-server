@@ -86,7 +86,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: any,
     @Req() req: any,
   ): Promise<void> {
-    console.log(req)
     if (req.error) {
       this.server.emit('updatedSendThread', {
         status: HttpStatus.FORBIDDEN,
@@ -656,15 +655,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'Access to this resource is denied',
       })
     } else {
-      // const {
-      //   messages,
-      //   fileCreateDto,
-      //   receiveId,
-      // } = data
-
-      console.log(data)
       const rs = await this.chatService.createChat(req.user.id, data)
-      console.log(rs)
       if (rs.error) {
         this.server.emit('chatWS', {
           status: HttpStatus.BAD_REQUEST,
@@ -701,7 +692,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: any,
     @Req() req: any,
   ): Promise<void> {
-    console.log(req)
     if (req.error) {
       this.server.emit('chatWS', {
         status: HttpStatus.FORBIDDEN,
@@ -840,7 +830,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: any,
     @Req() req: any,
   ): Promise<void> {
-    console.log(req.user)
     if (req.error) {
       this.server.emit('chatWS', {
         status: HttpStatus.FORBIDDEN,
