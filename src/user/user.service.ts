@@ -72,7 +72,7 @@ export class UserService implements OnModuleInit {
   async login({ email, password }: any): Promise<any> {
     const user = await this.checkLoginData(email, password)
     if (user.isTwoFactorAuthenticationEnabled) {
-      const token = this.authService.generateJWTRegisterAndLogin(email)
+      const token = this.authService.generateJWTRegisterAndLogin2FA(email)
       await this.cacheManager.set(token, JSON.stringify(user), {
         ttl: 60 * 5,
       }) // 5 minutes for 2fa
@@ -112,51 +112,47 @@ export class UserService implements OnModuleInit {
 
   async createUser(userCreateDto: UserCreateDto) {
     //log all cache in cache manager
-    const keys = await this.cacheManager.store.ttl()
-    console.log(keys)
 
-    // const userClean = { ...userCreateDto }
-    // this.cacheManager.del(userClean.email)
-    // const { email, name } = userClean
-    // const existingName = await this.checkUserName(name)
-    // if (!existingName) {
-    //   throw new HttpExceptionCustom(
-    //     'name already exists',
-    //     HttpStatus.BAD_REQUEST,
-    //   )
-    // }
+    const userClean = { ...userCreateDto }
+    this.cacheManager.del(userClean.email)
+    const { email, name } = userClean
+    const existingName = await this.checkUserName(name)
+    if (!existingName) {
+      throw new HttpExceptionCustom(
+        'name already exists',
+        HttpStatus.BAD_REQUEST,
+      )
+    }
 
-    // await this.checkUniqueUser(email)
-    // const emailExist = await this.cacheManager.get(email)
-    // console.log(emailExist)
-    // if (emailExist) {
-    //   throw new HttpExceptionCustom(
-    //     'email already exists',
-    //     HttpStatus.BAD_REQUEST,
-    //   )
-    // }
+    await this.checkUniqueUser(email)
+    const emailExist = await this.cacheManager.get(email)
+    console.log(emailExist)
+    if (emailExist) {
+      throw new HttpExceptionCustom(
+        'email already exists',
+        HttpStatus.BAD_REQUEST,
+      )
+    }
 
-    // this.cacheManager.set(email, true, { ttl: 900 }) //expires in 15 minutes
+    this.cacheManager.set(email, true, { ttl: 900 }) //expires in 15 minutes
 
-    // const accessToken = this.authService.generateJWTRegisterAndLogin(email) //expires in 15 minutes
-    // // const user = await this.userRepository.createUser(data)
-    //max time to verify email is 30 minutes
-    // if (userClean) {
-    // this.cacheManager.set(accessToken, JSON.stringify(userClean), {
-    //   ttl: 900,
-    // })
-    //   await this.mailQueue.add(
-    //     'register',
-    //     {
-    //       to: userClean.email,
-    //       name: userClean.name,
-    //       link: `${this.configService.get('HOST')}/auth/verify-email?token=${accessToken}`,
-    //     },
-    //     {
-    //       removeOnComplete: true,
-    //     },
-    //   )
-    // }
+    const accessToken = this.authService.generateJWTRegisterAndLogin2FA(email) //expires in 15 minutes
+    if (userClean) {
+      this.cacheManager.set(accessToken, JSON.stringify(userClean), {
+        ttl: 900,
+      })
+      await this.mailQueue.add(
+        'register',
+        {
+          to: userClean.email,
+          name: userClean.name,
+          link: `${this.configService.get('HOST')}/auth/verify-email?token=${accessToken}`,
+        },
+        {
+          removeOnComplete: true,
+        },
+      )
+    }
     return true
   }
 
@@ -184,7 +180,7 @@ export class UserService implements OnModuleInit {
         return this.commonService.deleteField(
           {
             ...userCreated,
-            accessToken,
+            token: accessToken,
           },
           [],
         )
@@ -262,7 +258,6 @@ export class UserService implements OnModuleInit {
 
   async forgotPassword(email: string) {
     const emailExist = await this.cacheManager.get(email)
-    console.log(emailExist)
 
     if (emailExist) {
       throw new HttpExceptionCustom(
@@ -315,7 +310,7 @@ export class UserService implements OnModuleInit {
     }
   }
 
-  async setTwoFactorAuthenticationSecret(
+  private async setTwoFactorAuthenticationSecret(
     secret: string,
     userId: string,
   ): Promise<any> {
@@ -332,6 +327,8 @@ export class UserService implements OnModuleInit {
     if (update) {
       this.cacheManager.set(req.token, JSON.stringify(update))
     }
+
+    return this.commonService.deleteField(update, [])
   }
 
   async generateQrCodeDataURL(otpAuthUrl: string) {
@@ -346,6 +343,22 @@ export class UserService implements OnModuleInit {
       token: twoFactorAuthenticationCode,
       secret: user.twoFactorAuthenticationSecret,
     })
+  }
+
+  async authenticate(token: string) {
+    const user = await this.cacheManager.get(token)
+    if (user) {
+      const userParsed = JSON.parse(user as any)
+      const newToken = this.authService.generateJWT(userParsed.email)
+      return this.commonService.deleteField(
+        {
+          ...userParsed,
+          token: newToken,
+        },
+        [''],
+      )
+    }
+    return false
   }
 
   private async checkLoginData(

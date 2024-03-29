@@ -81,7 +81,7 @@ export class AuthService {
     })
   }
 
-  generateJWTRegisterAndLogin(email: string): string {
+  generateJWTRegisterAndLogin2FA(email: string): string {
     return sign({ email }, process.env.JWT_REGISTER_SECRET, {
       expiresIn: '15m',
     })

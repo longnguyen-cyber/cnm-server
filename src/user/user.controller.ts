@@ -106,10 +106,14 @@ export class UserController {
     if (!isCodeValid) {
       throw new UnauthorizedException('Wrong authentication code')
     }
-    await this.userService.turnOnTwoFactorAuthentication(request)
+    const rs = await this.userService.turnOnTwoFactorAuthentication(request)
     return {
       status: HttpStatus.OK,
       message: 'Turn on 2FA success',
+      data: {
+        ...rs,
+        token: request.token,
+      },
     }
   }
 
@@ -127,19 +131,17 @@ export class UserController {
     if (!isCodeValid) {
       throw new UnauthorizedException('Wrong authentication code')
     }
-
+    const user2FA = await this.userService.authenticate(request.token)
     return {
       status: HttpStatus.OK,
       message: '2FA success',
-      data: this.commonService.deleteField(request.user, ['']),
+      data: user2FA,
     }
   }
 
   @Post('login')
   @UseGuards(AuthGuard)
   async login(@Body() userLoginDto: any, @Req() req: any): Promise<Response> {
-    console.log('req', req.error)
-    console.log('req', req.user)
     if (req.error) {
       console.log('user', userLoginDto)
       const user = await this.userService.login(userLoginDto)
@@ -285,9 +287,9 @@ export class UserController {
   }
 
   @Post('forgot-password')
-  // @UseGuards(AuthGuard)
   async forgotPassword(@Body() body: any, @Req() req: any): Promise<Response> {
     const rs = await this.userService.forgotPassword(body.email)
+    console.log('rs', rs)
     if (rs) {
       return {
         status: HttpStatus.OK,
@@ -319,7 +321,6 @@ export class UserController {
       return {
         status: HttpStatus.OK,
         message: 'Change password success. Please login again',
-        data: rs,
       }
     } else {
       return {
