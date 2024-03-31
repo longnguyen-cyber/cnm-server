@@ -42,7 +42,6 @@ export class ChatController {
     @Param('chatId') chatId: string,
     @Req() req: any,
   ): Promise<Response> {
-    console.log('chatid', chatId)
     if (req.error) {
       return {
         status: HttpStatus.FORBIDDEN,

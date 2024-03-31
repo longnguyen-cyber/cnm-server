@@ -31,6 +31,7 @@ export class ThreadRepository {
     let newMsg: any
     let newFile: any
     let dataReturn: any
+
     if (threadToDB.chatId === undefined || threadToDB.receiveId === null) {
       newThread = await prisma.threads.create({
         data: {

@@ -53,7 +53,7 @@ export class ChannelController {
         channelId,
         req.user.id,
       )
-
+      console.log('channel', channel)
       if (!channel) {
         return {
           status: HttpStatus.NOT_FOUND,
@@ -63,7 +63,7 @@ export class ChannelController {
       return {
         status: HttpStatus.OK,
         message: 'Get channel success',
-        data: await this.channelService.getChannelById(channelId, req.user.id),
+        data: channel,
       }
     }
   }

@@ -95,6 +95,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         members?: string[]
       } = data
 
+      if (!messages || !fileCreateDto) {
+        this.server.emit('updatedSendThread', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Message or file is required',
+        })
+        return
+      }
+
       const sender = this.commonService.deleteField(req.user, [])
       //retrun data immediately
       if (receiveId) {
@@ -331,7 +339,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server.emit('channelWS', {
             status: HttpStatus.CREATED,
             message: 'Create channel success',
-            data: rs,
+            data: {
+              ...rs,
+              type: 'channel',
+            },
           })
         } else {
           this.server.emit('channelWS', {
@@ -378,7 +389,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           message: 'Update channel success',
           data: {
             type: 'updateChannel',
-            channel: rs,
+            channel: {
+              ...rs,
+              type: 'channel',
+            },
           },
         })
       } else {
@@ -419,7 +433,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           message: 'Delete channel success',
           data: {
             type: 'deleteChannel',
-            channel: rs,
+            channel: {
+              ...rs,
+              type: 'channel',
+            },
           },
         })
       } else {
@@ -473,7 +490,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             message: 'Add user to channel success',
             data: {
               type: 'addUserToChannel',
-              channel: rs,
+              channel: {
+                ...rs,
+                type: 'channel',
+              },
             },
           })
         } else {
@@ -519,12 +539,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         })
       } else {
         if (rs) {
+          const members = rs.users.map((item) => item.id).concat(data.users)
           this.server.emit('channelWS', {
             status: HttpStatus.OK,
             message: 'Remove user from channel success',
             data: {
               type: 'removeUserFromChannel',
-              channel: rs,
+              channel: {
+                ...rs,
+                type: 'channel',
+              },
+              members,
             },
           })
         } else {
@@ -563,16 +588,30 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.user,
         req.user.id,
       )
-      if (rs) {
+      if (rs.error) {
         this.server.emit('channelWS', {
-          status: HttpStatus.OK,
-          message: 'Update role user in channel success',
+          status: HttpStatus.UNAUTHORIZED,
+          message: rs.error,
         })
       } else {
-        this.server.emit('channelWS', {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Update role user in channel fail',
-        })
+        if (rs) {
+          this.server.emit('channelWS', {
+            status: HttpStatus.OK,
+            message: 'Update role user in channel success',
+            data: {
+              type: 'updateRoleUserInChannel',
+              channel: {
+                ...rs,
+                type: 'channel',
+              },
+            },
+          })
+        } else {
+          this.server.emit('channelWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Update role user in channel fail',
+          })
+        }
       }
     }
   }
@@ -603,20 +642,32 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         req.user.id,
         data.transferOwner,
       )
-      if (rs) {
+
+      if (rs.error) {
         this.server.emit('channelWS', {
-          status: HttpStatus.OK,
-          message: 'Leave channel success',
-          data: {
-            type: 'leaveChannel',
-            channel: rs,
-          },
+          status: rs.status,
+          message: rs.error,
         })
       } else {
-        this.server.emit('channelWS', {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Leave channel fail',
-        })
+        if (rs) {
+          this.server.emit('channelWS', {
+            status: HttpStatus.OK,
+            message: 'Leave channel success',
+            data: {
+              type: 'leaveChannel',
+              channel: {
+                ...rs,
+                type: 'channel',
+              },
+              userLeave: req.user.id,
+            },
+          })
+        } else {
+          this.server.emit('channelWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Leave channel fail',
+          })
+        }
       }
     }
   }

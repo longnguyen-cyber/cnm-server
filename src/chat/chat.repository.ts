@@ -7,7 +7,7 @@ export class ChatRepository {
   constructor(private prisma: PrismaService) {}
 
   async getAllChat(userId: string, prisma: Tx = this.prisma) {
-    const chats = await prisma.chats.findMany({
+    let chats = await prisma.chats.findMany({
       where: {
         OR: [
           {
@@ -29,6 +29,10 @@ export class ChatRepository {
     if (chats.length === 0) {
       return []
     }
+
+    chats = chats.filter(
+      (chat) => chat.thread.length > 0 || chat.isFriend === true,
+    )
 
     let latestThread = new Map()
 
@@ -55,9 +59,13 @@ export class ChatRepository {
     if (lastedThreadId.length === 0) {
       const final = await Promise.all(
         chats.map(async (chat) => {
+          const userRevice =
+            chat.senderId === userId
+              ? chat.receiveId // if user is sender, will return user receive
+              : chat.senderId // if user is receiver, will return user sender
           const userReceive = await prisma.users.findUnique({
             where: {
-              id: chat.receiveId,
+              id: userRevice,
             },
           })
 
@@ -418,7 +426,7 @@ export class ChatRepository {
       return { error: 'Đã gửi lời mời kết bạn', status: HttpStatus.BAD_REQUEST }
     }
 
-    if (reqAddExist.thread.length > 0) {
+    if (reqAddExist && reqAddExist.thread.length > 0) {
       this.reqAddFriendHaveChat(reqAddExist.id, receiveId)
     } else {
       const reqAddFriend = await prisma.chats.create({
@@ -607,7 +615,6 @@ export class ChatRepository {
         isFriend: true,
       },
     })
-
     const final = await Promise.all(
       whitelistFriendAccept.map(async (chat) => {
         const anotherId =

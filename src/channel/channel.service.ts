@@ -65,7 +65,6 @@ export class ChannelService {
       channelCreate,
       userId,
     )
-
     return this.commonService.deleteField(
       findChannel,
       ['userId', 'thread'],
@@ -89,7 +88,10 @@ export class ChannelService {
     )
 
     return this.commonService.deleteField(
-      findChannel,
+      {
+        ...findChannel,
+        lastedThread: findChannel.threads[findChannel.threads.length - 1],
+      },
       ['userId', 'thread'],
       ['createdAt'],
     )
@@ -98,7 +100,7 @@ export class ChannelService {
   async deleteChannel(channelId: string, userId: string) {
     return this.commonService.deleteField(
       this.channelRepository.deleteChannel(channelId, userId),
-      ['userId'],
+      ['userId', 'threads', 'thread'],
     )
   }
 
@@ -113,11 +115,12 @@ export class ChannelService {
       personAddedId,
     )
 
-    return this.commonService.deleteField(added, [
-      'userId',
-      'thread',
-      'threads',
-    ])
+    const channel = await this.channelRepository.getChannelById(added.id)
+
+    return this.commonService.deleteField(
+      { ...channel, lastedThread: channel.threads[channel.threads.length - 1] },
+      ['userId', 'thread'],
+    )
   }
 
   async removeUserFromChannel(
@@ -143,7 +146,7 @@ export class ChannelService {
       user,
       userId,
     )
-    return this.commonService.deleteField(updated, ['userId'])
+    return this.commonService.deleteField(updated, ['userId', 'thread'])
   }
 
   async leaveChannel(
@@ -156,10 +159,10 @@ export class ChannelService {
       userId,
       transferOwner,
     )
-    return this.commonService.deleteField(leavteChannel, [
-      'userId',
-      'thread',
-      'threads',
-    ])
+    return this.commonService.deleteField(
+      leavteChannel,
+      ['userId', 'thread'],
+      ['status'],
+    )
   }
 }
