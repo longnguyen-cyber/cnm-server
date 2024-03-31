@@ -33,7 +33,6 @@ export class AuthGuard implements CanActivate {
           : request.handshake.headers.authorization
             ? request.handshake.headers.authorization
             : request.handshake.auth.Authorization.split(' ')[1]
-
       const whiteList = [
         '/api/users/login',
         '/api/users/register',

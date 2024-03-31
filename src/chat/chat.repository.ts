@@ -107,18 +107,10 @@ export class ChatRepository {
   }
 
   async getChatById(id: string, userId: string, prisma: Tx = this.prisma) {
-    if (id === undefined) return null
+    if (id === undefined || id === '') return null
     const chat = await prisma.chats.findUnique({
       where: {
-        id: id,
-        OR: [
-          {
-            senderId: userId,
-          },
-          {
-            receiveId: userId,
-          },
-        ],
+        id,
       },
       include: {
         thread: true,
@@ -373,29 +365,26 @@ export class ChatRepository {
     receiveId: string,
     prisma: Tx = this.prisma,
   ) {
-    const reqAddExist = await prisma.chats.findFirst({
+    const reqAddExist = await prisma.chats.findUnique({
       where: {
         id: chatId,
-        OR: [
-          {
-            senderId: receiveId,
-          },
-          {
-            receiveId: receiveId,
-          },
-        ],
       },
     })
-    if (reqAddExist.requestAdd === true)
+    if (reqAddExist === null)
+      return { error: 'Không tìm thấy chat', status: HttpStatus.NOT_FOUND }
+    else if (reqAddExist.requestAdd === true)
       return { error: 'Đã gửi lời mời kết bạn', status: HttpStatus.BAD_REQUEST }
 
     const reqAddFriend = await prisma.chats.update({
       where: {
         id: chatId,
-        receiveId,
       },
       data: {
         requestAdd: true,
+        userRequest:
+          reqAddExist.senderId === receiveId
+            ? reqAddExist.receiveId
+            : reqAddExist.senderId,
       },
     })
 
@@ -417,28 +406,41 @@ export class ChatRepository {
     senderId: string,
     prisma: Tx = this.prisma,
   ) {
+    if (receiveId === senderId)
+      return {
+        error: 'Không thể tự kết bạn với chính mình',
+        status: HttpStatus.BAD_REQUEST,
+      }
+
     const reqAddExist = await this.chatExist(senderId, receiveId)
-    if (reqAddExist.requestAdd === true) {
+
+    if (reqAddExist && reqAddExist.requestAdd === true) {
       return { error: 'Đã gửi lời mời kết bạn', status: HttpStatus.BAD_REQUEST }
     }
-    const reqAddFriend = await prisma.chats.create({
-      data: {
-        requestAdd: true,
-        receiveId,
-        senderId,
-      },
-    })
-    if (reqAddFriend === null) return { error: 'Request add friend fail' }
 
-    const sender = await prisma.users.findUnique({
-      where: {
-        id: senderId,
-      },
-    })
+    if (reqAddExist.thread.length > 0) {
+      this.reqAddFriendHaveChat(reqAddExist.id, receiveId)
+    } else {
+      const reqAddFriend = await prisma.chats.create({
+        data: {
+          requestAdd: true,
+          receiveId,
+          senderId,
+          userRequest: senderId,
+        },
+      })
+      if (reqAddFriend === null) return { error: 'Request add friend fail' }
 
-    return {
-      ...reqAddFriend,
-      user: sender,
+      const sender = await prisma.users.findUnique({
+        where: {
+          id: senderId,
+        },
+      })
+
+      return {
+        ...reqAddFriend,
+        user: sender,
+      }
     }
   }
 
@@ -470,7 +472,6 @@ export class ChatRepository {
         const unReqAddFriend = await prisma.chats.update({
           where: {
             id: chatId,
-            senderId: userId,
           },
           data: {
             requestAdd: false,
@@ -519,7 +520,12 @@ export class ChatRepository {
         error: 'Đã là bạn bè',
         status: HttpStatus.BAD_REQUEST,
       }
-    else {
+    if (existing.userRequest === userId) {
+      return {
+        error: 'Không thể tự kết bạn với chính mình',
+        status: HttpStatus.BAD_REQUEST,
+      }
+    } else {
       const acceptAddFriend = await prisma.chats.update({
         where: {
           id: chatId,
@@ -577,10 +583,10 @@ export class ChatRepository {
     const rejectAddFriend = await prisma.chats.update({
       where: {
         id: chatId,
-        receiveId: userId,
       },
       data: {
         requestAdd: false,
+        userRequest: null,
       },
     })
 
@@ -637,23 +643,25 @@ export class ChatRepository {
       },
     })
 
-    const final = await Promise.all(
-      waitlistFriendAccept.map(async (chat) => {
-        const anotherId =
-          chat.senderId === userId ? chat.receiveId : chat.senderId
-        const userReceive = await prisma.users.findUnique({
-          where: {
-            id: anotherId,
-          },
-        })
+    const final = (
+      await Promise.all(
+        waitlistFriendAccept.map(async (chat) => {
+          if (chat.userRequest !== userId) {
+            const userReceive = await prisma.users.findUnique({
+              where: {
+                id: chat.senderId,
+              },
+            })
+            return {
+              ...chat,
+              user: userReceive,
+            }
+          }
+        }),
+      )
+    ).filter(Boolean)
 
-        return {
-          ...chat,
-          user: userReceive,
-        }
-      }),
-    )
-    return final
+    return final ?? []
   }
 
   async unfriend(chatId: string, prisma: Tx = this.prisma): Promise<any> {
@@ -687,6 +695,7 @@ export class ChatRepository {
         data: {
           isFriend: false,
           requestAdd: false,
+          userRequest: null,
         },
       })
       return unfriend

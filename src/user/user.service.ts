@@ -41,12 +41,11 @@ export class UserService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    await this.cacheManager.del('01635080905l@gmail.com')
     const users = await this.userRepository.findAll()
+    const userInCache = (await this.cacheManager.get('user')) as any
     users.map((user) => {
       this.commonService.deleteField(user, [])
     })
-    const userInCache = (await this.cacheManager.get('user')) as any
     if (!userInCache) {
       this.cacheManager.set('user', JSON.stringify(users))
     } else if (users.length !== JSON.parse(userInCache).length) {
@@ -458,12 +457,13 @@ export class UserService implements OnModuleInit {
   }
 
   private buildUserResponse(user: ResUserDto): any {
-    const { name, email, avatar, displayName, phone, status } = user
+    const { name, email, phone, status, id } = user
     return {
+      id,
       name,
       email,
-      avatar,
-      displayName,
+      avatar: user.avatar ?? '',
+      displayName: user.displayName ?? name,
       phone,
       status,
     }

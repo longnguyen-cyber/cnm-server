@@ -52,22 +52,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('online', this.user)
   }
 
-  @SubscribeMessage('joinRoom')
-  async handleJoinRoom(
-    @MessageBody() data: any,
-    @ConnectedSocket() socket: Socket,
-  ) {
-    await this.handleLeaveRoom(data, socket)
-  }
-
-  @SubscribeMessage('leaveRoom')
-  async handleLeaveRoom(
-    @MessageBody() data: any,
-    @ConnectedSocket() socket: Socket,
-  ) {
-    console.log('leaveRoom')
-  }
-
   /**
    * @param data:{
    * messages:MessageCreateDto
@@ -118,6 +102,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           ...data,
           timeThread: new Date(),
           user: sender,
+          isReply: false,
+          isRecall: false,
         })
       } else {
         this.server.emit('updatedSendThread', {
@@ -125,6 +111,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           members: members,
           timeThread: new Date(),
           user: sender,
+          isReply: false,
+          isRecall: false,
         })
       }
 
@@ -712,7 +700,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server.emit('chatWS', {
             status: HttpStatus.OK,
             message: 'Request friend success',
-            data: { receiveId: data.receiveId, chat: rs },
+            data: { receiveId: data.receiveId, chat: rs, type: 'reqAddFriend' },
           })
         } else {
           this.server.emit('chatWS', {
@@ -756,7 +744,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server.emit('chatWS', {
             status: HttpStatus.OK,
             message: 'Unrequest friend success',
-            data: { type: 'unReqAddFriend', chat: rs },
+            data: {
+              type: 'unReqAddFriend',
+              chat: rs,
+              receiveId:
+                rs.receiveId === req.user.id ? rs.senderId : rs.receiveId,
+            },
           })
         } else {
           this.server.emit('chatWS', {
@@ -790,10 +783,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'Access to this resource is denied',
       })
     } else {
+      if (data.receiveId === req.user.id) {
+        this.server.emit('chatWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'You can not add yourself',
+        })
+        return
+      }
       const rs = await this.chatService.reqAddFriendHaveChat(
         data.chatId,
         data.receiveId,
       )
+
       if (rs.error) {
         this.server.emit('chatWS', {
           status: rs.status,
@@ -804,7 +805,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server.emit('chatWS', {
             status: HttpStatus.OK,
             message: 'Request friend success',
-            data: { receiveId: data.receiveId, user: rs },
+            data: {
+              receiveId: data.receiveId,
+              chat: rs,
+              type: 'reqAddFriendHaveChat',
+            },
           })
         } else {
           this.server.emit('chatWS', {
@@ -850,7 +855,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server.emit('chatWS', {
             status: HttpStatus.OK,
             message: 'Accept friend success',
-            data: { type: 'acceptAddFriend', chat: rs },
+            data: {
+              type: 'acceptAddFriend',
+              chat: rs,
+              senderId: req.user.id,
+              receiveId:
+                rs.receiveId === req.user.id ? rs.senderId : rs.receiveId,
+            },
           })
         } else {
           this.server.emit('chatWS', {
@@ -897,7 +908,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server.emit('chatWS', {
             status: HttpStatus.OK,
             message: 'Reject friend success',
-            data: { type: 'rejectAddFriend', chat: rs },
+            data: {
+              type: 'rejectAddFriend',
+              chat: rs,
+              senderId: req.user.id,
+            },
           })
         } else {
           this.server.emit('chatWS', {
@@ -940,7 +955,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server.emit('chatWS', {
             status: HttpStatus.OK,
             message: 'Unfriend success',
-            data: { type: 'unfriend', chat: rs },
+            data: {
+              type: 'unfriend',
+              chat: rs,
+              senderId: req.user.id,
+              receiveId:
+                rs.receiveId === req.user.id ? rs.senderId : rs.receiveId,
+            },
           })
         } else {
           this.server.emit('chatWS', {

@@ -85,7 +85,6 @@ export class UserController {
   async register(@Req() request: any): Promise<Response> {
     const { otpAuthUrl } =
       await this.userService.generateTwoFactorAuthenticationSecret(request)
-
     return {
       status: HttpStatus.OK,
       message: 'Generate 2FA success',

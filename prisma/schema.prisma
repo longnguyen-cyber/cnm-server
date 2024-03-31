@@ -16,7 +16,7 @@ model users {
   status                           String
   phone                            String?
   email                            String      @unique
-  avatar                           String?
+  avatar                           String      @default("")
   isTwoFactorAuthenticationEnabled Boolean     @default(false)
   twoFactorAuthenticationSecret    String      @default("")
   isOwner                          Boolean?
@@ -27,7 +27,6 @@ model users {
   channel                          String[]    @db.ObjectId
   threads                          threads[]
   reactions                        reactions[]
-  isOnline                         Boolean?    @default(false)
 }
 
 model channels {
@@ -45,18 +44,19 @@ model channels {
 }
 
 model chats {
-  id         String    @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
   // bookmark   bookmarks[]
-  thread     threads[]
-  receiveId  String    @db.ObjectId
-  senderId   String?   @db.ObjectId
-  isFriend   Boolean?  @default(false)
-  requestAdd Boolean?  @default(false)
-  user       users?    @relation(fields: [senderId], references: [id])
-  timeThread DateTime? @default(now())
+  thread      threads[]
+  userRequest String?   @db.ObjectId
+  receiveId   String    @db.ObjectId
+  senderId    String?   @db.ObjectId
+  isFriend    Boolean?  @default(false)
+  requestAdd  Boolean?  @default(false)
+  user        users?    @relation(fields: [senderId], references: [id])
+  timeThread  DateTime? @default(now())
 }
 
 // model bookmarks {

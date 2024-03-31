@@ -33,7 +33,7 @@ export class ChatService {
       chatId,
       receiveId,
     )
-    return this.commonService.deleteField(req, ['thread'])
+    return this.commonService.deleteField(req, ['thread'], ['status'])
   }
 
   async reqAddFriend(receiveId: string, senderId: string) {
@@ -51,7 +51,7 @@ export class ChatService {
 
   async acceptAddFriend(chatId: string, userId: string) {
     const accept = await this.chatRepository.acceptAddFriend(chatId, userId)
-    return this.commonService.deleteField(accept, ['thread'])
+    return this.commonService.deleteField(accept, ['thread'], ['status'])
   }
 
   async rejectAddFriend(chatId: string, userId: string) {
@@ -77,7 +77,7 @@ export class ChatService {
 
   async unfriend(chatId: string) {
     const req = await this.chatRepository.unfriend(chatId)
-    return this.commonService.deleteField(req, ['thread'])
+    return this.commonService.deleteField(req, ['thread'], ['status'])
   }
 
   private compareToCreateChat(senderId: string, data: any): ChatToDBDto {
