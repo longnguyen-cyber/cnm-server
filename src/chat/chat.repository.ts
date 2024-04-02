@@ -26,10 +26,6 @@ export class ChatRepository {
       },
     })
 
-    if (chats.length === 0) {
-      return []
-    }
-
     chats = chats.filter(
       (chat) => chat.thread.length > 0 || chat.isFriend === true,
     )
@@ -114,6 +110,28 @@ export class ChatRepository {
     }
   }
 
+  async getChatByUserId(
+    senderId: string,
+    receiveId: string,
+    prisma: Tx = this.prisma,
+  ) {
+    const chat = await prisma.chats.findFirst({
+      where: {
+        OR: [
+          {
+            senderId,
+            receiveId,
+          },
+          {
+            senderId: receiveId,
+            receiveId: senderId,
+          },
+        ],
+      },
+    })
+    return chat ?? null
+  }
+
   async getChatById(id: string, userId: string, prisma: Tx = this.prisma) {
     if (id === undefined || id === '') return null
     const chat = await prisma.chats.findUnique({
@@ -152,12 +170,12 @@ export class ChatRepository {
           messages: true,
           user: true,
           files: true,
-          reactions: true,
+          emojis: true,
           replysTo: {
             include: {
               user: true,
               files: true,
-              reactions: true,
+              emojis: true,
               messages: true,
             },
           },
@@ -165,7 +183,7 @@ export class ChatRepository {
             include: {
               user: true,
               files: true,
-              reactions: true,
+              emojis: true,
               messages: true,
             },
           },

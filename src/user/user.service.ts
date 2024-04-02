@@ -25,6 +25,7 @@ import { UserCreateDto } from './dto/userCreate.dto'
 import { UserUpdateDto } from './dto/userUpdate.dto'
 import { UserCheck } from './user.check'
 import { UserRepository } from './user.repository'
+import { ChatService } from '../chat/chat.service'
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -33,6 +34,7 @@ export class UserService implements OnModuleInit {
     private commonService: CommonService,
     private userRepository: UserRepository,
     private userCheck: UserCheck,
+    private chatService: ChatService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @Inject('RabbitMQUploadService')
     private readonly rabbitMQService: RabbitMQService,
@@ -41,22 +43,49 @@ export class UserService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const users = await this.userRepository.findAll()
-    console.log(users)
-    this.cacheManager.set('user', JSON.stringify(users))
+    // const users = await this.userRepository.findAll()
+    // // console.log(users)
+    // this.cacheManager.set('user', JSON.stringify(users), {
+    //   ttl: 60 * 60 * 24 * 7, // 1 week
+    // })
+    // const userInCache = (await this.cacheManager.get('user')) as any
+    // users.map((user) => {
+    //   this.commonService.deleteField(user, [])
+    // })
+    // if (!userInCache) {
+    //   this.cacheManager.set('user', JSON.stringify(users), {
+    //     ttl: 60 * 60 * 24 * 7, // 1 week
+    //   })
+    // } else if (users.length !== JSON.parse(userInCache).length) {
+    //   this.cacheManager.set('user', JSON.stringify(users), {
+    //     ttl: 60 * 60 * 24 * 7, // 1 week
+    //   })
+    // }
   }
 
   async searchUser(query: string, id: string) {
     const users = (await this.cacheManager.get('user')) as any
-    console.log(users)
     if (users) {
       const usersParsed = JSON.parse(users)
-      const userFilter = usersParsed.filter((user: any) => {
-        return (
-          user.name.toLowerCase().includes(query.toLowerCase()) &&
-          user.id !== id
+      const usersWithChatId = usersParsed.map((user: any) => {
+        const chatId = user.chatIds.find(
+          (chat: any) =>
+            (chat.receiveId === user.id && chat.senderId === id) ||
+            (chat.receiveId === id && chat.senderId === user.id),
         )
+        return {
+          user: {
+            ...user,
+            chatIds: undefined, // remove chatIds from user
+          },
+          chatId: chatId ? chatId.id : null,
+        }
       })
+      const userFilter = usersWithChatId.filter(
+        (data: any) =>
+          data.user.name.toLowerCase().includes(query.toLowerCase()) &&
+          data.user.id !== id,
+      )
 
       return this.commonService.deleteField(userFilter, ['channels'])
     }

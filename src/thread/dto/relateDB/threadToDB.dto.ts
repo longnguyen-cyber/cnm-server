@@ -1,6 +1,4 @@
-import { FileCreateDto } from '../fileCreate.dto'
 import { MessageCreateDto } from '../messageCreate.dto'
-import { ReactCreateDto } from '../reactCreate.dto'
 import { ThreadCreateDto } from '../threadCreate.dto'
 import { FileToDB } from './fileToDB.dto'
 

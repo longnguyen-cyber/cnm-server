@@ -1,0 +1,44 @@
+{
+  "id": "66096fa1c121006ac2eb88db",
+  "createdAt": "2024-03-31T14:13:50.722Z",
+  "isEdited": null,
+  "isReply": false,
+  "isRecall": false,
+  "receiveId": "65bceb94ceda5567efc0b629",
+  "senderId": null,
+  "chatId": "6608cf8b7af6e132bb469007",
+  "channelId": null,
+  "threadId": null,
+  "replyToId": null,
+  "messages": {
+    "id": "66096fa3c121006ac2eb88dc",
+    "message": "nesdw",
+    "type": "text",
+    "createdAt": "2024-03-31T14:13:55.476Z",
+    "threadId": "66096fa1c121006ac2eb88db"
+  },
+  "user": {
+    "id": "65dd4ae4cbeffa04dbbc5b16",
+    "name": "nesdw",
+    "displayName": null,
+    "phone": null,
+    "email": "01635080905l@gmail.com",
+    "avatar": "https://workchat.s3.ap-southeast-1.amazonaws.com/Screenshot-from-2024-02-25-13-48-02.png",
+    "isTwoFactorAuthenticationEnabled": false,
+    "twoFactorAuthenticationSecret": "",
+    "isOwner": null,
+    "createdAt": "2024-02-27T02:37:24.930Z"
+  },
+  "files": [],
+  "emojis": [
+    {
+      "id": "660bb37ac34e3ddabfed545b",
+      "emoji": "smile",
+      "quantity": 5,
+      "createdAt": "2024-04-02T07:27:54.916Z",
+      "senderId": "65bceb94ceda5567efc0b629",
+      "threadId": "66096fa1c121006ac2eb88db"
+    }
+  ],
+  "replys": []
+}

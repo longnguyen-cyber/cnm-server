@@ -5,12 +5,12 @@ import { Queue as QueueEnum, UploadMethod } from '../enums'
 import { RabbitMQService } from '../rabbitmq/rabbitmq.service'
 import { FileCreateDto } from './dto/fileCreate.dto'
 import { MessageCreateDto } from './dto/messageCreate.dto'
-import { ReactToDBDto } from './dto/relateDB/reactToDB.dto'
 import { ThreadToDBDto } from './dto/relateDB/threadToDB.dto'
 import { ThreadRepository } from './thread.repository'
 import { Queue as QueueThread } from 'bull'
 import { InjectQueue } from '@nestjs/bull'
 import { Interval } from '@nestjs/schedule'
+import { EmojiToDBDto } from './dto/relateDB/emojiToDB.dto'
 
 @Injectable()
 export class ThreadService {
@@ -35,15 +35,28 @@ export class ThreadService {
       'paused',
     ])
 
-    const filteredJobs = jobs
+    const filteredJobsSend = jobs
       .filter((job) => job.name === 'send-thread' && job.opts.lifo === true)
       .sort((a, b) => {
         return a.timestamp - b.timestamp
       })
+
+    const filteredJobsDelete = jobs
+      .filter((job) => job.name === 'delete-thread' && job.opts.lifo === true)
+      .sort((a, b) => {
+        return a.timestamp - b.timestamp
+      })
+
+    const filteredJobsRecall = jobs
+      .filter((job) => job.name === 'recall-thread' && job.opts.lifo === true)
+      .sort((a, b) => {
+        return a.timestamp - b.timestamp
+      })
+
     // 1711857378169
 
-    if (filteredJobs.length > 0) {
-      filteredJobs.forEach(async (job) => {
+    if (filteredJobsSend.length > 0) {
+      filteredJobsSend.forEach(async (job) => {
         const data = job.data
         // job.remove()
         const result = await this.sendQueue(data)
@@ -52,8 +65,35 @@ export class ThreadService {
           job.remove()
         }
       })
-    } else {
-      // console.log('No job')
+    }
+    if (filteredJobsDelete.length > 0) {
+      filteredJobsDelete.forEach(async (job) => {
+        const data = job.data
+        const result = await this.deleteQueue(
+          data.threadId,
+          data.userDeleteId,
+          data.type,
+        )
+        if (result) {
+          console.log('Delete thread success')
+          job.remove()
+        }
+      })
+    }
+
+    if (filteredJobsRecall.length > 0) {
+      filteredJobsRecall.forEach(async (job) => {
+        const data = job.data
+        const result = await this.recallQueue(
+          data.threadId,
+          data.recallId,
+          data.type,
+        )
+        if (result) {
+          console.log('Recall thread success')
+          job.remove()
+        }
+      })
     }
   }
 
@@ -133,9 +173,13 @@ export class ThreadService {
       chatId,
     }
 
-    await this.threadQueue.add('send-thread', threadToDb, {
-      lifo: true,
-    })
+    if (fileCreateDto) {
+      this.sendQueue(threadToDb)
+    } else {
+      await this.threadQueue.add('send-thread', threadToDb, {
+        lifo: true,
+      })
+    }
   }
 
   async updateThread(
@@ -202,30 +246,42 @@ export class ThreadService {
     return thread
   }
 
-  async deleteThread(threadId: string, senderId?: string, receiveId?: string) {
-    const oldFile = await this.threadRepository.getThreadById(threadId)
+  async deleteThread(threadId: string, userDeleteId: string, type: string) {
+    //get file before delete to delete file in s3
+
+    await this.threadQueue.add(
+      'delete-thread',
+      { threadId, userDeleteId, type },
+      { lifo: true },
+    )
+  }
+
+  private async deleteQueue(
+    threadId: string,
+    userDeleteId: string,
+    type: string,
+  ) {
     const thread = await this.threadRepository.deleteThread(
       threadId,
-      senderId,
-      receiveId,
+      userDeleteId,
+      type,
     )
-    if (thread && oldFile.files.length > 0) {
-      const files = oldFile.files.map((file) => {
-        return this.commonService.getFileName(file.path)
-      })
-      await this.rabbitMQService.addToQueue(
-        QueueEnum.Upload,
-        UploadMethod.DeleteMultiple,
-        files,
-      )
-    }
     return thread
   }
 
-  async recallSendThread(threadId: string, senderId: string) {
+  async recallSendThread(threadId: string, recallId: string, type: string) {
+    await this.threadQueue.add(
+      'recall-thread',
+      { threadId, recallId, type },
+      { lifo: true },
+    )
+  }
+
+  private async recallQueue(threadId: string, recallId: string, type: string) {
     const thread = await this.threadRepository.recallSendThread(
       threadId,
-      senderId,
+      recallId,
+      type,
     )
     return thread
   }
@@ -269,25 +325,25 @@ export class ThreadService {
     return reply
   }
 
-  async addReact(
-    react: string,
+  async addEmoji(
+    emoji: string,
     quantity: number,
     threadId: string,
     senderId: string,
   ) {
-    const reactToDb = this.compareToCreateReact(
-      react,
+    const emojiToDb = this.compareToCreateEmoji(
+      emoji,
       quantity,
       threadId,
       senderId,
     )
-    const thread = await this.threadRepository.addReact(reactToDb)
+    const thread = await this.threadRepository.addEmoji(emojiToDb)
     return thread
   }
 
-  async removeReact(threadId: string, senderId: string) {
-    const reactToDb = this.compareToCreateReact(null, null, threadId, senderId)
-    const thread = await this.threadRepository.removeReact(reactToDb)
+  async removeEmoji(threadId: string, senderId: string) {
+    const emojiToDb = this.compareToCreateEmoji(null, null, threadId, senderId)
+    const thread = await this.threadRepository.removeEmoji(emojiToDb)
     return thread
   }
 
@@ -320,6 +376,15 @@ export class ThreadService {
       }
     })
     return newThreads
+  }
+
+  async threadExists(threadId: string, recallId: string, type: string) {
+    const thread = await this.threadRepository.threadExists(
+      threadId,
+      recallId,
+      type,
+    )
+    return thread
   }
 
   async getThreadById(threadId: string) {
@@ -399,17 +464,17 @@ export class ThreadService {
     }
   }
 
-  private compareToCreateReact(
-    react?: string,
+  private compareToCreateEmoji(
+    emoji?: string,
     quantity?: number,
     threadId?: string,
-    userId?: string,
-  ): ReactToDBDto {
+    senderId?: string,
+  ): EmojiToDBDto {
     return {
-      react: react,
+      emoji,
       quantity,
       threadId,
-      userId,
+      senderId,
     }
   }
 }

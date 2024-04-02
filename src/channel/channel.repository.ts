@@ -166,7 +166,7 @@ export class ChannelRepository {
         include: {
           messages: true,
           files: true,
-          reactions: true,
+          emojis: true,
           user: true,
         },
       })
@@ -178,13 +178,13 @@ export class ChannelRepository {
         const threads = await getAllMessageOfThread(thread.id)
         const messages = threads?.messages
         const files = threads?.files
-        const reactions = threads?.reactions
+        const emojis = threads?.emojis
         const user = threads?.user
         return {
           ...thread,
           messages,
           files,
-          reactions,
+          emojis,
           user,
         }
       }),
@@ -304,7 +304,7 @@ export class ChannelRepository {
           },
         })
 
-        await prisma.reactions.deleteMany({
+        await prisma.emojis.deleteMany({
           where: {
             threadId: thread.id,
           },

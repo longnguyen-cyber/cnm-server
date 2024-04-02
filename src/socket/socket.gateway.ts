@@ -84,7 +84,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         channelId,
         chatId,
         replyId,
-        members,
       }: {
         messages?: MessageCreateDto
         fileCreateDto?: FileCreateDto[]
@@ -92,7 +91,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         channelId?: string
         chatId?: string
         replyId?: string
-        members?: string[]
       } = data
 
       if (!messages && !fileCreateDto) {
@@ -104,6 +102,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const sender = this.commonService.deleteField(req.user, [])
+
+      if (fileCreateDto) {
+        await this.threadService.createThread(
+          messages,
+          fileCreateDto,
+          userId,
+          receiveId,
+          channelId,
+          chatId,
+          replyId,
+        )
+      }
       //retrun data immediately
       if (receiveId) {
         this.server.emit('updatedSendThread', {
@@ -133,15 +143,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           return
         }
       } else {
-        await this.threadService.createThread(
-          messages,
-          fileCreateDto,
-          userId,
-          receiveId,
-          channelId,
-          chatId,
-          replyId,
-        )
+        if (!fileCreateDto) {
+          await this.threadService.createThread(
+            messages,
+            fileCreateDto,
+            userId,
+            receiveId,
+            channelId,
+            chatId,
+            replyId,
+          )
+        }
       }
     }
   }
@@ -240,54 +252,147 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * @param data:{
-   * threadId:string
-   * senderId:string
-   * receiveId:string
-   * }
+   * @param data:// {
+//     "threadId": "660bc6fc2190416551808733",
+//     "receiveId":"65bceb94ceda5567efc0b629",
+//     "type": "chat"
+// }
+   * @param req: token
+   * @returns
+   * status: pass
+   */
+  @SubscribeMessage('recallSendThread')
+  @UseGuards(AuthGuard)
+  async handleRecallThread(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    const {
+      threadId,
+      type,
+    }: {
+      threadId: string
+      receiveId?: string
+      type: string
+    } = data
+    const rs = await this.threadService.threadExists(
+      threadId,
+      req.user.id,
+      type,
+    )
+    if (rs) {
+      this.server.emit('updatedSendThread', {
+        ...data,
+      })
+
+      await this.threadService.recallSendThread(threadId, req.user.id, type)
+    }
+  }
+
+  /**
+   * @param data:// {
+//     "threadId": "660bc6fc2190416551808733",
+//     "receiveId": "65bceb94ceda5567efc0b629",
+//     "type": "chat"
+// }
    * @param req: token
    * @returns
    * status: pass
    */
   @SubscribeMessage('deleteThread')
   @UseGuards(AuthGuard)
-  async handleDeleteThread(@MessageBody() data: any): Promise<void> {
-    const { threadId, senderId, receiveId } = data
-    const rs = await this.threadService.deleteThread(
+  async handleDeleteThread(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    const {
       threadId,
-      senderId,
-      receiveId,
+      type,
+    }: {
+      threadId: string
+      receiveId?: string
+      type: string
+    } = data
+
+    const rs = await this.threadService.threadExists(
+      threadId,
+      req.user.id,
+      type,
     )
-    this.server.emit('updatedSendThread', rs)
+    if (rs) {
+      this.server.emit('updatedSendThread', {
+        ...data,
+      })
+
+      await this.threadService.deleteThread(threadId, req.user.id, type)
+    }
   }
 
   /**
    * @param data:{
-   * react:string
-   * quantity:number
-   * threadId:string
-   * senderId:string
-   * }
+    "emoji":"smile",
+    "quantity":10,
+    "threadId": "66096fa1c121006ac2eb88db",
+    "receiveId":"65bceb94ceda5567efc0b629",
+    "typeEmoji":"add"
+}
    * @param req: token
    * @returns
    * status: pass
    */
-  @SubscribeMessage('addReact')
+  @SubscribeMessage('emoji')
   @UseGuards(AuthGuard)
-  async handleAddReact(@MessageBody() data: any): Promise<void> {
-    const {
-      react,
-      quantity,
-      threadId,
-      senderId,
-    }: {
-      react: string
-      quantity: number
-      threadId: string
-      senderId: string
-    } = data
-    await this.threadService.addReact(react, quantity, threadId, senderId)
-    this.server.emit('updatedSendThread', true)
+  async handleaddEmoji(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
+      this.server.emit('updatedSendThread', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      const {
+        emoji,
+        quantity,
+        threadId,
+        receiveId,
+        members,
+        typeEmoji,
+      }: {
+        emoji: string
+        quantity: number
+        threadId: string
+        receiveId?: string
+        members?: string[]
+        typeEmoji: string
+      } = data
+      if (receiveId) {
+        this.server.emit('updatedSendThread', {
+          ...data,
+          receiveId,
+          type: 'chat',
+          typeEmoji,
+        })
+      } else {
+        this.server.emit('updatedSendThread', {
+          ...data,
+          members,
+          type: 'channel',
+          typeEmoji,
+        })
+      }
+      if (typeEmoji === 'add') {
+        await this.threadService.addEmoji(
+          emoji,
+          quantity,
+          threadId,
+          req.user.id,
+        )
+      } else {
+        await this.threadService.removeEmoji(threadId, req.user.id)
+      }
+    }
   }
 
   /**

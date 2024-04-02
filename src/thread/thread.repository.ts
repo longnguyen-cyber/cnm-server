@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
-import { Response, Tx } from '../common/common.type'
+import { Tx } from '../common/common.type'
 import { PrismaService } from '../prisma/prisma.service'
-import { ReactToDBDto } from './dto/relateDB/reactToDB.dto'
+import { EmojiToDBDto } from './dto/relateDB/emojiToDB.dto'
 import { ThreadToDBDto } from './dto/relateDB/threadToDB.dto'
 
 @Injectable()
@@ -60,6 +60,11 @@ export class ThreadRepository {
         newThread = await prisma.threads.create({
           data: {
             isReply: false,
+            user: {
+              connect: {
+                id: threadToDB.senderId,
+              },
+            },
             receiveId: threadToDB.receiveId,
             chats: {
               connect: {
@@ -82,6 +87,11 @@ export class ThreadRepository {
           data: {
             isReply: false,
             receiveId: threadToDB.receiveId,
+            user: {
+              connect: {
+                id: threadToDB.senderId,
+              },
+            },
             chats: {
               connect: {
                 id: threadToDB.chatId,
@@ -158,60 +168,78 @@ export class ThreadRepository {
     }
   }
 
-  async recallSendThread(
+  async threadExists(
     threadId: string,
     senderId: string,
+    type: string,
     prisma: Tx = this.prisma,
-  ): Promise<any> {
-    const deleteThread = await prisma.threads.update({
+  ) {
+    const threadExist = await prisma.threads.findUnique({
       where: {
         id: threadId,
-        senderId: senderId,
-      },
-      data: {
-        isRecall: true,
       },
     })
-    if (!deleteThread) {
-      return {
-        success: false,
-        message: 'Recall thread failed',
-        errors: 'Recall thread failed',
-        data: null,
-      }
-    }
-    const deleteMsg = await prisma.messages.deleteMany({
-      where: {
-        threadId: threadId,
-      },
-    })
-
-    const deleteFile = await prisma.files.deleteMany({
-      where: {
-        threadId: threadId,
-      },
-    })
-
-    const deleteReact = await prisma.reactions.deleteMany({
-      where: {
-        threadId: threadId,
-      },
-    })
-
-    if (!deleteMsg && !deleteFile && !deleteReact && !deleteThread) {
-      return {
-        success: false,
-        message: 'Delete thread failed',
-        errors: 'Delete message, file, react and thread failed',
-        data: null,
-      }
+    if (!threadExist) {
+      return false
+    } else if (
+      (type === 'chat' && threadExist.senderId !== senderId) ||
+      (type === 'channel' && threadExist.senderId !== senderId)
+    ) {
+      return false
     }
 
-    return {
-      success: true,
-      message: 'Delete thread successfully',
-      errors: '',
-      data: threadId,
+    return true
+  }
+  async recallSendThread(
+    threadId: string,
+    recallId: string,
+    type: string,
+    prisma: Tx = this.prisma,
+  ): Promise<any> {
+    const threadExist = await this.threadExists(
+      threadId,
+      recallId,
+      type,
+      prisma,
+    )
+
+    if (!threadExist) {
+      return {
+        status: HttpStatus.NOT_FOUND,
+        errors: 'Thread not found',
+      }
+    } else {
+      const recallSendThread = await prisma.threads.update({
+        where: {
+          id: threadId,
+        },
+        data: {
+          isRecall: true,
+        },
+      })
+      if (!recallSendThread) {
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Recall thread failed',
+        }
+      }
+      await prisma.messages.deleteMany({
+        where: {
+          threadId: threadId,
+        },
+      })
+
+      await prisma.files.deleteMany({
+        where: {
+          threadId: threadId,
+        },
+      })
+
+      await prisma.emojis.deleteMany({
+        where: {
+          threadId: threadId,
+        },
+      })
     }
   }
 
@@ -381,157 +409,114 @@ export class ThreadRepository {
 
   async deleteThread(
     threadId: string,
-    senderId?: string,
-    receiveId?: string,
+    userDeleteId: string,
+    type: string,
     prisma: Tx = this.prisma,
   ) {
-    let thread = null
-    if (senderId) {
-      thread = await prisma.threads.findFirst({
+    const threadExist = await this.threadExists(
+      threadId,
+      userDeleteId,
+      type,
+      prisma,
+    )
+
+    if (!threadExist) {
+      return {
+        status: HttpStatus.NOT_FOUND,
+        errors: 'Thread not found',
+      }
+    } else {
+      const recallSendThread = await prisma.threads.delete({
         where: {
           id: threadId,
-          senderId,
         },
       })
-    } else if (receiveId) {
-      thread = await prisma.threads.findFirst({
+      if (!recallSendThread) {
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Delete thread failed',
+        }
+      }
+      await prisma.messages.deleteMany({
         where: {
-          id: threadId,
-          receiveId,
+          threadId: threadId,
+        },
+      })
+
+      await prisma.files.deleteMany({
+        where: {
+          threadId: threadId,
+        },
+      })
+
+      await prisma.emojis.deleteMany({
+        where: {
+          threadId: threadId,
         },
       })
     }
+  }
 
-    if (thread) {
-      const deleteMsg = await prisma.messages.deleteMany({
+  async addEmoji(emojiToDB: EmojiToDBDto, prisma: Tx = this.prisma) {
+    const threadId = emojiToDB.threadId
+    const senderId = emojiToDB.senderId
+    const emoji = await prisma.emojis.findUnique({
+      where: {
+        threadId,
+        senderId,
+      },
+    })
+
+    if (emoji) {
+      await prisma.emojis.update({
         where: {
-          threadId: threadId,
+          threadId,
+          senderId,
+        },
+        data: {
+          quantity: emojiToDB.quantity,
         },
       })
-
-      const deleteFile = await prisma.files.deleteMany({
-        where: {
-          threadId: threadId,
+      return true
+    } else {
+      await prisma.emojis.create({
+        data: {
+          threadId,
+          senderId,
+          emoji: emojiToDB.emoji,
+          quantity: emojiToDB.quantity,
         },
       })
-
-      const deleteReact = await prisma.reactions.deleteMany({
-        where: {
-          threadId: threadId,
-        },
-      })
-
-      const deleteThread = await prisma.threads.delete({
-        where: {
-          id: threadId,
-        },
-      })
-
-      if (!deleteMsg && !deleteFile && !deleteReact && !deleteThread) {
-        return false
-      }
       return true
     }
   }
 
-  async addReact(reactToDB: ReactToDBDto, prisma: Tx = this.prisma) {
-    const threadId = reactToDB.threadId
-    const userId = reactToDB.userId
-    const react = await prisma.reactions.findUnique({
+  async removeEmoji(emojiToDB: EmojiToDBDto, prisma: Tx = this.prisma) {
+    const threadId = emojiToDB.threadId
+    const senderId = emojiToDB.senderId
+    const existEmoji = await prisma.emojis.findUnique({
       where: {
         threadId,
-        userId,
+        senderId,
       },
     })
-
-    if (react) {
-      await prisma.reactions.update({
-        where: {
-          threadId: threadId,
-          userId: userId,
-        },
-        data: {
-          quantity: reactToDB.quantity,
-        },
-      })
-
-      return {
-        success: true,
-        message: 'Update react successfully',
-        errors: '',
-      }
-    } else {
-      await prisma.reactions.create({
-        data: {
-          threadId: threadId,
-          userId: userId,
-          react: reactToDB.react,
-          quantity: reactToDB.quantity,
-        },
-      })
-    }
-
-    return {
-      success: true,
-      message: 'Create react successfully',
-      errors: '',
-    }
-  }
-
-  async removeReact(reactToDB: ReactToDBDto, prisma: Tx = this.prisma) {
-    const threadId = reactToDB.threadId
-    const userId = reactToDB.userId
-
-    await prisma.reactions.delete({
+    if (!existEmoji) return false
+    await prisma.emojis.delete({
       where: {
-        userId: userId,
-        threadId: threadId,
+        senderId,
+        threadId,
       },
     })
 
-    return {
-      success: true,
-      message: 'Delete react successfully',
-      errors: '',
-    }
+    return true
   }
   async getAllThread(type: string, id: string, prisma: Tx = this.prisma) {
-    // let threads: any
-    // if (type === 'channelId') {
-    //   threads = await prisma.threads.findMany({
-    //     where: {
-    //       isReply: false,
-    //       channelId: id,
-    //     },
-    //     include: {
-    //       messages: true,
-    //       user: true,
-    //       files: true,
-    //       reactions: true,
-    //       replys: true,
-    //     },
-    //   })
-    // } else if (type === 'chatId') {
-    //   threads = await prisma.threads.findMany({
-    //     where: {
-    //       isReply: false,
-    //       chatId: id,
-    //     },
-    //     include: {
-    //       messages: true,
-    //       user: true,
-    //       files: true,
-    //       reactions: true,
-    //       replys: true,
-    //     },
-    //   })
-    // }
     const threads = await prisma.threads.findMany({
       include: {
         messages: true,
         user: true,
         files: true,
-        reactions: true,
+        emojis: true,
         replys: true,
       },
     })
@@ -547,7 +532,7 @@ export class ThreadRepository {
             messages: true,
             user: true,
             files: true,
-            reactions: true,
+            emojis: true,
           },
         })
         return {
@@ -584,7 +569,7 @@ export class ThreadRepository {
         messages: true,
         user: true,
         files: true,
-        reactions: true,
+        emojis: true,
         replys: true,
       },
     })
@@ -598,7 +583,7 @@ export class ThreadRepository {
         messages: true,
         user: true,
         files: true,
-        reactions: true,
+        emojis: true,
       },
     })
 

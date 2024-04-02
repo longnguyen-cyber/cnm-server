@@ -22,6 +22,10 @@ export class ChatService {
     )
   }
 
+  async getChatByUserId(senderId: string, userId: string) {
+    return await this.chatRepository.getChatByUserId(senderId, userId)
+  }
+
   async createChat(senderId: string, data: any) {
     const chatToDb = this.compareToCreateChat(senderId, data)
     const chat = await this.chatRepository.createChat(chatToDb)

@@ -46,9 +46,9 @@ export class ResThreadDto {
       path: string
       size: number
     }[]
-    reactions?: {
+    emojis?: {
       id: string
-      reaction: string
+      emoji: string
       createdAt: Date
       updatedAt: Date
       user?: {

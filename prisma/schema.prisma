@@ -9,24 +9,24 @@ generator client {
 }
 
 model users {
-  id                               String      @id @default(auto()) @map("_id") @db.ObjectId
-  name                             String      @unique
+  id                               String    @id @default(auto()) @map("_id") @db.ObjectId
+  name                             String    @unique
   password                         String
   displayName                      String?
   status                           String
   phone                            String?
-  email                            String      @unique
-  avatar                           String      @default("")
-  isTwoFactorAuthenticationEnabled Boolean     @default(false)
-  twoFactorAuthenticationSecret    String      @default("")
+  email                            String    @unique
+  avatar                           String    @default("")
+  isTwoFactorAuthenticationEnabled Boolean   @default(false)
+  twoFactorAuthenticationSecret    String    @default("")
   isOwner                          Boolean?
-  createdAt                        DateTime?   @default(now())
-  updatedAt                        DateTime?   @updatedAt
+  createdAt                        DateTime? @default(now())
+  updatedAt                        DateTime? @updatedAt
   deletedAt                        DateTime?
   chats                            chats[]
-  channel                          String[]    @db.ObjectId
+  channel                          String[]  @db.ObjectId
   threads                          threads[]
-  reactions                        reactions[]
+  emojis                           emojis[]
 }
 
 model channels {
@@ -59,19 +59,6 @@ model chats {
   timeThread  DateTime? @default(now())
 }
 
-// model bookmarks {
-//   id        String    @id @default(auto()) @map("_id") @db.ObjectId
-//   name      String
-//   url       String
-//   createdAt DateTime  @default(now())
-//   updatedAt DateTime  @updatedAt
-//   deletedAt DateTime?
-//   chat      chats?    @relation(fields: [chatId], references: [id])
-//   chatId    String?   @db.ObjectId
-//   channel   channels? @relation(fields: [channelId], references: [id])
-//   channelId String?   @db.ObjectId
-// }
-
 model threads {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   createdAt DateTime  @default(now())
@@ -98,9 +85,9 @@ model threads {
   replysTo  threads?  @relation("replysTo", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   replysTos threads[] @relation("replysTo")
 
-  messages  messages?
-  reactions reactions[]
-  files     files[]
+  messages messages?
+  emojis   emojis[]
+  files    files[]
 }
 
 model messages {
@@ -114,17 +101,19 @@ model messages {
   thread    threads?  @relation(fields: [threadId], references: [id])
 }
 
-model reactions {
+model emojis {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  react     String    @unique
+  emoji     String
   quantity  Int       @default(0)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-  userId    String?   @unique @db.ObjectId
-  user      users?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  senderId  String?   @unique @db.ObjectId
+  user      users?    @relation(fields: [senderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   threadId  String?   @unique @db.ObjectId
   thread    threads?  @relation(fields: [threadId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("emojis")
 }
 
 model files {

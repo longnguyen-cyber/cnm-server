@@ -12,6 +12,7 @@ import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import * as redisStore from 'cache-manager-redis-store'
 import { JwtModule } from '@nestjs/jwt'
+import { ChatModule } from '../chat/chat.module'
 @Module({
   controllers: [UserController],
   providers: [UserService, UserRepository, UserCheck, EmailConsumer],
@@ -20,6 +21,7 @@ import { JwtModule } from '@nestjs/jwt'
     RabbitMQModule,
     PrismaModule,
     CommonModule,
+    ChatModule,
     ConfigModule,
     JwtModule.register({
       secret: 'secret',
