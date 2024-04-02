@@ -79,7 +79,7 @@ export class UserController {
   }
 
   // 2fa
-  @UseGuards(AuthGuard)
+  //token will die in 30 days
   @Post('2fa/generate')
   @UseGuards(AuthGuard)
   async register(@Req() request: any): Promise<Response> {
@@ -277,6 +277,7 @@ export class UserController {
   @Post('logout')
   @UseGuards(AuthGuard)
   async logout(@Req() request: any): Promise<Response> {
+    console.log('logout')
     await this.userService.logout(request)
     return {
       status: HttpStatus.OK,
@@ -285,12 +286,18 @@ export class UserController {
   }
 
   @Post('forgot-password')
-  async forgotPassword(@Body() body: any, @Req() req: any): Promise<Response> {
+  async forgotPassword(@Body() body: any): Promise<Response> {
     const rs = await this.userService.forgotPassword(body.email)
     if (rs) {
       return {
         status: HttpStatus.OK,
         message: 'Please check your email to reset password',
+      }
+    } else if (rs === null) {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message:
+          'Email already exists. Please check your email to reset password',
       }
     } else {
       return {

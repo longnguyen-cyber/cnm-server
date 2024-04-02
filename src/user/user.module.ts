@@ -29,7 +29,6 @@ import { JwtModule } from '@nestjs/jwt'
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        ttl: 60 * 60 * 24 * 10, // 10 days
         isGlobal: true,
         store: redisStore,
         host: configService.get<string>('REDIS_HOST'),

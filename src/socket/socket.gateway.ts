@@ -95,7 +95,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         members?: string[]
       } = data
 
-      if (!messages || !fileCreateDto) {
+      if (!messages && !fileCreateDto) {
         this.server.emit('updatedSendThread', {
           status: HttpStatus.BAD_REQUEST,
           message: 'Message or file is required',
@@ -112,15 +112,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           user: sender,
           isReply: false,
           isRecall: false,
+          type: 'chat',
         })
       } else {
         this.server.emit('updatedSendThread', {
           ...data,
-          members: members,
           timeThread: new Date(),
           user: sender,
           isReply: false,
           isRecall: false,
+          type: 'channel',
         })
       }
 

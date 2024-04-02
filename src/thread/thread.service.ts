@@ -53,7 +53,7 @@ export class ThreadService {
         }
       })
     } else {
-      console.log('No job')
+      // console.log('No job')
     }
   }
 

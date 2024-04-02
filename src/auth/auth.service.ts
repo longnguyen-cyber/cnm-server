@@ -8,6 +8,7 @@ import { Token } from './interface/auth.interface'
 export class AuthService {
   private readonly SALT_LEN = 32
   private readonly KEY_LEN = 64
+
   private readonly SCRYPT_PARAMS = {
     N: 32768,
     r: 8,
@@ -83,29 +84,23 @@ export class AuthService {
 
   generateJWTRegisterAndLogin2FA(email: string): string {
     return sign({ email }, process.env.JWT_REGISTER_SECRET, {
-      expiresIn: '15m',
+      expiresIn: process.env.REGISTER_2FA_EXPIRED,
     })
   }
 
   generateJWTConfirm(email: string): string {
-    return sign({ email }, process.env.JWT_CONFIRM_SECRET, {
-      expiresIn: '15m',
+    return sign({ email }, process.env.CONFIRM_EXPIRED, {
+      expiresIn: process.env.CONFIRM_EXPIRED,
     })
   }
 
   generateJWT(email: string): string {
-    return sign({ email }, process.env.JWT_SECRET, { expiresIn: '30d' })
+    return sign({ email }, process.env.JWT_SECRET, {
+      expiresIn: process.env.LOGIN_EXPIRED,
+    })
   }
 
   decodeJWT(ac_token: Token): JwtPayload | string {
     return verify(ac_token, process.env.JWT_SECRET)
-  }
-
-  generateJWTRefresh(email: string): string {
-    return sign({ email }, process.env.JWT_REFRESH_SECRET, { expiresIn: '30d' })
-  }
-
-  decodeJWTRefresh(rf_token: string): JwtPayload | string {
-    return verify(rf_token, process.env.JWT_REFRESH_SECRET)
   }
 }

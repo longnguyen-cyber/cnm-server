@@ -41,20 +41,14 @@ export class UserService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // const users = await this.userRepository.findAll()
-    // const userInCache = (await this.cacheManager.get('user')) as any
-    // users.map((user) => {
-    //   this.commonService.deleteField(user, [])
-    // })
-    // if (!userInCache) {
-    //   this.cacheManager.set('user', JSON.stringify(users))
-    // } else if (users.length !== JSON.parse(userInCache).length) {
-    //   this.cacheManager.set('user', JSON.stringify(users))
-    // }
+    const users = await this.userRepository.findAll()
+    console.log(users)
+    this.cacheManager.set('user', JSON.stringify(users))
   }
 
   async searchUser(query: string, id: string) {
     const users = (await this.cacheManager.get('user')) as any
+    console.log(users)
     if (users) {
       const usersParsed = JSON.parse(users)
       const userFilter = usersParsed.filter((user: any) => {
@@ -73,8 +67,8 @@ export class UserService implements OnModuleInit {
     if (user.isTwoFactorAuthenticationEnabled) {
       const token = this.authService.generateJWTRegisterAndLogin2FA(email)
       await this.cacheManager.set(token, JSON.stringify(user), {
-        ttl: 60 * 5,
-      }) // 5 minutes for 2fa
+        ttl: this.configService.get<number>('REGISTER_2FA_EXPIRED'),
+      }) // 15 minutes for 2fa
       throw new HttpException(
         {
           message: 'Please provide two factor authentication code',
@@ -86,7 +80,7 @@ export class UserService implements OnModuleInit {
 
     const token = this.authService.generateJWT(email)
     await this.cacheManager.set(token, JSON.stringify(user), {
-      ttl: 60 * 60 * 24 * 30,
+      ttl: this.configService.get<number>('LOGIN_EXPIRED'),
     }) // 30 days
     this.commonService.deleteField(user, [])
     return {
@@ -131,13 +125,15 @@ export class UserService implements OnModuleInit {
       )
     }
 
-    this.cacheManager.set(email, true, { ttl: 900 }) //expires in 15 minutes
+    this.cacheManager.set(email, true, {
+      ttl: this.configService.get<number>('EMAIL_VERIFY_EXPIRED'),
+    }) //expires in 15 minutes
 
     const accessToken = this.authService.generateJWTRegisterAndLogin2FA(email) //expires in 15 minutes
     if (userClean) {
       this.cacheManager.set(accessToken, JSON.stringify(userClean), {
-        ttl: 900,
-      })
+        ttl: this.configService.get<number>('REGISTER_2FA_EXPIRED'),
+      }) //15 minutes for verify email register
       await this.mailQueue.add(
         'register',
         {
@@ -172,8 +168,14 @@ export class UserService implements OnModuleInit {
         this.cacheManager.del(userParsed.email)
         const accessToken = this.authService.generateJWT(userCreated.email)
         this.cacheManager.set(accessToken, JSON.stringify(userCreated), {
-          ttl: 60 * 60 * 24 * 30,
+          ttl: this.configService.get<number>('LOGIN_EXPIRED'),
         }) // 30 days
+        const userInCache = (await this.cacheManager.get('user')) as any
+        if (userInCache) {
+          const userParsed = JSON.parse(userInCache)
+          userParsed.push(userCreated)
+          this.cacheManager.set('user', JSON.stringify(userParsed))
+        }
         return this.commonService.deleteField(
           {
             ...userCreated,
@@ -257,31 +259,36 @@ export class UserService implements OnModuleInit {
     const emailExist = await this.cacheManager.get(email)
 
     if (emailExist) {
-      throw new HttpExceptionCustom(
-        'email already exists. Please check your email to reset password',
-        HttpStatus.BAD_REQUEST,
-      )
+      // throw new HttpExceptionCustom(
+      //   'email already exists. Please check your email to reset password',
+      //   HttpStatus.BAD_REQUEST,
+      // )
+      return null
+    } else {
+      const user = await this.userRepository.getUserByEmail(email)
+      if (user) {
+        const token = this.authService.generateJWTConfirm(email)
+        this.cacheManager.set(email, true, {
+          ttl: this.configService.get('CONFIRM_EXPIRED'),
+        }) //expires in 15 minutes
+        this.cacheManager.set(token, JSON.stringify(user), {
+          ttl: this.configService.get('CONFIRM_EXPIRED'),
+        })
+        await this.mailQueue.add(
+          'forgot-password',
+          {
+            to: email,
+            name: user.name,
+            link: `${this.configService.get('HOST')}/auth/reset-password?token=${token}`,
+          },
+          {
+            removeOnComplete: true,
+          },
+        )
+        return true
+      }
+      return false
     }
-
-    const user = await this.userRepository.getUserByEmail(email)
-    if (user) {
-      const token = this.authService.generateJWTConfirm(email)
-      this.cacheManager.set(email, true, { ttl: 900 })
-      this.cacheManager.set(token, JSON.stringify(user), { ttl: 900 })
-      await this.mailQueue.add(
-        'forgot-password',
-        {
-          to: email,
-          name: user.name,
-          link: `${this.configService.get('HOST')}/auth/reset-password?token=${token}`,
-        },
-        {
-          removeOnComplete: true,
-        },
-      )
-      return true
-    }
-    return false
   }
 
   //2fa
@@ -298,7 +305,9 @@ export class UserService implements OnModuleInit {
 
     const isSet = await this.setTwoFactorAuthenticationSecret(secret, user.id)
     if (isSet) {
-      this.cacheManager.set(token, JSON.stringify(isSet), { ttl: 60 * 15 }) //15 minutes
+      this.cacheManager.set(token, JSON.stringify(isSet), {
+        ttl: this.configService.get('TURN_ON_2FA_EXPIRED'),
+      }) //15 minutes
     }
 
     return {

@@ -109,6 +109,6 @@ import { ScheduleModule } from '@nestjs/schedule'
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(Middleware).forRoutes('users')
+    consumer.apply(Middleware).forRoutes('*')
   }
 }

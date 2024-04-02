@@ -2,6 +2,7 @@ import { CACHE_MANAGER, Inject, Injectable, UseGuards } from '@nestjs/common'
 import { ChannelService } from './channel/channel.service'
 import { ChatService } from './chat/chat.service'
 import { Cache } from 'cache-manager'
+import { ConfigService } from '@nestjs/config'
 
 @Injectable()
 export class AppService {
@@ -9,6 +10,7 @@ export class AppService {
     private readonly channelService: ChannelService,
     private readonly chatService: ChatService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly configService: ConfigService,
   ) {}
   async getHello() {
     return 'Health check'
@@ -39,7 +41,9 @@ export class AppService {
       }
     })
 
-    this.cacheManager.set(userId, final, { ttl: 60 * 60 * 24 * 30 }) // 30 days
+    this.cacheManager.set(userId, final, {
+      ttl: this.configService.get<number>('ALL_EXPIRED'),
+    }) // 30 days
 
     return final
   }

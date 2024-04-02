@@ -53,7 +53,6 @@ export class ChannelController {
         channelId,
         req.user.id,
       )
-      console.log('channel', channel)
       if (!channel) {
         return {
           status: HttpStatus.NOT_FOUND,
