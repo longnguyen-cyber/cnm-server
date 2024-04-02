@@ -1,6 +1,5 @@
 /* eslint-disable prettier/prettier */
 import {
-  Body,
   Controller,
   Get,
   HttpStatus,
@@ -8,16 +7,10 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common'
-import { ApiTags } from '@nestjs/swagger'
-import { UploadService } from './upload.service'
-import { Response } from 'src/common/common.type'
 import { FileInterceptor } from '@nestjs/platform-express'
-import { unlink } from 'fs'
-import { diskStorage } from 'multer'
-import slugify from 'slugify'
-import { FileCreateDto } from 'src/thread/dto/fileCreate.dto'
-import { MessageCreateDto } from 'src/thread/dto/messageCreate.dto'
-import { ResThreadDto } from 'src/thread/dto/resThread.dto'
+import { ApiTags } from '@nestjs/swagger'
+import { Response } from 'src/common/common.type'
+import { UploadService } from './upload.service'
 
 @ApiTags('upload')
 @Controller('upload')

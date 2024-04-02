@@ -54,16 +54,14 @@ export class ThreadService {
       })
 
     // 1711857378169
-
     if (filteredJobsSend.length > 0) {
       filteredJobsSend.forEach(async (job) => {
         const data = job.data
-        // job.remove()
         const result = await this.sendQueue(data)
         if (result) {
           console.log('Send thread success')
-          job.remove()
         }
+        job.remove()
       })
     }
     if (filteredJobsDelete.length > 0) {
@@ -76,14 +74,15 @@ export class ThreadService {
         )
         if (result) {
           console.log('Delete thread success')
-          job.remove()
         }
+        job.remove()
       })
     }
 
     if (filteredJobsRecall.length > 0) {
       filteredJobsRecall.forEach(async (job) => {
         const data = job.data
+        job.remove()
         const result = await this.recallQueue(
           data.threadId,
           data.recallId,
@@ -91,8 +90,8 @@ export class ThreadService {
         )
         if (result) {
           console.log('Recall thread success')
-          job.remove()
         }
+        job.remove()
       })
     }
   }
@@ -174,8 +173,10 @@ export class ThreadService {
     }
 
     if (fileCreateDto) {
+      console.log('fileCreateDto', fileCreateDto)
       this.sendQueue(threadToDb)
     } else {
+      console.log('messageCreateDto', messageCreateDto)
       await this.threadQueue.add('send-thread', threadToDb, {
         lifo: true,
       })

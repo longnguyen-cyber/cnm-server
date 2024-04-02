@@ -223,9 +223,12 @@ export class ThreadRepository {
           message: 'Recall thread failed',
         }
       }
-      await prisma.messages.deleteMany({
+      await prisma.messages.update({
         where: {
           threadId: threadId,
+        },
+        data: {
+          message: 'Tin nhắn đã bị thu hồi',
         },
       })
 
@@ -426,12 +429,21 @@ export class ThreadRepository {
         errors: 'Thread not found',
       }
     } else {
-      const recallSendThread = await prisma.threads.delete({
+      // First, delete the messages associated with the thread
+      await prisma.messages.deleteMany({
+        where: {
+          threadId: threadId,
+        },
+      })
+
+      // Then, delete the thread
+      const deleteThread = await prisma.threads.delete({
         where: {
           id: threadId,
         },
       })
-      if (!recallSendThread) {
+
+      if (!deleteThread) {
         return {
           status: HttpStatus.BAD_REQUEST,
           message: 'Delete thread failed',

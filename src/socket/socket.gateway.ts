@@ -114,6 +114,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           replyId,
         )
       }
+
       //retrun data immediately
       if (receiveId) {
         this.server.emit('updatedSendThread', {
@@ -136,7 +137,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       //handle after return data
-      if (!chatId && receiveId) {
+      if (receiveId && !chatId) {
         const chatExist = await this.chatService.getChatById(chatId, userId)
         if (!chatExist) {
           this.handleCreateChat({ receiveId, messages, fileCreateDto }, req)
@@ -283,6 +284,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (rs) {
       this.server.emit('updatedSendThread', {
         ...data,
+        typeMsg: 'recall',
       })
 
       await this.threadService.recallSendThread(threadId, req.user.id, type)
@@ -322,6 +324,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (rs) {
       this.server.emit('updatedSendThread', {
         ...data,
+        typeMsg: 'delete',
       })
 
       await this.threadService.deleteThread(threadId, req.user.id, type)
