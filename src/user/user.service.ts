@@ -25,9 +25,6 @@ import { UserCreateDto } from './dto/userCreate.dto'
 import { UserUpdateDto } from './dto/userUpdate.dto'
 import { UserCheck } from './user.check'
 import { UserRepository } from './user.repository'
-const { google } = require("googleapis");
-const { OAuth2 } = google.auth;
-const client = new OAuth2("89598028532-3k1n6njbc059nl349pp2lo5ottal2apf.apps.googleusercontent.com");
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -41,7 +38,7 @@ export class UserService implements OnModuleInit {
     private readonly rabbitMQService: RabbitMQService,
     @InjectQueue('queue') private readonly mailQueue: QueueEmail,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     // const users = await this.userRepository.findAll()
@@ -285,56 +282,6 @@ export class UserService implements OnModuleInit {
       return true
     }
     return false
-  }
-
-  async loginGoogle(tokenId: any) {
-    const verify = await client.verifyIdToken({ idToken: tokenId, audience: "39780276999-23ndjnog9cr448vg0jqcmcf4qq62ufnq.apps.googleusercontent.com" });
-    const { email_verified, email, name, picture } = verify.payload
-    if (!email_verified) {
-      throw new HttpExceptionCustom(
-        'Email verification failed',
-        HttpStatus.BAD_REQUEST,
-      )
-    }
-    const user = await this.userRepository.getUserByEmail(email)
-    if (user) {
-      const token = this.authService.generateJWT(email)
-      await this.cacheManager.set(token, JSON.stringify(user), {
-        ttl: 60 * 60 * 24 * 30,
-      }) // 30 days
-      this.commonService.deleteField(user, [])
-      return {
-        ...user,
-        token,
-      }
-    } else {
-      const passwordLoinGoogle = email + "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";
-      const passwordHashed = await this.authService.hashPassword(
-        passwordLoinGoogle
-      )
-      const userCreateDto = {
-        email,
-        name,
-        avatar: picture,
-        password: passwordHashed
-      }
-      const userCreated = await this.userRepository.createUser(userCreateDto)
-      if (userCreated) {
-        // this.cacheManager.del(token)
-        // this.cacheManager.del(userParsed.email)
-        const accessToken = this.authService.generateJWT(userCreated.email)
-        this.cacheManager.set(accessToken, JSON.stringify(userCreated), {
-          ttl: 60 * 60 * 24 * 30,
-        }) // 30 days
-        return this.commonService.deleteField(
-          {
-            ...userCreated,
-            token: accessToken,
-          },
-          [],
-        )
-      }
-    }
   }
 
   //2fa

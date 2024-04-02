@@ -300,28 +300,6 @@ export class UserController {
     }
   }
 
-  @Post('google-login')
-  async LoginGoogle(@Body() body: any, @Req() req: any): Promise<Response> {
-   
-   console.log('body', body.tokenId)
-   console.log('body2', req.body.tokenId)
-    const user = await this.userService.loginGoogle(req.body.tokenId)
-    if (user) {
-      return {
-        status: HttpStatus.OK,
-        message: 'Login success',
-        data: user,
-      }
-    } else {
-      return {
-        status: HttpStatus.NOT_FOUND,
-        message: 'Login fail',
-      }
-    }
-  } 
-    
-  
-
   @UseGuards(AuthGuard)
   @Post('reset-password')
   async changePass(@Req() req: any): Promise<Response> {
