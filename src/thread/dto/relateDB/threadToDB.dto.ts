@@ -10,4 +10,5 @@ export class ThreadToDBDto extends ThreadCreateDto {
   replyId?: string
   messages: MessageCreateDto
   file: FileToDB[]
+  stoneId: string
 }

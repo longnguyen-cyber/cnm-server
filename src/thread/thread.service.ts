@@ -53,7 +53,6 @@ export class ThreadService {
         return a.timestamp - b.timestamp
       })
 
-    // 1711857378169
     if (filteredJobsSend.length > 0) {
       filteredJobsSend.forEach(async (job) => {
         const data = job.data
@@ -68,7 +67,7 @@ export class ThreadService {
       filteredJobsDelete.forEach(async (job) => {
         const data = job.data
         const result = await this.deleteQueue(
-          data.threadId,
+          data.stoneId,
           data.userDeleteId,
           data.type,
         )
@@ -84,7 +83,7 @@ export class ThreadService {
         const data = job.data
         job.remove()
         const result = await this.recallQueue(
-          data.threadId,
+          data.stoneId,
           data.recallId,
           data.type,
         )
@@ -105,6 +104,7 @@ export class ThreadService {
       receiveId,
       channelId,
       chatId,
+      stoneId,
     } = threadRaw
     const threadToDb = this.compareToCreateThread(
       messageCreateDto,
@@ -114,6 +114,7 @@ export class ThreadService {
       receiveId,
       channelId,
       chatId,
+      stoneId,
     )
 
     if (fileCreateDto) {
@@ -161,6 +162,7 @@ export class ThreadService {
     channelId?: string,
     chatId?: string,
     replyId?: string,
+    stoneId?: string,
   ) {
     const threadToDb = {
       messageCreateDto,
@@ -170,6 +172,7 @@ export class ThreadService {
       receiveId,
       channelId,
       chatId,
+      stoneId,
     }
 
     if (fileCreateDto) {
@@ -247,40 +250,40 @@ export class ThreadService {
     return thread
   }
 
-  async deleteThread(threadId: string, userDeleteId: string, type: string) {
+  async deleteThread(stoneId: string, userDeleteId: string, type: string) {
     //get file before delete to delete file in s3
 
     await this.threadQueue.add(
       'delete-thread',
-      { threadId, userDeleteId, type },
+      { stoneId, userDeleteId, type },
       { lifo: true },
     )
   }
 
   private async deleteQueue(
-    threadId: string,
+    stoneId: string,
     userDeleteId: string,
     type: string,
   ) {
     const thread = await this.threadRepository.deleteThread(
-      threadId,
+      stoneId,
       userDeleteId,
       type,
     )
     return thread
   }
 
-  async recallSendThread(threadId: string, recallId: string, type: string) {
+  async recallSendThread(stoneId: string, recallId: string, type: string) {
     await this.threadQueue.add(
       'recall-thread',
-      { threadId, recallId, type },
+      { stoneId, recallId, type },
       { lifo: true },
     )
   }
 
-  private async recallQueue(threadId: string, recallId: string, type: string) {
+  private async recallQueue(stoneId: string, recallId: string, type: string) {
     const thread = await this.threadRepository.recallSendThread(
-      threadId,
+      stoneId,
       recallId,
       type,
     )
@@ -329,21 +332,21 @@ export class ThreadService {
   async addEmoji(
     emoji: string,
     quantity: number,
-    threadId: string,
+    stoneId: string,
     senderId: string,
   ) {
-    const emojiToDb = this.compareToCreateEmoji(
+    const emojiToDB = this.compareToCreateEmoji(
       emoji,
       quantity,
-      threadId,
+      stoneId,
       senderId,
     )
-    const thread = await this.threadRepository.addEmoji(emojiToDb)
+    const thread = await this.threadRepository.addEmoji(emojiToDB)
     return thread
   }
 
-  async removeEmoji(threadId: string, senderId: string) {
-    const emojiToDb = this.compareToCreateEmoji(null, null, threadId, senderId)
+  async removeEmoji(stoneId: string, senderId: string) {
+    const emojiToDb = this.compareToCreateEmoji(null, null, stoneId, senderId)
     const thread = await this.threadRepository.removeEmoji(emojiToDb)
     return thread
   }
@@ -379,9 +382,9 @@ export class ThreadService {
     return newThreads
   }
 
-  async threadExists(threadId: string, recallId: string, type: string) {
+  async threadExists(stoneId: string, recallId: string, type: string) {
     const thread = await this.threadRepository.threadExists(
-      threadId,
+      stoneId,
       recallId,
       type,
     )
@@ -421,6 +424,7 @@ export class ThreadService {
     receiveId?: string,
     channelId?: string,
     chatId?: string,
+    stoneId?: string,
     threadId?: string,
   ): ThreadToDBDto {
     return {
@@ -440,6 +444,7 @@ export class ThreadService {
       chatId,
       threadId,
       replyId,
+      stoneId,
     }
   }
 
@@ -468,13 +473,13 @@ export class ThreadService {
   private compareToCreateEmoji(
     emoji?: string,
     quantity?: number,
-    threadId?: string,
+    stoneId?: string,
     senderId?: string,
   ): EmojiToDBDto {
     return {
       emoji,
       quantity,
-      threadId,
+      stoneId,
       senderId,
     }
   }

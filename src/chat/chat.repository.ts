@@ -147,6 +147,9 @@ export class ChatRepository {
       return null
     }
 
+    if (chat.senderId !== userId && chat.receiveId !== userId) {
+      return null
+    }
     const userRevice =
       chat.senderId === userId
         ? chat.receiveId // if user is sender, will return user receive
@@ -221,9 +224,12 @@ export class ChatRepository {
       return threadReturn
     }
 
-    if (chat === null) {
-      return null
-    }
+    if (chat.thread.length === 0)
+      return {
+        ...chat,
+        user: userReceive,
+        threads: [],
+      }
 
     const threads = await Promise.all(
       chat.thread.map(async (thread) => {

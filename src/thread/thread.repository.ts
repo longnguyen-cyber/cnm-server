@@ -37,6 +37,7 @@ export class ThreadRepository {
         data: {
           senderId: threadToDB.senderId,
           channelId: threadToDB.channelId,
+          stoneId: threadToDB.stoneId,
           isReply: false,
           replyToId: replyId || null,
         },
@@ -60,6 +61,7 @@ export class ThreadRepository {
         newThread = await prisma.threads.create({
           data: {
             isReply: false,
+            stoneId: threadToDB.stoneId,
             user: {
               connect: {
                 id: threadToDB.senderId,
@@ -87,6 +89,7 @@ export class ThreadRepository {
           data: {
             isReply: false,
             receiveId: threadToDB.receiveId,
+            stoneId: threadToDB.stoneId,
             user: {
               connect: {
                 id: threadToDB.senderId,
@@ -169,14 +172,14 @@ export class ThreadRepository {
   }
 
   async threadExists(
-    threadId: string,
+    stoneId: string,
     senderId: string,
     type: string,
     prisma: Tx = this.prisma,
   ) {
     const threadExist = await prisma.threads.findUnique({
       where: {
-        id: threadId,
+        stoneId,
       },
     })
     if (!threadExist) {
@@ -191,17 +194,12 @@ export class ThreadRepository {
     return true
   }
   async recallSendThread(
-    threadId: string,
+    stoneId: string,
     recallId: string,
     type: string,
     prisma: Tx = this.prisma,
   ): Promise<any> {
-    const threadExist = await this.threadExists(
-      threadId,
-      recallId,
-      type,
-      prisma,
-    )
+    const threadExist = await this.threadExists(stoneId, recallId, type, prisma)
 
     if (!threadExist) {
       return {
@@ -211,7 +209,7 @@ export class ThreadRepository {
     } else {
       const recallSendThread = await prisma.threads.update({
         where: {
-          id: threadId,
+          stoneId,
         },
         data: {
           isRecall: true,
@@ -225,7 +223,7 @@ export class ThreadRepository {
       }
       await prisma.messages.update({
         where: {
-          threadId: threadId,
+          threadId: recallSendThread.id,
         },
         data: {
           message: 'Tin nhắn đã bị thu hồi',
@@ -234,13 +232,13 @@ export class ThreadRepository {
 
       await prisma.files.deleteMany({
         where: {
-          threadId: threadId,
+          threadId: recallSendThread.id,
         },
       })
 
       await prisma.emojis.deleteMany({
         where: {
-          threadId: threadId,
+          threadId: recallSendThread.id,
         },
       })
     }
@@ -411,13 +409,13 @@ export class ThreadRepository {
   }
 
   async deleteThread(
-    threadId: string,
+    stoneId: string,
     userDeleteId: string,
     type: string,
     prisma: Tx = this.prisma,
   ) {
     const threadExist = await this.threadExists(
-      threadId,
+      stoneId,
       userDeleteId,
       type,
       prisma,
@@ -429,17 +427,22 @@ export class ThreadRepository {
         errors: 'Thread not found',
       }
     } else {
+      const thread = await prisma.threads.findUnique({
+        where: {
+          stoneId,
+        },
+      })
       // First, delete the messages associated with the thread
       await prisma.messages.deleteMany({
         where: {
-          threadId: threadId,
+          threadId: thread.id,
         },
       })
 
       // Then, delete the thread
       const deleteThread = await prisma.threads.delete({
         where: {
-          id: threadId,
+          id: thread.id,
         },
       })
 
@@ -451,30 +454,35 @@ export class ThreadRepository {
       }
       await prisma.messages.deleteMany({
         where: {
-          threadId: threadId,
+          threadId: thread.id,
         },
       })
 
       await prisma.files.deleteMany({
         where: {
-          threadId: threadId,
+          threadId: thread.id,
         },
       })
 
       await prisma.emojis.deleteMany({
         where: {
-          threadId: threadId,
+          threadId: thread.id,
         },
       })
     }
   }
 
   async addEmoji(emojiToDB: EmojiToDBDto, prisma: Tx = this.prisma) {
-    const threadId = emojiToDB.threadId
+    const stoneId = emojiToDB.stoneId
     const senderId = emojiToDB.senderId
+    const thread = await prisma.threads.findUnique({
+      where: {
+        stoneId,
+      },
+    })
     const emoji = await prisma.emojis.findUnique({
       where: {
-        threadId,
+        threadId: thread.id,
         senderId,
       },
     })
@@ -482,7 +490,7 @@ export class ThreadRepository {
     if (emoji) {
       await prisma.emojis.update({
         where: {
-          threadId,
+          threadId: thread.id,
           senderId,
         },
         data: {
@@ -493,7 +501,7 @@ export class ThreadRepository {
     } else {
       await prisma.emojis.create({
         data: {
-          threadId,
+          threadId: thread.id,
           senderId,
           emoji: emojiToDB.emoji,
           quantity: emojiToDB.quantity,
@@ -504,11 +512,16 @@ export class ThreadRepository {
   }
 
   async removeEmoji(emojiToDB: EmojiToDBDto, prisma: Tx = this.prisma) {
-    const threadId = emojiToDB.threadId
+    const stoneId = emojiToDB.stoneId
     const senderId = emojiToDB.senderId
+    const thread = await prisma.threads.findUnique({
+      where: {
+        stoneId,
+      },
+    })
     const existEmoji = await prisma.emojis.findUnique({
       where: {
-        threadId,
+        threadId: thread.id,
         senderId,
       },
     })
@@ -516,7 +529,7 @@ export class ThreadRepository {
     await prisma.emojis.delete({
       where: {
         senderId,
-        threadId,
+        threadId: thread.id,
       },
     })
 

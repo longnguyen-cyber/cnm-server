@@ -16,6 +16,8 @@ import { CommonService } from '../common/common.service'
 import { FileCreateDto } from '../thread/dto/fileCreate.dto'
 import { MessageCreateDto } from '../thread/dto/messageCreate.dto'
 import { ThreadService } from '../thread/thread.service'
+import { v4 as uuidv4 } from 'uuid'
+
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -92,6 +94,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         chatId?: string
         replyId?: string
       } = data
+      const stoneId = uuidv4()
 
       if (!messages && !fileCreateDto) {
         this.server.emit('updatedSendThread', {
@@ -112,6 +115,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           channelId,
           chatId,
           replyId,
+          stoneId,
         )
       }
 
@@ -119,6 +123,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (receiveId) {
         this.server.emit('updatedSendThread', {
           ...data,
+          stoneId,
           timeThread: new Date(),
           user: sender,
           isReply: false,
@@ -128,6 +133,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       } else {
         this.server.emit('updatedSendThread', {
           ...data,
+          stoneId,
           timeThread: new Date(),
           user: sender,
           isReply: false,
@@ -153,6 +159,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             channelId,
             chatId,
             replyId,
+            stoneId,
           )
         }
       }
@@ -254,7 +261,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   /**
    * @param data:// {
-//     "threadId": "660bc6fc2190416551808733",
+//     "stoneId": "660bc6fc2190416551808733",
 //     "receiveId":"65bceb94ceda5567efc0b629",
 //     "type": "chat"
 // }
@@ -269,31 +276,27 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Req() req: any,
   ): Promise<void> {
     const {
-      threadId,
+      stoneId,
       type,
     }: {
-      threadId: string
+      stoneId: string
       receiveId?: string
       type: string
     } = data
-    const rs = await this.threadService.threadExists(
-      threadId,
-      req.user.id,
-      type,
-    )
+    const rs = await this.threadService.threadExists(stoneId, req.user.id, type)
     if (rs) {
       this.server.emit('updatedSendThread', {
         ...data,
         typeMsg: 'recall',
       })
 
-      await this.threadService.recallSendThread(threadId, req.user.id, type)
+      await this.threadService.recallSendThread(stoneId, req.user.id, type)
     }
   }
 
   /**
    * @param data:// {
-//     "threadId": "660bc6fc2190416551808733",
+//     "stoneId": "660bc6fc2190416551808733",
 //     "receiveId": "65bceb94ceda5567efc0b629",
 //     "type": "chat"
 // }
@@ -308,26 +311,22 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Req() req: any,
   ): Promise<void> {
     const {
-      threadId,
+      stoneId,
       type,
     }: {
-      threadId: string
+      stoneId: string
       receiveId?: string
       type: string
     } = data
 
-    const rs = await this.threadService.threadExists(
-      threadId,
-      req.user.id,
-      type,
-    )
+    const rs = await this.threadService.threadExists(stoneId, req.user.id, type)
     if (rs) {
       this.server.emit('updatedSendThread', {
         ...data,
         typeMsg: 'delete',
       })
 
-      await this.threadService.deleteThread(threadId, req.user.id, type)
+      await this.threadService.deleteThread(stoneId, req.user.id, type)
     }
   }
 
@@ -358,14 +357,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const {
         emoji,
         quantity,
-        threadId,
+        stoneId,
         receiveId,
         members,
         typeEmoji,
       }: {
         emoji: string
         quantity: number
-        threadId: string
+        stoneId: string
         receiveId?: string
         members?: string[]
         typeEmoji: string
@@ -386,14 +385,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         })
       }
       if (typeEmoji === 'add') {
-        await this.threadService.addEmoji(
-          emoji,
-          quantity,
-          threadId,
-          req.user.id,
-        )
+        await this.threadService.addEmoji(emoji, quantity, stoneId, req.user.id)
       } else {
-        await this.threadService.removeEmoji(threadId, req.user.id)
+        await this.threadService.removeEmoji(stoneId, req.user.id)
       }
     }
   }

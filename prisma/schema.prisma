@@ -75,6 +75,7 @@ model threads {
   chats     chats?    @relation(fields: [chatId], references: [id])
   channel   channels? @relation(fields: [channelId], references: [id])
   channelId String?   @db.ObjectId
+  stoneId   String    @unique @default("")
 
   //self relation
   threadId String?   @db.ObjectId
