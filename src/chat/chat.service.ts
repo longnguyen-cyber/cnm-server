@@ -1,13 +1,16 @@
-import { Injectable } from '@nestjs/common'
+import { forwardRef, Inject, Injectable } from '@nestjs/common'
 import { ChatRepository } from './chat.repository'
 import { ChatToDBDto } from './dto/relateDB/ChatToDB.dto'
 import { CommonService } from '../common/common.service'
+import { UserService } from '../user/user.service'
 
 @Injectable()
 export class ChatService {
   constructor(
     private chatRepository: ChatRepository,
     private readonly commonService: CommonService,
+    @Inject(forwardRef(() => UserService))
+    private userService: UserService,
   ) {}
 
   async getAllChat(userId: string) {
@@ -29,6 +32,9 @@ export class ChatService {
   async createChat(senderId: string, data: any) {
     const chatToDb = this.compareToCreateChat(senderId, data)
     const chat = await this.chatRepository.createChat(chatToDb)
+    if (chat) {
+      await this.userService.updateCacheUser()
+    }
     return this.commonService.deleteField(chat, ['thread'])
   }
 
@@ -37,15 +43,24 @@ export class ChatService {
       chatId,
       receiveId,
     )
+    if (req) {
+      await this.userService.updateCacheUser()
+    }
     return this.commonService.deleteField(req, ['thread'], ['status'])
   }
 
   async reqAddFriend(receiveId: string, senderId: string) {
     const req = await this.chatRepository.reqAddFriend(receiveId, senderId)
+    if (req) {
+      await this.userService.updateCacheUser()
+    }
     return this.commonService.deleteField(req, ['thread'])
   }
   async unReqAddFriend(chatId: string, userId: string) {
     const req = await this.chatRepository.unReqAddFriend(chatId, userId)
+    if (req) {
+      await this.userService.updateCacheUser()
+    }
     return this.commonService.deleteField(req, ['thread'])
   }
 
@@ -55,11 +70,17 @@ export class ChatService {
 
   async acceptAddFriend(chatId: string, userId: string) {
     const accept = await this.chatRepository.acceptAddFriend(chatId, userId)
+    if (accept) {
+      await this.userService.updateCacheUser()
+    }
     return this.commonService.deleteField(accept, ['thread'], ['status'])
   }
 
   async rejectAddFriend(chatId: string, userId: string) {
     const req = await this.chatRepository.rejectAddFriend(chatId, userId)
+    if (req) {
+      await this.userService.updateCacheUser()
+    }
     return this.commonService.deleteField(req, ['thread'])
   }
 
@@ -81,6 +102,9 @@ export class ChatService {
 
   async unfriend(chatId: string) {
     const req = await this.chatRepository.unfriend(chatId)
+    if (req) {
+      await this.userService.updateCacheUser()
+    }
     return this.commonService.deleteField(req, ['thread'], ['status'])
   }
 

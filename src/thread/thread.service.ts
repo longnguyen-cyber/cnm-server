@@ -24,7 +24,7 @@ export class ThreadService {
   ) {}
   // QUEUE
 
-  @Interval(1000 * 10) // Chạy 5s 1 lần
+  @Interval(1000 * 10) // Chạy 10s 1 lần
   async handleInterval() {
     const jobs = await this.threadQueue.getJobs([
       'active',
@@ -55,17 +55,25 @@ export class ThreadService {
 
     if (filteredJobsSend.length > 0) {
       filteredJobsSend.forEach(async (job) => {
+        // job.remove()
+
         const data = job.data
+        const time1 = new Date()
         const result = await this.sendQueue(data)
         if (result) {
           console.log('Send thread success')
         }
+        const time2 = new Date()
         job.remove()
+
+        console.log('Send Success: ', time2.getTime() - time1.getTime(), 'ms')
       })
     }
     if (filteredJobsDelete.length > 0) {
       filteredJobsDelete.forEach(async (job) => {
         const data = job.data
+        const time1 = new Date()
+
         const result = await this.deleteQueue(
           data.stoneId,
           data.userDeleteId,
@@ -74,14 +82,16 @@ export class ThreadService {
         if (result) {
           console.log('Delete thread success')
         }
+        const time2 = new Date()
         job.remove()
+        console.log('Delete Success: ', time2.getTime() - time1.getTime(), 'ms')
       })
     }
 
     if (filteredJobsRecall.length > 0) {
       filteredJobsRecall.forEach(async (job) => {
         const data = job.data
-        job.remove()
+        const time1 = new Date()
         const result = await this.recallQueue(
           data.stoneId,
           data.recallId,
@@ -90,7 +100,9 @@ export class ThreadService {
         if (result) {
           console.log('Recall thread success')
         }
+        const time2 = new Date()
         job.remove()
+        console.log('Recall Success: ', time2.getTime() - time1.getTime(), 'ms')
       })
     }
   }

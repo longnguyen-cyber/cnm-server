@@ -118,7 +118,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           stoneId,
         )
       }
-
+      console.log('data', data)
       //retrun data immediately
       if (receiveId) {
         this.server.emit('updatedSendThread', {
@@ -143,7 +143,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       //handle after return data
-      if (receiveId && !chatId) {
+      if (receiveId && (!chatId || chatId === '')) {
         const chatExist = await this.chatService.getChatById(chatId, userId)
         if (!chatExist) {
           this.handleCreateChat({ receiveId, messages, fileCreateDto }, req)
@@ -854,7 +854,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server.emit('chatWS', {
             status: HttpStatus.OK,
             message: 'Request friend success',
-            data: { receiveId: data.receiveId, chat: rs, type: 'reqAddFriend' },
+            data: {
+              receiveId: data.receiveId,
+              chat: rs,
+              type: 'reqAddFriend',
+              senderId: req.user.id,
+            },
           })
         } else {
           this.server.emit('chatWS', {
@@ -903,6 +908,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
               chat: rs,
               receiveId:
                 rs.receiveId === req.user.id ? rs.senderId : rs.receiveId,
+              senderId: req.user.id,
             },
           })
         } else {
@@ -961,6 +967,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             message: 'Request friend success',
             data: {
               receiveId: data.receiveId,
+              senderId: req.user.id,
               chat: rs,
               type: 'reqAddFriendHaveChat',
             },

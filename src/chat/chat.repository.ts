@@ -520,11 +520,19 @@ export class ChatRepository {
     userId: string,
     prisma: Tx = this.prisma,
   ) {
+    console.log(receiveId, userId)
     const friendChatWaittingAccept = await prisma.chats.findFirst({
       where: {
-        receiveId,
-        senderId: userId,
-        requestAdd: true,
+        OR: [
+          {
+            receiveId,
+            senderId: userId,
+          },
+          {
+            receiveId: userId,
+            senderId: receiveId,
+          },
+        ],
       },
     })
 
@@ -590,6 +598,9 @@ export class ChatRepository {
       where: {
         id: chatId,
       },
+      include: {
+        thread: true,
+      },
     })
 
     if (!existing)
@@ -597,32 +608,44 @@ export class ChatRepository {
         error: 'Không tìm thấy chat',
         status: HttpStatus.NOT_FOUND,
       }
+    if (existing.userRequest === userId) {
+      return {
+        error: 'Không thể tự từ chối lời mời kết bạn',
+        status: HttpStatus.BAD_REQUEST,
+      }
+    }
+    if (existing.senderId !== userId && existing.receiveId !== userId) {
+      return {
+        error: 'Không tìm thấy',
+        status: HttpStatus.BAD_REQUEST,
+      }
+    }
 
-    const rejected = await prisma.chats.findFirst({
-      where: {
-        id: chatId,
-        isFriend: true,
-        requestAdd: false,
-      },
-    })
-
-    if (rejected)
+    if (existing.isFriend === true && existing.requestAdd === false)
       return {
         error: 'Đã từ chối lời mời kết bạn',
         status: HttpStatus.BAD_REQUEST,
       }
+    if (existing.thread.length === 0) {
+      const deleteFriend = await prisma.chats.delete({
+        where: {
+          id: chatId,
+        },
+      })
+      return deleteFriend
+    } else {
+      const rejectAddFriend = await prisma.chats.update({
+        where: {
+          id: chatId,
+        },
+        data: {
+          requestAdd: false,
+          userRequest: null,
+        },
+      })
 
-    const rejectAddFriend = await prisma.chats.update({
-      where: {
-        id: chatId,
-      },
-      data: {
-        requestAdd: false,
-        userRequest: null,
-      },
-    })
-
-    return rejectAddFriend
+      return rejectAddFriend
+    }
   }
 
   async whitelistFriendAccept(userId: string, prisma: Tx = this.prisma) {

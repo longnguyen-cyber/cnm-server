@@ -17,21 +17,22 @@ export class UserRepository {
   }
 
   async findAll(prisma: Tx = this.prisma) {
-    const users = await prisma.users.findMany({
-      include: {
-        chats: true,
-      },
-    })
+    const users = await prisma.users.findMany()
     const final = await Promise.all(
       users.map(async (user) => {
         const channels = await findChannelOfUser(user.id, prisma)
+        const chats = await prisma.chats.findMany({
+          where: {
+            OR: [{ senderId: user.id }, { receiveId: user.id }],
+          },
+        })
 
-        const chatIds = user.chats.map((chat) => ({
+        const chatIds = chats.map((chat) => ({
           id: chat.id,
           senderId: chat.senderId,
           receiveId: chat.receiveId,
         }))
-        delete user.chats
+
         return {
           ...user,
           channels,

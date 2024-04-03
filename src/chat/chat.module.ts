@@ -9,6 +9,7 @@ import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { ChatController } from './chat.controller'
 import { ChatRepository } from './chat.repository'
 import { ChatService } from './chat.service'
+import { UserModule } from '../user/user.module'
 @Module({
   controllers: [ChatController],
   providers: [ChatService, ChatRepository],
@@ -16,6 +17,7 @@ import { ChatService } from './chat.service'
     PrismaModule,
     CommonModule,
     RabbitMQModule,
+    forwardRef(() => UserModule),
     forwardRef(() => AuthModule),
     CacheModule.registerAsync({
       imports: [ConfigModule],

@@ -42,22 +42,22 @@ export class EmailConsumer {
   @Process('send-thread')
   async sendThread(job: Job<unknown>) {
     const time1 = new Date()
-    this.logger.log(`Send thread: ${job.data} success`)
+    this.logger.log(`add send thread: ${job.data}`)
     const time2 = new Date()
-    console.log('Send Success: ', time2.getTime() - time1.getTime(), 'ms')
+    console.log('add success: ', time2.getTime() - time1.getTime(), 'ms')
   }
   @Process('delete-thread')
   async deleteThread(job: Job<unknown>) {
     const time1 = new Date()
-    this.logger.log(`Delete: ${job.data} success`)
+    this.logger.log(`add delete: ${job.data}`)
     const time2 = new Date()
-    console.log('Delete Success: ', time2.getTime() - time1.getTime(), 'ms')
+    console.log('add delete success: ', time2.getTime() - time1.getTime(), 'ms')
   }
   @Process('recall-thread')
   async recallThread(job: Job<unknown>) {
     const time1 = new Date()
-    this.logger.log(`Recall: ${job.data} success`)
+    this.logger.log(`add recall: ${job.data}`)
     const time2 = new Date()
-    console.log('Recall Success: ', time2.getTime() - time1.getTime(), 'ms')
+    console.log('add recall success: ', time2.getTime() - time1.getTime(), 'ms')
   }
 }

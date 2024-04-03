@@ -63,6 +63,13 @@ export class UserService implements OnModuleInit {
     // }
   }
 
+  async updateCacheUser() {
+    const users = await this.userRepository.findAll()
+    this.cacheManager.set('user', JSON.stringify(users), {
+      ttl: 60 * 60 * 24 * 7, // 1 week
+    })
+  }
+
   async searchUser(query: string, id: string) {
     const users = (await this.cacheManager.get('user')) as any
     if (users) {
