@@ -96,6 +96,7 @@ export class ChatRepository {
               },
               include: {
                 messages: true,
+                files: true,
               },
             })
           }
@@ -370,7 +371,7 @@ export class ChatRepository {
           newFile = file.map(async (file) => {
             return await prisma.files.create({
               data: {
-                filename: file.fileName,
+                filename: file.filename,
                 size: file.size,
                 path: file.path,
                 threadId: thread.id,

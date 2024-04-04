@@ -19,6 +19,44 @@ export class AppService {
   async getAll(userId: string) {
     const channels = await this.channelService.getAllChannel(userId)
     const chats = await this.chatService.getAllChat(userId)
+    chats.map((item) => {
+      const lastedThread = item.lastedThread
+
+      if (
+        lastedThread !== null &&
+        lastedThread.messages == null &&
+        lastedThread.files.length > 0
+      ) {
+        if (userId === lastedThread.senderId) {
+          lastedThread.messages = {
+            message: `Bạn vừa gửi ${lastedThread.files.length} file`,
+          }
+        } else {
+          lastedThread.messages = {
+            message: `Bạn vừa nhận dược ${lastedThread.files.length} file`,
+          }
+        }
+      }
+    })
+
+    channels.map((item) => {
+      const lastedThread = item.lastedThread
+      if (
+        lastedThread !== null &&
+        lastedThread.messages == null &&
+        lastedThread.files.length > 0
+      ) {
+        if (userId === lastedThread.senderId) {
+          lastedThread.messages = {
+            message: `Bạn vừa gửi ${lastedThread.files.length} file`,
+          }
+        } else {
+          lastedThread.messages = {
+            message: `Bạn vừa nhận dược ${lastedThread.files.length} file`,
+          }
+        }
+      }
+    })
 
     const rs = [...channels, ...chats]
     rs.sort((a, b) => {

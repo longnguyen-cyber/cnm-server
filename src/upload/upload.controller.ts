@@ -37,7 +37,7 @@ export class UploadController {
       files.map(async (file) => {
         return {
           path: await this.uploadService.upload(file.originalname, file.buffer),
-          fileName: file.originalname,
+          filename: file.originalname,
         }
       }),
     )

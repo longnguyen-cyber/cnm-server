@@ -74,6 +74,7 @@ export class UploadService {
         Bucket: this.config.get('AWS_S3_BUCKET_NAME'),
         Key: fileName,
         Body: file,
+        ACL: 'public-read',
       }),
     )
     return this.commonService.pathUpload(fileName)

@@ -11,6 +11,7 @@ export class ThreadRepository {
   async createThread(threadToDB: ThreadToDBDto, prisma: Tx = this.prisma) {
     const messages = threadToDB.messages
     const replyId = threadToDB.replyId
+
     let replyTo: any
     if (replyId) {
       replyTo = await prisma.threads.findUnique({
@@ -19,10 +20,7 @@ export class ThreadRepository {
         },
       })
       if (!replyTo) {
-        return {
-          status: HttpStatus.BAD_REQUEST,
-          error: 'Reply to thread not found',
-        }
+        return false
       }
     }
 
@@ -33,6 +31,14 @@ export class ThreadRepository {
     let dataReturn: any
 
     if (threadToDB.chatId === undefined || threadToDB.receiveId === null) {
+      const channelExist = await prisma.channels.findUnique({
+        where: {
+          id: threadToDB.channelId,
+        },
+      })
+      if (!channelExist) {
+        return false
+      }
       newThread = await prisma.threads.create({
         data: {
           senderId: threadToDB.senderId,
@@ -57,6 +63,15 @@ export class ThreadRepository {
       })
       dataReturn = channel
     } else {
+      const chatExist = await prisma.chats.findUnique({
+        where: {
+          id: threadToDB.chatId,
+        },
+      })
+
+      if (!chatExist) {
+        return false
+      }
       if (replyId) {
         newThread = await prisma.threads.create({
           data: {
@@ -133,42 +148,18 @@ export class ThreadRepository {
         return await prisma.files.create({
           data: {
             threadId,
-            filename: file.fileName,
+            filename: file.filename,
             size: file.size,
             path: file.path,
           },
         })
       })
       if (!newFile) {
-        throw new HttpException(
-          {
-            status: HttpStatus.BAD_REQUEST,
-            message: 'File error. Please check again',
-          },
-          HttpStatus.BAD_REQUEST,
-        )
+        return false
       }
     }
 
-    const sender = await prisma.users.findUnique({
-      where: {
-        id: threadToDB.senderId,
-      },
-    })
-
-    return {
-      thread: {
-        ...newThread,
-
-        messages: {
-          ...newMsg,
-        },
-        user: sender,
-        files: newFile,
-      },
-      dataReturn,
-      sender,
-    }
+    return true
   }
 
   async threadExists(
@@ -202,10 +193,7 @@ export class ThreadRepository {
     const threadExist = await this.threadExists(stoneId, recallId, type, prisma)
 
     if (!threadExist) {
-      return {
-        status: HttpStatus.NOT_FOUND,
-        errors: 'Thread not found',
-      }
+      return false
     } else {
       const recallSendThread = await prisma.threads.update({
         where: {
@@ -216,10 +204,7 @@ export class ThreadRepository {
         },
       })
       if (!recallSendThread) {
-        return {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Recall thread failed',
-        }
+        return false
       }
       await prisma.messages.update({
         where: {
@@ -241,6 +226,8 @@ export class ThreadRepository {
           threadId: recallSendThread.id,
         },
       })
+
+      return true
     }
   }
 
@@ -286,7 +273,7 @@ export class ThreadRepository {
       newFile = files.map(async (file) => {
         return await prisma.files.create({
           data: {
-            filename: file.fileName,
+            filename: file.filename,
             size: file.size,
             path: file.path,
             threadId: newMsgReply.id,
@@ -374,7 +361,7 @@ export class ThreadRepository {
               threadId,
             },
             data: {
-              filename: file.fileName,
+              filename: file.filename,
               size: file.size,
               path: file.path,
             },
@@ -422,17 +409,13 @@ export class ThreadRepository {
     )
 
     if (!threadExist) {
-      return {
-        status: HttpStatus.NOT_FOUND,
-        errors: 'Thread not found',
-      }
+      return false
     } else {
       const thread = await prisma.threads.findUnique({
         where: {
           stoneId,
         },
       })
-      // First, delete the messages associated with the thread
       await prisma.messages.deleteMany({
         where: {
           threadId: thread.id,
@@ -447,10 +430,7 @@ export class ThreadRepository {
       })
 
       if (!deleteThread) {
-        return {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Delete thread failed',
-        }
+        return false
       }
       await prisma.messages.deleteMany({
         where: {
@@ -469,6 +449,8 @@ export class ThreadRepository {
           threadId: thread.id,
         },
       })
+
+      return true
     }
   }
 

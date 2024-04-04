@@ -106,18 +106,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const sender = this.commonService.deleteField(req.user, [])
 
-      if (fileCreateDto) {
-        await this.threadService.createThread(
-          messages,
-          fileCreateDto,
-          userId,
-          receiveId,
-          channelId,
-          chatId,
-          replyId,
-          stoneId,
-        )
-      }
       console.log('data', data)
       //retrun data immediately
       if (receiveId) {
@@ -150,18 +138,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           return
         }
       } else {
-        if (!fileCreateDto) {
-          await this.threadService.createThread(
-            messages,
-            fileCreateDto,
-            userId,
-            receiveId,
-            channelId,
-            chatId,
-            replyId,
-            stoneId,
-          )
-        }
+        await this.threadService.createThread(
+          messages,
+          fileCreateDto,
+          userId,
+          receiveId,
+          channelId,
+          chatId,
+          replyId,
+          stoneId,
+        )
       }
     }
   }

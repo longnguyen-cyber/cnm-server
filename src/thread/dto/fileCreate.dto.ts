@@ -8,7 +8,7 @@ export class FileCreateDto {
   })
   @IsString()
   @IsEmpty()
-  readonly fileName: string
+  readonly filename: string
 
   @ApiProperty({
     example: 'uploads\\1690871613508-416057544.mp4',

@@ -53,20 +53,28 @@ export class ThreadService {
         return a.timestamp - b.timestamp
       })
 
+    console.log('filteredJobsSend', filteredJobsSend)
+
     if (filteredJobsSend.length > 0) {
       filteredJobsSend.forEach(async (job) => {
         // job.remove()
 
         const data = job.data
+        console.log('data', data)
         const time1 = new Date()
         const result = await this.sendQueue(data)
+        console.log('result', result)
         if (result) {
           console.log('Send thread success')
         }
         const time2 = new Date()
         job.remove()
 
-        console.log('Send Success: ', time2.getTime() - time1.getTime(), 'ms')
+        console.log(
+          'Send Success and remove this: ',
+          time2.getTime() - time1.getTime(),
+          'ms',
+        )
       })
     }
     if (filteredJobsDelete.length > 0) {
@@ -84,7 +92,11 @@ export class ThreadService {
         }
         const time2 = new Date()
         job.remove()
-        console.log('Delete Success: ', time2.getTime() - time1.getTime(), 'ms')
+        console.log(
+          'Delete Success and remove this: ',
+          time2.getTime() - time1.getTime(),
+          'ms',
+        )
       })
     }
 
@@ -102,7 +114,11 @@ export class ThreadService {
         }
         const time2 = new Date()
         job.remove()
-        console.log('Recall Success: ', time2.getTime() - time1.getTime(), 'ms')
+        console.log(
+          'Recall Success and remove this: ',
+          time2.getTime() - time1.getTime(),
+          'ms',
+        )
       })
     }
   }
@@ -129,39 +145,6 @@ export class ThreadService {
       stoneId,
     )
 
-    // if (fileCreateDto) {
-    //   const limitFileSize = fileCreateDto.some((file) => {
-    //     return this.commonService.limitFileSize(file.size)
-    //   })
-    //   if (limitFileSize) {
-    //     throw new HttpException(
-    //       `Currently the file size has exceeded our limit (2MB). Please try again with a smaller file.`,
-    //       HttpStatus.BAD_REQUEST,
-    //     )
-    //   } else {
-    //     const payload = fileCreateDto.map((file) => {
-    //       return {
-    //         fileName: file.originalname,
-    //         file: file.buffer,
-    //       }
-    //     })
-    //     const uploadFile = await this.rabbitMQService.addToQueue(
-    //       QueueEnum.Upload,
-    //       UploadMethod.UploadMultiple,
-    //       payload,
-    //     )
-
-    //     if (uploadFile) {
-    //       threadToDb.file = fileCreateDto.map((file) => {
-    //         return {
-    //           ...file,
-    //           path: this.commonService.pathUpload(file.fileName),
-    //         }
-    //       })
-    //     }
-    //   }
-    // }
-
     const thread = await this.threadRepository.createThread(threadToDb)
     return thread
   }
@@ -187,12 +170,6 @@ export class ThreadService {
       stoneId,
     }
 
-    // if (fileCreateDto) {
-    //   console.log('fileCreateDto', fileCreateDto)
-    //   this.sendQueue(threadToDb)
-    // } else {
-    //   console.log('messageCreateDto', messageCreateDto)
-    // }
     await this.threadQueue.add('send-thread', threadToDb, {
       lifo: true,
     })
@@ -228,7 +205,7 @@ export class ThreadService {
       } else {
         const payload = fileCreateDto.map((file) => {
           return {
-            fileName: file.fileName,
+            fileName: file.filename,
             file: file.buffer,
           }
         })
@@ -242,7 +219,7 @@ export class ThreadService {
           threadToDb.file = fileCreateDto.map((file) => {
             return {
               ...file,
-              path: this.commonService.pathUpload(file.fileName),
+              path: this.commonService.pathUpload(file.filename),
             }
           })
         }
@@ -444,7 +421,7 @@ export class ThreadService {
       file: fileCreateDto
         ? fileCreateDto.map((file) => {
             return {
-              fileName: file.fileName,
+              filename: file.filename,
               size: file.size,
               path: file.path,
             }
@@ -473,7 +450,7 @@ export class ThreadService {
       file: fileCreateDto
         ? fileCreateDto.map((file) => {
             return {
-              fileName: file.fileName,
+              fileName: file.filename,
               size: file.size,
               path: file.path,
             }
