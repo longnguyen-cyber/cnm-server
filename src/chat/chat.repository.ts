@@ -2,6 +2,8 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
 import { Tx } from '../common/common.type'
 import { PrismaService } from '../prisma/prisma.service'
 import { ChatToDBDto } from './dto/relateDB/ChatToDB.dto'
+import { v4 as uuidv4 } from 'uuid'
+
 @Injectable()
 export class ChatRepository {
   constructor(private prisma: PrismaService) {}
@@ -308,10 +310,15 @@ export class ChatRepository {
     return chatExist
   }
 
-  async createChat(chatToDB: ChatToDBDto, prisma: Tx = this.prisma) {
+  async createChat(
+    chatToDB: ChatToDBDto,
+    stoneIdd: string,
+    prisma: Tx = this.prisma,
+  ) {
     const { receiveId, senderId, file, messages } = chatToDB
     let newMsg: any
     let newFile: any
+    const stoneId = uuidv4()
 
     const chatExist = await this.chatExist(senderId, receiveId)
     if (chatExist) {
@@ -321,6 +328,7 @@ export class ChatRepository {
         const chat = await prisma.chats.create({
           data: {
             receiveId: chatToDB.receiveId,
+
             user: {
               connect: {
                 id: chatToDB.senderId,
@@ -338,6 +346,7 @@ export class ChatRepository {
           data: {
             isReply: false,
             receiveId,
+            stoneId,
             chats: {
               connect: {
                 id: chat.id,

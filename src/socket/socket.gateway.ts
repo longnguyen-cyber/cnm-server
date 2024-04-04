@@ -797,7 +797,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'Access to this resource is denied',
       })
     } else {
-      const rs = await this.chatService.createChat(req.user.id, data)
+      const stoneId = uuidv4()
+
+      const rs = await this.chatService.createChat(req.user.id, data, stoneId)
       if (rs.error) {
         this.server.emit('chatWS', {
           status: HttpStatus.BAD_REQUEST,

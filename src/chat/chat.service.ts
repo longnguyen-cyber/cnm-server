@@ -29,9 +29,9 @@ export class ChatService {
     return await this.chatRepository.getChatByUserId(senderId, userId)
   }
 
-  async createChat(senderId: string, data: any) {
+  async createChat(senderId: string, data: any, stoneId: string) {
     const chatToDb = this.compareToCreateChat(senderId, data)
-    const chat = await this.chatRepository.createChat(chatToDb)
+    const chat = await this.chatRepository.createChat(chatToDb, stoneId)
     if (chat) {
       await this.userService.updateCacheUser()
     }
