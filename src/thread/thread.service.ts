@@ -129,38 +129,38 @@ export class ThreadService {
       stoneId,
     )
 
-    if (fileCreateDto) {
-      const limitFileSize = fileCreateDto.some((file) => {
-        return this.commonService.limitFileSize(file.size)
-      })
-      if (limitFileSize) {
-        throw new HttpException(
-          `Currently the file size has exceeded our limit (2MB). Please try again with a smaller file.`,
-          HttpStatus.BAD_REQUEST,
-        )
-      } else {
-        const payload = fileCreateDto.map((file) => {
-          return {
-            fileName: file.originalname,
-            file: file.buffer,
-          }
-        })
-        const uploadFile = await this.rabbitMQService.addToQueue(
-          QueueEnum.Upload,
-          UploadMethod.UploadMultiple,
-          payload,
-        )
+    // if (fileCreateDto) {
+    //   const limitFileSize = fileCreateDto.some((file) => {
+    //     return this.commonService.limitFileSize(file.size)
+    //   })
+    //   if (limitFileSize) {
+    //     throw new HttpException(
+    //       `Currently the file size has exceeded our limit (2MB). Please try again with a smaller file.`,
+    //       HttpStatus.BAD_REQUEST,
+    //     )
+    //   } else {
+    //     const payload = fileCreateDto.map((file) => {
+    //       return {
+    //         fileName: file.originalname,
+    //         file: file.buffer,
+    //       }
+    //     })
+    //     const uploadFile = await this.rabbitMQService.addToQueue(
+    //       QueueEnum.Upload,
+    //       UploadMethod.UploadMultiple,
+    //       payload,
+    //     )
 
-        if (uploadFile) {
-          threadToDb.file = fileCreateDto.map((file) => {
-            return {
-              ...file,
-              path: this.commonService.pathUpload(file.fileName),
-            }
-          })
-        }
-      }
-    }
+    //     if (uploadFile) {
+    //       threadToDb.file = fileCreateDto.map((file) => {
+    //         return {
+    //           ...file,
+    //           path: this.commonService.pathUpload(file.fileName),
+    //         }
+    //       })
+    //     }
+    //   }
+    // }
 
     const thread = await this.threadRepository.createThread(threadToDb)
     return thread
@@ -187,15 +187,15 @@ export class ThreadService {
       stoneId,
     }
 
-    if (fileCreateDto) {
-      console.log('fileCreateDto', fileCreateDto)
-      this.sendQueue(threadToDb)
-    } else {
-      console.log('messageCreateDto', messageCreateDto)
-      await this.threadQueue.add('send-thread', threadToDb, {
-        lifo: true,
-      })
-    }
+    // if (fileCreateDto) {
+    //   console.log('fileCreateDto', fileCreateDto)
+    //   this.sendQueue(threadToDb)
+    // } else {
+    //   console.log('messageCreateDto', messageCreateDto)
+    // }
+    await this.threadQueue.add('send-thread', threadToDb, {
+      lifo: true,
+    })
   }
 
   async updateThread(
@@ -228,7 +228,7 @@ export class ThreadService {
       } else {
         const payload = fileCreateDto.map((file) => {
           return {
-            fileName: file.originalname,
+            fileName: file.fileName,
             file: file.buffer,
           }
         })
@@ -444,7 +444,7 @@ export class ThreadService {
       file: fileCreateDto
         ? fileCreateDto.map((file) => {
             return {
-              fileName: file.originalname,
+              fileName: file.fileName,
               size: file.size,
               path: file.path,
             }
@@ -473,7 +473,7 @@ export class ThreadService {
       file: fileCreateDto
         ? fileCreateDto.map((file) => {
             return {
-              fileName: file.originalname,
+              fileName: file.fileName,
               size: file.size,
               path: file.path,
             }

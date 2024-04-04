@@ -9,6 +9,7 @@ import {
 } from '@aws-sdk/client-s3'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { CommonService } from '../common/common.service'
 
 interface File {
   fileName: string
@@ -18,7 +19,10 @@ interface File {
 
 @Injectable()
 export class UploadService {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly commonService: CommonService,
+  ) {}
   private readonly s3Client = new S3Client({
     region: this.config.get('AWS_S3_REGION'),
     credentials: {
@@ -70,15 +74,9 @@ export class UploadService {
         Bucket: this.config.get('AWS_S3_BUCKET_NAME'),
         Key: fileName,
         Body: file,
-        ACL: 'public-read',
       }),
     )
-  }
-
-  async uploadMultiple(files: { fileName: string; file: Buffer }[]) {
-    await Promise.all(
-      files.map(({ fileName, file }) => this.upload(fileName, file)),
-    )
+    return this.commonService.pathUpload(fileName)
   }
 
   async update(fileName: string, file: Buffer, oldFileName: string) {

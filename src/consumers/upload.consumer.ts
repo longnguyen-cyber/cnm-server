@@ -39,9 +39,7 @@ export class ConsumerService implements OnModuleInit {
               case UploadMethod.UploadSingle:
                 await this.uploadService.upload(fileName, dataUpload)
                 break
-              case UploadMethod.UploadMultiple:
-                await this.uploadService.uploadMultiple(payload)
-                break
+
               case UploadMethod.Update:
                 await this.uploadService.update(
                   fileName,

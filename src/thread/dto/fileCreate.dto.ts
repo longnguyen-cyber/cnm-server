@@ -8,19 +8,11 @@ export class FileCreateDto {
   })
   @IsString()
   @IsEmpty()
-  readonly originalname: string
-
-  @ApiProperty({
-    example: 'Windmill - 47905.mp4',
-    description: 'the originalname of the file',
-  })
-  @IsString()
-  @IsEmpty()
   readonly fileName: string
 
   @ApiProperty({
     example: 'uploads\\1690871613508-416057544.mp4',
-    description: 'the path of the file',
+    description: 'the path of the file after upload to s#',
   })
   @IsEmpty()
   @IsString()
@@ -29,7 +21,6 @@ export class FileCreateDto {
   @ApiProperty({
     example: 'buffer file',
   })
-  @IsEmpty()
   readonly buffer: any
 
   @ApiProperty({

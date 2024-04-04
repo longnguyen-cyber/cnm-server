@@ -5,9 +5,14 @@ import {
   HttpStatus,
   Post,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common'
-import { FileInterceptor } from '@nestjs/platform-express'
+import {
+  AnyFilesInterceptor,
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express'
 import { ApiTags } from '@nestjs/swagger'
 import { Response } from 'src/common/common.type'
 import { UploadService } from './upload.service'
@@ -26,8 +31,23 @@ export class UploadController {
     }
   }
   @Post()
-  @UseInterceptors(FileInterceptor('send'))
-  async sd(@UploadedFile() file?: Express.Multer.File): Promise<any> {
-    console.log(file)
+  @UseInterceptors(AnyFilesInterceptor())
+  async sd(@UploadedFiles() files?: Express.Multer.File[]): Promise<any> {
+    const rs = await Promise.all(
+      files.map(async (file) => {
+        return {
+          path: await this.uploadService.upload(file.originalname, file.buffer),
+          fileName: file.originalname,
+        }
+      }),
+    )
+
+    console.log('upload success', rs)
+
+    return {
+      status: HttpStatus.OK,
+      message: 'Upload success',
+      data: rs,
+    }
   }
 }
