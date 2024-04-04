@@ -76,6 +76,3 @@ volumes:
 # volumes:
 #   mongodb_data_container:
 #     driver: local
-# docker network create cnm-network
-# docker network connect cnm-network redis
-# docker network connect cnm-network rabbitmq

@@ -11,12 +11,10 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common'
-import { ApiTags } from '@nestjs/swagger'
 import { Response } from 'src/common/common.type'
 import { AuthGuard } from '../auth/guard/auth.guard'
 import { ChatService } from './chat.service'
 
-@ApiTags('chats')
 @Controller('chats')
 @UseGuards(AuthGuard)
 export class ChatController {

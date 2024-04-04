@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core'
 import { NestExpressApplication } from '@nestjs/platform-express'
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 
 async function bootstrap() {
@@ -17,13 +16,6 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api')
   app.set('trust proxy', true)
-  const config = new DocumentBuilder()
-    .setTitle('NestJS Prisma')
-    .setDescription('NestJS Prisma API description')
-    .setVersion('0.1')
-    .build()
-  const document = SwaggerModule.createDocument(app, config)
-  SwaggerModule.setup('doc', app, document)
 
   app.enableCors({
     origin: 'http://localhost:3000',

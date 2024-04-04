@@ -10,7 +10,6 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common'
-import { ApiBody, ApiTags } from '@nestjs/swagger'
 import { Response } from 'src/common/common.type'
 import { AuthGuard } from '../auth/guard/auth.guard'
 import { ChannelService } from './channel.service'
@@ -18,7 +17,6 @@ import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
 import { ChannelCreateDto } from './dto/ChannelCreate.dto'
 import { UserOfChannel } from './dto/UserOfChannel.dto'
 
-@ApiTags('channels')
 @Controller('channels')
 @UseGuards(AuthGuard)
 export class ChannelController {
