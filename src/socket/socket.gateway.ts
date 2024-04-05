@@ -109,6 +109,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log('data', data)
       //retrun data immediately
       if (receiveId) {
+        if (messages === undefined && fileCreateDto.length > 0) {
+          if (req.user.id !== receiveId) {
+            data.messages = {
+              message: `Bạn vừa gửi ${fileCreateDto.length} file`,
+            }
+          } else {
+            data.messages = {
+              message: `Bạn vừa nhận dược ${fileCreateDto.length} file`,
+            }
+          }
+        }
         this.server.emit('updatedSendThread', {
           ...data,
           stoneId,
@@ -359,7 +370,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (receiveId) {
         this.server.emit('updatedSendThread', {
           ...data,
-          receiveId,
           type: 'chat',
           typeEmoji,
         })

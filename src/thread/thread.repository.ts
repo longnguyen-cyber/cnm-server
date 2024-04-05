@@ -143,20 +143,24 @@ export class ThreadRepository {
         },
       })
     }
-    if (threadToDB.file !== undefined && threadToDB.file !== null) {
-      newFile = threadToDB.file.map(async (file) => {
-        return await prisma.files.create({
-          data: {
-            threadId,
-            filename: file.filename,
-            size: file.size,
-            path: file.path,
-          },
-        })
-      })
-      if (!newFile) {
-        return false
-      }
+    if (
+      threadToDB.file !== undefined &&
+      threadToDB.file !== null &&
+      threadToDB.file.length > 0
+    ) {
+      console.log('threadToDB.file', threadToDB.file)
+      await Promise.all(
+        threadToDB.file.map(async (file) => {
+          await prisma.files.create({
+            data: {
+              threadId,
+              filename: file.filename,
+              size: file.size,
+              path: file.path,
+            },
+          })
+        }),
+      )
     }
 
     return true
@@ -370,18 +374,18 @@ export class ThreadRepository {
       })
       let updateFile: any
       if (files) {
-        updateFile = files.map(async (file) => {
-          return await prisma.files.update({
-            where: {
-              threadId,
-            },
-            data: {
-              filename: file.filename,
-              size: file.size,
-              path: file.path,
-            },
-          })
-        })
+        // updateFile = files.map(async (file) => {
+        //   return await prisma.files.update({
+        //     where: {
+        //       threadId,
+        //     },
+        //     data: {
+        //       filename: file.filename,
+        //       size: file.size,
+        //       path: file.path,
+        //     },
+        //   })
+        // })
       }
 
       if (!updateMsg) {

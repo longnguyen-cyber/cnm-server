@@ -39,6 +39,7 @@ export class UploadController {
         return {
           path: await this.uploadService.upload(file.originalname, file.buffer),
           filename: file.originalname,
+          size: file.size,
         }
       }),
     )
@@ -64,6 +65,7 @@ export class UploadController {
     const data = {
       path: upload,
       filename: file.originalname,
+      size: file.size,
     }
     console.log('upload success', data)
     return {
