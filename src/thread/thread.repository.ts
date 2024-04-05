@@ -202,18 +202,33 @@ export class ThreadRepository {
         data: {
           isRecall: true,
         },
+        include: {
+          files: true,
+          messages: true,
+        },
       })
       if (!recallSendThread) {
         return false
       }
-      await prisma.messages.update({
-        where: {
-          threadId: recallSendThread.id,
-        },
-        data: {
-          message: 'Tin nhắn đã bị thu hồi',
-        },
-      })
+      console.log(recallSendThread)
+
+      if (recallSendThread.files.length > 0) {
+        await prisma.messages.create({
+          data: {
+            threadId: recallSendThread.id,
+            message: 'Tin nhắn đã bị thu hồi',
+          },
+        })
+      } else {
+        await prisma.messages.update({
+          where: {
+            threadId: recallSendThread.id,
+          },
+          data: {
+            message: 'Tin nhắn đã bị thu hồi',
+          },
+        })
+      }
 
       await prisma.files.deleteMany({
         where: {
@@ -421,7 +436,11 @@ export class ThreadRepository {
           threadId: thread.id,
         },
       })
-
+      await prisma.files.deleteMany({
+        where: {
+          threadId: thread.id,
+        },
+      })
       // Then, delete the thread
       const deleteThread = await prisma.threads.delete({
         where: {
@@ -432,17 +451,6 @@ export class ThreadRepository {
       if (!deleteThread) {
         return false
       }
-      await prisma.messages.deleteMany({
-        where: {
-          threadId: thread.id,
-        },
-      })
-
-      await prisma.files.deleteMany({
-        where: {
-          threadId: thread.id,
-        },
-      })
 
       await prisma.emojis.deleteMany({
         where: {

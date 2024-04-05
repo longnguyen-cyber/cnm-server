@@ -53,8 +53,6 @@ export class ThreadService {
         return a.timestamp - b.timestamp
       })
 
-    console.log('filteredJobsSend', filteredJobsSend)
-
     if (filteredJobsSend.length > 0) {
       filteredJobsSend.forEach(async (job) => {
         // job.remove()

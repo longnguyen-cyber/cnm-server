@@ -268,6 +268,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       stoneId: string
       receiveId?: string
       type: string
+      typeRecall: string
     } = data
     const rs = await this.threadService.threadExists(stoneId, req.user.id, type)
     if (rs) {

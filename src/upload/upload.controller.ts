@@ -33,6 +33,7 @@ export class UploadController {
   @Post()
   @UseInterceptors(AnyFilesInterceptor())
   async sd(@UploadedFiles() files?: Express.Multer.File[]): Promise<any> {
+    console.log('files', files)
     const rs = await Promise.all(
       files.map(async (file) => {
         return {
@@ -48,6 +49,27 @@ export class UploadController {
       status: HttpStatus.OK,
       message: 'Upload success',
       data: rs,
+    }
+  }
+  @Post('single')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadSingleFile(
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<any> {
+    console.log('file', file)
+    const upload = await this.uploadService.upload(
+      file.originalname,
+      file.buffer,
+    )
+    const data = {
+      path: upload,
+      filename: file.originalname,
+    }
+    console.log('upload success', data)
+    return {
+      status: HttpStatus.OK,
+      message: 'Upload success',
+      data,
     }
   }
 }
