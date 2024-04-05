@@ -15,14 +15,21 @@ export class ChatService {
 
   async getAllChat(userId: string) {
     const rs = await this.chatRepository.getAllChat(userId)
+
     return rs.map((chat) => this.commonService.deleteField(chat, ['thread']))
   }
 
   async getChatById(chatId: string, userId: string) {
-    return this.buildChatResponse(
-      await this.chatRepository.getChatById(chatId, userId),
-      ['thread', 'channel'],
-    )
+    const chat = await this.chatRepository.getChatById(chatId, userId)
+
+    chat.threads = chat.threads.map((thread) => {
+      thread.files = thread.files.map((file) => {
+        file.size = this.commonService.convertToSize(file.size)
+        return file
+      })
+      return thread
+    })
+    return this.buildChatResponse(chat, ['thread', 'channel'])
   }
 
   async getChatByUserId(senderId: string, userId: string) {

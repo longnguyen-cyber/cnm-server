@@ -36,19 +36,18 @@ export class CommonService {
   }
 
   convertToSize(bytes: number): string {
-    const mb = bytes / 1024 / 1024
-    // if mb >1024 => convert to GB
-    // if gb > 1024 => convert to TB
-
-    if (mb > 1024) {
-      const gb = mb / 1024
-      if (gb > 1024) {
-        const tb = gb / 1024
-        return `${tb.toFixed(2)} TB`
+    const kb = bytes / 1024
+    // if kb > 1024 convert to MB
+    if (kb > 1024) {
+      const mb = kb / 1024
+      // if mb > 1024 convert to GB
+      if (mb > 1024) {
+        const gb = mb / 1024
+        return `${gb.toFixed(2)} GB`
       }
-      return `${gb.toFixed(2)} GB`
-    } else {
       return `${mb.toFixed(2)} MB`
+    } else {
+      return `${kb.toFixed(2)} KB`
     }
   }
 

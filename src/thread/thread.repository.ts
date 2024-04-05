@@ -481,14 +481,14 @@ export class ThreadRepository {
       },
     })
 
-    if (emoji) {
+    if (emoji && emoji.quantity > 0 && emoji.emoji === emojiToDB.emoji) {
       await prisma.emojis.update({
         where: {
           threadId: thread.id,
           senderId,
         },
         data: {
-          quantity: emojiToDB.quantity,
+          quantity: emoji.quantity + 1,
         },
       })
       return true
@@ -498,7 +498,7 @@ export class ThreadRepository {
           threadId: thread.id,
           senderId,
           emoji: emojiToDB.emoji,
-          quantity: emojiToDB.quantity,
+          quantity: 1,
         },
       })
       return true
