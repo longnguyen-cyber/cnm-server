@@ -384,7 +384,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (typeEmoji === 'add') {
         await this.threadService.addEmoji(emoji, quantity, stoneId, req.user.id)
       } else {
-        await this.threadService.removeEmoji(stoneId, req.user.id)
+        await this.threadService.removeEmoji(emoji, stoneId, req.user.id)
       }
     }
   }

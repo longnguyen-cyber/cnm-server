@@ -480,9 +480,10 @@ export class ThreadRepository {
         stoneId,
       },
     })
-    const emoji = await prisma.emojis.findUnique({
+    const emoji = await prisma.emojis.findFirst({
       where: {
         threadId: thread.id,
+        emoji: emojiToDB.emoji,
       },
     })
 
@@ -494,8 +495,7 @@ export class ThreadRepository {
     ) {
       await prisma.emojis.update({
         where: {
-          threadId: thread.id,
-          senderId,
+          id: emoji.id,
         },
         data: {
           quantity: emoji.quantity + 1,
@@ -516,6 +516,7 @@ export class ThreadRepository {
   }
 
   async removeEmoji(emojiToDB: EmojiToDBDto, prisma: Tx = this.prisma) {
+    console.log('emojiToDB', emojiToDB)
     const stoneId = emojiToDB.stoneId
     const senderId = emojiToDB.senderId
     const thread = await prisma.threads.findUnique({
@@ -523,26 +524,27 @@ export class ThreadRepository {
         stoneId,
       },
     })
-    const existEmoji = await prisma.emojis.findUnique({
+    console.log('thread', thread)
+    const existEmoji = await prisma.emojis.findFirst({
       where: {
         threadId: thread.id,
+        emoji: emojiToDB.emoji,
       },
     })
+    console.log('existEmoji', existEmoji)
     if (!existEmoji) return false
     if (existEmoji.senderId !== senderId) return false
     if (existEmoji.quantity === 1) {
       await prisma.emojis.delete({
         where: {
-          senderId,
-          threadId: thread.id,
+          id: existEmoji.id,
         },
       })
       return true
     } else
       await prisma.emojis.update({
         where: {
-          threadId: thread.id,
-          senderId,
+          id: existEmoji.id,
         },
         data: {
           quantity: existEmoji.quantity - 1,

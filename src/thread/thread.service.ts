@@ -329,8 +329,9 @@ export class ThreadService {
     return thread
   }
 
-  async removeEmoji(stoneId: string, senderId: string) {
-    const emojiToDb = this.compareToCreateEmoji(null, stoneId, senderId)
+  async removeEmoji(emoji: string, stoneId: string, senderId: string) {
+    const emojiToDb = this.compareToCreateEmoji(emoji, stoneId, senderId)
+    console.log('emojiToDb', emojiToDb)
     const thread = await this.threadRepository.removeEmoji(emojiToDb)
     return thread
   }

@@ -111,7 +111,7 @@ model emojis {
   deletedAt DateTime?
   senderId  String?   @db.ObjectId
   user      users?    @relation(fields: [senderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  threadId  String?   @unique @db.ObjectId
+  threadId  String?   @db.ObjectId
   thread    threads?  @relation(fields: [threadId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("emojis")
