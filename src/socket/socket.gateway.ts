@@ -346,7 +346,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Req() req: any,
   ): Promise<void> {
     if (req.error) {
-      this.server.emit('updatedSendThread', {
+      this.server.emit('updatedEmojiThread', {
         status: HttpStatus.FORBIDDEN,
         message: 'Access to this resource is denied',
       })
@@ -366,14 +366,15 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         members?: string[]
         typeEmoji: string
       } = data
+      console.log(data)
       if (receiveId) {
-        this.server.emit('updatedSendThread', {
+        this.server.emit('updatedEmojiThread', {
           ...data,
           type: 'chat',
           typeEmoji,
         })
       } else {
-        this.server.emit('updatedSendThread', {
+        this.server.emit('updatedEmojiThread', {
           ...data,
           members,
           type: 'channel',

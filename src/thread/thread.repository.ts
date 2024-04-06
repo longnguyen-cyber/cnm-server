@@ -526,16 +526,28 @@ export class ThreadRepository {
     const existEmoji = await prisma.emojis.findUnique({
       where: {
         threadId: thread.id,
-        senderId,
       },
     })
     if (!existEmoji) return false
-    await prisma.emojis.delete({
-      where: {
-        senderId,
-        threadId: thread.id,
-      },
-    })
+    if (existEmoji.senderId !== senderId) return false
+    if (existEmoji.quantity === 1) {
+      await prisma.emojis.delete({
+        where: {
+          senderId,
+          threadId: thread.id,
+        },
+      })
+      return true
+    } else
+      await prisma.emojis.update({
+        where: {
+          threadId: thread.id,
+          senderId,
+        },
+        data: {
+          quantity: existEmoji.quantity - 1,
+        },
+      })
 
     return true
   }
