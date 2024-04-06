@@ -52,19 +52,21 @@ export class ThreadService {
       .sort((a, b) => {
         return a.timestamp - b.timestamp
       })
-
     if (filteredJobsSend.length > 0) {
+      console.log(
+        'filteredJobsSend',
+        filteredJobsSend.map((job) => job.id),
+      )
       filteredJobsSend.forEach(async (job) => {
         // job.remove()
 
         const data = job.data
-        console.log('data', data)
         const time1 = new Date()
         const result = await this.sendQueue(data)
-        console.log('result', result)
         if (result) {
           console.log('Send thread success')
         }
+        console.log('jobid', job.id)
         const time2 = new Date()
         job.remove()
 
@@ -322,18 +324,13 @@ export class ThreadService {
     stoneId: string,
     senderId: string,
   ) {
-    const emojiToDB = this.compareToCreateEmoji(
-      emoji,
-      quantity,
-      stoneId,
-      senderId,
-    )
+    const emojiToDB = this.compareToCreateEmoji(emoji, stoneId, senderId)
     const thread = await this.threadRepository.addEmoji(emojiToDB)
     return thread
   }
 
   async removeEmoji(stoneId: string, senderId: string) {
-    const emojiToDb = this.compareToCreateEmoji(null, null, stoneId, senderId)
+    const emojiToDb = this.compareToCreateEmoji(null, stoneId, senderId)
     const thread = await this.threadRepository.removeEmoji(emojiToDb)
     return thread
   }
@@ -459,13 +456,11 @@ export class ThreadService {
 
   private compareToCreateEmoji(
     emoji?: string,
-    quantity?: number,
     stoneId?: string,
     senderId?: string,
   ): EmojiToDBDto {
     return {
       emoji,
-      quantity,
       stoneId,
       senderId,
     }

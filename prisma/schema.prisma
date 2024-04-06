@@ -75,7 +75,7 @@ model threads {
   chats     chats?    @relation(fields: [chatId], references: [id])
   channel   channels? @relation(fields: [channelId], references: [id])
   channelId String?   @db.ObjectId
-  stoneId   String    @unique @default("")
+  stoneId   String    @unique
 
   //self relation
   threadId String?   @db.ObjectId
@@ -109,7 +109,7 @@ model emojis {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-  senderId  String?   @unique @db.ObjectId
+  senderId  String?   @db.ObjectId
   user      users?    @relation(fields: [senderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   threadId  String?   @unique @db.ObjectId
   thread    threads?  @relation(fields: [threadId], references: [id], onDelete: NoAction, onUpdate: NoAction)

@@ -21,7 +21,7 @@ export class ChatService {
 
   async getChatById(chatId: string, userId: string) {
     const chat = await this.chatRepository.getChatById(chatId, userId)
-
+    if (!chat) return this.buildChatResponse(chat, ['thread', 'channel'])
     chat.threads = chat.threads.map((thread) => {
       thread.files = thread.files.map((file) => {
         file.size = this.commonService.convertToSize(file.size)

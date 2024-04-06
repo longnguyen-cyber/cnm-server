@@ -530,7 +530,6 @@ export class ChatRepository {
     userId: string,
     prisma: Tx = this.prisma,
   ) {
-    console.log(receiveId, userId)
     const friendChatWaittingAccept = await prisma.chats.findFirst({
       where: {
         OR: [

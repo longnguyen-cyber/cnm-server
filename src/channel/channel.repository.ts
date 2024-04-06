@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service'
 import { ChannelCreateDto } from './dto/ChannelCreate.dto'
 import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
 import { UserOfChannel } from './dto/UserOfChannel.dto'
+import { v4 as uuidv4 } from 'uuid'
 
 @Injectable()
 export class ChannelRepository {
@@ -593,8 +594,15 @@ export class ChannelRepository {
     }
 
     if (channel) {
+      const stoneId = uuidv4()
+
       const thread = await this.prisma.threads.create({
-        data: { channelId: channel.id, isReply: false },
+        data: {
+          channelId: channel.id,
+          isReply: false,
+
+          stoneId,
+        },
         include: { user: true, messages: true },
       })
       const messages = await this.prisma.messages.create({

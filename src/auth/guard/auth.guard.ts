@@ -10,7 +10,6 @@ import {
 import { Cache } from 'cache-manager'
 
 import { HttpExceptionCustom } from '../../common/common.exception'
-import { AuthService } from '../auth.service'
 
 @Injectable()
 export class AuthGuard implements CanActivate {

@@ -106,7 +106,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const sender = this.commonService.deleteField(req.user, [])
 
-      console.log('data', data)
       //retrun data immediately
       if (receiveId) {
         if (messages === undefined && fileCreateDto.length > 0) {
