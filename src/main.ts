@@ -18,7 +18,7 @@ async function bootstrap() {
   app.set('trust proxy', true)
 
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: '*',
     methods: '*',
     credentials: true,
     allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],

@@ -61,6 +61,7 @@ export class ThreadService {
         // job.remove()
 
         const data = job.data
+        console.log('data', data)
         const time1 = new Date()
         const result = await this.sendQueue(data)
         if (result) {

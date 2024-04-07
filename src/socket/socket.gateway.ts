@@ -94,6 +94,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         chatId?: string
         replyId?: string
       } = data
+
+      console.log(data)
       const stoneId = uuidv4()
 
       if (!messages && !fileCreateDto) {
@@ -108,15 +110,25 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       //retrun data immediately
       if (receiveId) {
-        if (messages === undefined && fileCreateDto.length > 0) {
-          if (req.user.id !== receiveId) {
-            data.messages = {
-              message: `Bạn vừa gửi ${fileCreateDto.length} file`,
-            }
-          } else {
-            data.messages = {
-              message: `Bạn vừa nhận dược ${fileCreateDto.length} file`,
-            }
+        // if (messages === undefined && fileCreateDto.length > 0) {
+        //   if (req.user.id !== receiveId) {
+        //     data.messages = {
+        //       message: `Bạn vừa gửi ${fileCreateDto.length} file`,
+        //     }
+        //   } else {
+        //     data.messages = {
+        //       message: `Bạn vừa nhận dược ${fileCreateDto.length} file`,
+        //     }
+        //   }
+        // }
+        let files = []
+        if (data.fileCreateDto.length > 0) {
+          for (let i = 0; i < data.fileCreateDto.length; i++) {
+            const sizeConvert = this.commonService.convertToSize(
+              data.fileCreateDto[i].size,
+            )
+            const newData = { ...data.fileCreateDto[i], size: sizeConvert }
+            files = [...files, newData]
           }
         }
         this.server.emit('updatedSendThread', {
@@ -126,6 +138,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           user: sender,
           isReply: false,
           isRecall: false,
+          messages: data.messages !== undefined ? data.messages : null,
+          fileCreateDto: files,
           type: 'chat',
         })
       } else {
@@ -285,6 +299,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.emit('updatedSendThread', {
         ...data,
         typeMsg: 'recall',
+        messages: {
+          message: 'Tin nhắn đã bị thu hồi',
+          isRecall: true,
+        },
       })
 
       await this.threadService.recallSendThread(stoneId, req.user.id, type)
@@ -839,6 +857,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'Access to this resource is denied',
       })
     } else {
+      console.log(data)
       const rs = await this.chatService.reqAddFriend(
         data.receiveId,
         req.user.id,
