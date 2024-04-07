@@ -248,6 +248,11 @@ export class ThreadRepository {
           threadId: recallSendThread.id,
         },
       })
+      await prisma.emojis.deleteMany({
+        where: {
+          threadId: recallSendThread.id,
+        },
+      })
 
       return true
     }
@@ -451,6 +456,11 @@ export class ThreadRepository {
           threadId: thread.id,
         },
       })
+      await prisma.emojis.deleteMany({
+        where: {
+          threadId: thread.id,
+        },
+      })
       // Then, delete the thread
       const deleteThread = await prisma.threads.delete({
         where: {
@@ -461,12 +471,6 @@ export class ThreadRepository {
       if (!deleteThread) {
         return false
       }
-
-      await prisma.emojis.deleteMany({
-        where: {
-          threadId: thread.id,
-        },
-      })
 
       return true
     }

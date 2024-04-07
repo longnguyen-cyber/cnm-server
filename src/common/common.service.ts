@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common'
 
 @Injectable()
 export class CommonService {
+  private readonly LIMIT_SIZE = 100 // 100 MB
+
   isNotEmptyObject(obj: object): boolean {
     return obj && Object.keys(obj).length !== 0
   }
@@ -29,7 +31,7 @@ export class CommonService {
 
   limitFileSize(bytes: number): boolean {
     const fileSize = bytes / 1024 / 1024 // MB
-    if (fileSize <= 2) {
+    if (fileSize <= this.LIMIT_SIZE) {
       return true
     }
     return false

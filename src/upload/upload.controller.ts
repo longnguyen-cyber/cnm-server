@@ -16,12 +16,16 @@ import {
 import { ApiTags } from '@nestjs/swagger'
 import { Response } from 'src/common/common.type'
 import { UploadService } from './upload.service'
+import { CommonService } from '../common/common.service'
 
 @ApiTags('upload')
 @Controller('upload')
 // @UseGuards(AuthGuard)
 export class UploadController {
-  constructor(private readonly uploadService: UploadService) {}
+  constructor(
+    private readonly uploadService: UploadService,
+    private readonly conmmonService: CommonService,
+  ) {}
   @Get()
   async getFileUpload(): Promise<Response> {
     return {
@@ -33,7 +37,16 @@ export class UploadController {
   @Post()
   @UseInterceptors(AnyFilesInterceptor())
   async sd(@UploadedFiles() files?: Express.Multer.File[]): Promise<any> {
-    console.log('files', files)
+    const isLimit = files.every((file) =>
+      this.conmmonService.limitFileSize(file.size),
+    )
+
+    if (!isLimit) {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'File size is too large',
+      }
+    }
     const rs = await Promise.all(
       files.map(async (file) => {
         return {
@@ -58,6 +71,12 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<any> {
     console.log('file', file)
+    if (!this.conmmonService.limitFileSize(file.size)) {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'File size is too large',
+      }
+    }
     const upload = await this.uploadService.upload(
       file.originalname,
       file.buffer,
