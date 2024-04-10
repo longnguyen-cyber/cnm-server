@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common'
 
 @Injectable()
 export class CommonService {
-  private readonly LIMIT_SIZE = 100 // 100 MB
+  private readonly LIMIT_SIZE = 20 // 20 MB
 
   isNotEmptyObject(obj: object): boolean {
     return obj && Object.keys(obj).length !== 0

@@ -149,7 +149,6 @@ export class ChatRepository {
     if (chat === null) {
       return null
     }
-
     if (chat.senderId !== userId && chat.receiveId !== userId) {
       return null
     }
@@ -313,13 +312,12 @@ export class ChatRepository {
 
   async createChat(
     chatToDB: ChatToDBDto,
-    stoneIdd: string,
+    stoneId: string,
     prisma: Tx = this.prisma,
-  ) {
+  ): Promise<any> {
     const { receiveId, senderId, file, messages } = chatToDB
     let newMsg: any
     let newFile: any
-    const stoneId = uuidv4()
 
     const chatExist = await this.chatExist(senderId, receiveId)
     if (chatExist) {

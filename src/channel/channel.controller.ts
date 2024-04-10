@@ -1,9 +1,11 @@
 import {
   Body,
+  CACHE_MANAGER,
   Controller,
   Delete,
   Get,
   HttpStatus,
+  Inject,
   Param,
   Post,
   Put,
@@ -16,12 +18,44 @@ import { ChannelService } from './channel.service'
 import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
 import { ChannelCreateDto } from './dto/ChannelCreate.dto'
 import { UserOfChannel } from './dto/UserOfChannel.dto'
+import { Cache } from 'cache-manager'
 
 @Controller('channels')
 @UseGuards(AuthGuard)
 export class ChannelController {
-  constructor(private readonly channelService: ChannelService) {}
+  constructor(
+    private readonly channelService: ChannelService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
+  // @Get('/insert')
+  // async insert() {
+  //   try {
+  //     this.update()
+  //     // const cachedData = await this.cacheManager.get('insert')
+  //     // if (cachedData) console.log('cachedData', cachedData)
+  //     // else {
+  //     //   const data = 'insert'
+  //     //   await this.cacheManager.set('insert', data, { ttl: 60 * 60 * 24 * 30 })
+  //     //   console.log('insert', cachedData)
+  //     // }
+  //   } catch (error) {
+  //     console.error('Error writing to cache:', error)
+  //   }
+  // }
+  // @Get('/get')
+  // async get() {
+  //   // console.log('get', await this.cacheManager.get('insert'))
+  //   return this.cacheManager.get('insert')
+  // }
+
+  // // @Post('/update')
+  // async update() {
+  //   const data = 'update333'
+  //   await this.cacheManager.set('insert', data, { ttl: 60 * 60 * 24 * 30 })
+  //   console.log('update', await this.cacheManager.get('insert'))
+  //   return true
+  // }
   @Get()
   async getAllChannel(@Req() req: any): Promise<Response> {
     if (req.error) {

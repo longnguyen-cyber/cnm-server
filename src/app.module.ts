@@ -1,5 +1,6 @@
 /* eslint-disable prettier/prettier */
 import {
+  CacheInterceptor,
   CacheModule,
   MiddlewareConsumer,
   Module,
@@ -27,6 +28,7 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { Valid } from './utils/validUser'
 import { ScheduleModule } from '@nestjs/schedule'
+import { APP_INTERCEPTOR } from '@nestjs/core'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -103,6 +105,10 @@ import { ScheduleModule } from '@nestjs/schedule'
     {
       provide: 'VALID',
       useClass: Valid,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: CacheInterceptor,
     },
   ],
   controllers: [UserController, AppController],

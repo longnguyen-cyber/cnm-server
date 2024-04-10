@@ -33,8 +33,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   user = []
   @WebSocketServer() server: Server
 
-  @UseGuards(AuthGuard)
-  handleConnection(@ConnectedSocket() socket: Socket) {
+  handleConnection(@ConnectedSocket() socket: Socket, @Req() req: any) {
     const isAuthenticated = socket.handshake.auth
     console.log('connected')
 
@@ -122,7 +121,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         //   }
         // }
         let files = []
-        if (data.fileCreateDto.length > 0) {
+        if (data.fileCreateDto != undefined && data.fileCreateDto.length > 0) {
           for (let i = 0; i < data.fileCreateDto.length; i++) {
             const sizeConvert = this.commonService.convertToSize(
               data.fileCreateDto[i].size,
@@ -431,10 +430,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     } else {
       const members = [...new Set([...data.members, req.user.id])]
-      if (members.length < 2) {
+      if (members.length < 3) {
         this.server.emit('channelWS', {
           status: HttpStatus.BAD_REQUEST,
-          message: 'Nhóm phải có ít nhất 2 người',
+          message: 'Nhóm phải có ít nhất 3 người',
         })
       } else if (data.name === '') {
         this.server.emit('channelWS', {
@@ -501,23 +500,30 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         req.user.id,
         data.channelUpdate,
       )
-      if (rs) {
+      if (rs.error) {
         this.server.emit('channelWS', {
-          status: HttpStatus.OK,
-          message: 'Update channel success',
-          data: {
-            type: 'updateChannel',
-            channel: {
-              ...rs,
-              type: 'channel',
-            },
-          },
+          status: HttpStatus.UNAUTHORIZED,
+          message: rs.error,
         })
       } else {
-        this.server.emit('channelWS', {
-          status: HttpStatus.NOT_FOUND,
-          message: 'Channel not found',
-        })
+        if (rs) {
+          this.server.emit('channelWS', {
+            status: HttpStatus.OK,
+            message: 'Update channel success',
+            data: {
+              type: 'updateChannel',
+              channel: {
+                ...rs,
+                type: 'channel',
+              },
+            },
+          })
+        } else {
+          this.server.emit('channelWS', {
+            status: HttpStatus.NOT_FOUND,
+            message: 'Channel not found',
+          })
+        }
       }
     }
   }
@@ -545,23 +551,31 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.channelId,
         req.user.id,
       )
-      if (rs) {
+
+      if (rs.error) {
         this.server.emit('channelWS', {
-          status: HttpStatus.OK,
-          message: 'Delete channel success',
-          data: {
-            type: 'deleteChannel',
-            channel: {
-              ...rs,
-              type: 'channel',
-            },
-          },
+          status: HttpStatus.UNAUTHORIZED,
+          message: rs.error,
         })
       } else {
-        this.server.emit('channelWS', {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'Failed to delete channel',
-        })
+        if (rs) {
+          this.server.emit('channelWS', {
+            status: HttpStatus.OK,
+            message: 'Delete channel success',
+            data: {
+              type: 'deleteChannel',
+              channel: {
+                ...rs,
+                type: 'channel',
+              },
+            },
+          })
+        } else {
+          this.server.emit('channelWS', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Failed to delete channel',
+          })
+        }
       }
     }
   }
@@ -591,11 +605,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'You are not authorized to add user to this channel',
       })
     } else {
+      console.log(data)
       const rs = await this.channelService.addUserToChannel(
         data.channelId,
         data.users,
         req.user.id,
       )
+
       if (rs.error) {
         this.server.emit('channelWS', {
           status: HttpStatus.UNAUTHORIZED,
@@ -657,7 +673,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         })
       } else {
         if (rs) {
-          const members = rs.users.map((item) => item.id).concat(data.users)
+          const members = rs.users.map((item) => item.id)
+
           this.server.emit('channelWS', {
             status: HttpStatus.OK,
             message: 'Remove user from channel success',
@@ -668,6 +685,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 type: 'channel',
               },
               members,
+              removeMembers: data.users,
             },
           })
         } else {
@@ -1123,6 +1141,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'Access to this resource is denied',
       })
     } else {
+      console.log(data)
       const rs = await this.chatService.unfriend(data.chatId)
       if (rs.error) {
         this.server.emit('chatWS', {

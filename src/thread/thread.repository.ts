@@ -27,8 +27,6 @@ export class ThreadRepository {
 
     let threadId = ''
     let newThread: any
-    let newMsg: any
-    let newFile: any
     let dataReturn: any
     if (!threadToDB || !threadToDB.senderId) {
       return false
@@ -130,7 +128,6 @@ export class ThreadRepository {
           })
           dataReturn = chat
           threadId = newThread.id
-          console.log('threadId', threadId)
         } catch (error) {
           console.log('error', error)
         }
@@ -139,7 +136,7 @@ export class ThreadRepository {
 
     if (threadId) {
       if (messages && messages.message !== undefined) {
-        newMsg = await prisma.messages.create({
+        await prisma.messages.create({
           data: {
             threadId,
             message: messages.message,
@@ -165,7 +162,11 @@ export class ThreadRepository {
         )
       }
 
-      return true
+      const id =
+        threadToDB.chatId === undefined
+          ? threadToDB.channelId
+          : threadToDB.chatId
+      return id
     }
     return false
   }
