@@ -655,6 +655,19 @@ export class ChatRepository {
     }
   }
 
+  async listFriend(prisma: Tx = this.prisma) {
+    const listFriend = await prisma.chats.findMany({
+      where: {
+        isFriend: true,
+      },
+      include: {
+        user: true,
+      },
+    })
+
+    return listFriend
+  }
+
   async whitelistFriendAccept(userId: string, prisma: Tx = this.prisma) {
     const whitelistFriendAccept = await prisma.chats.findMany({
       where: {

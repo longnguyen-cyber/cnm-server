@@ -11,6 +11,7 @@ import { Queue as QueueThread } from 'bull'
 import { InjectQueue } from '@nestjs/bull'
 import { Interval } from '@nestjs/schedule'
 import { EmojiToDBDto } from './dto/relateDB/emojiToDB.dto'
+import { ChatService } from '../chat/chat.service'
 
 @Injectable()
 export class ThreadService {
@@ -21,6 +22,7 @@ export class ThreadService {
     private readonly rabbitMQService: RabbitMQService,
     @Inject(AppService) private appService: AppService,
     @InjectQueue('queue') private readonly threadQueue: QueueThread,
+    private readonly chatService: ChatService,
   ) {}
   // QUEUE
 
@@ -66,6 +68,7 @@ export class ThreadService {
         const result = await this.sendQueue(data)
         if (result) {
           console.log('Send thread success')
+          this.chatService.updateCacheChat(data.chatId, data.senderId)
         }
         console.log('jobid', job.id)
         const time2 = new Date()

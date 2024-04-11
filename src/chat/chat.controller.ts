@@ -1,4 +1,3 @@
-import { users } from './../../node_modules/.prisma/client/index.d'
 import {
   Body,
   Controller,
@@ -134,6 +133,26 @@ export class ChatController {
         status: HttpStatus.BAD_REQUEST,
         message: 'Waitlist friend fail',
       }
+    }
+  }
+  @Get('/search/:name')
+  @UseGuards(AuthGuard)
+  async search(
+    @Param('name') name: string,
+    @Req() req: any,
+  ): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Please login again',
+        errors: req.error,
+      }
+    }
+    const users = await this.chatService.searchFriend(name, req.user.id)
+    return {
+      status: HttpStatus.OK,
+      message: 'Search success',
+      data: users,
     }
   }
 }

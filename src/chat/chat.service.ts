@@ -1,4 +1,10 @@
-import { CACHE_MANAGER, forwardRef, Inject, Injectable } from '@nestjs/common'
+import {
+  CACHE_MANAGER,
+  forwardRef,
+  Inject,
+  Injectable,
+  OnModuleInit,
+} from '@nestjs/common'
 import { ChatRepository } from './chat.repository'
 import { ChatToDBDto } from './dto/relateDB/ChatToDB.dto'
 import { CommonService } from '../common/common.service'
@@ -7,7 +13,7 @@ import { Cache } from 'cache-manager'
 import { ConfigService } from '@nestjs/config'
 
 @Injectable()
-export class ChatService {
+export class ChatService implements OnModuleInit {
   constructor(
     private chatRepository: ChatRepository,
     private readonly commonService: CommonService,
@@ -16,6 +22,13 @@ export class ChatService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly configService: ConfigService,
   ) {}
+
+  async onModuleInit() {
+    // const listFriend = await this.chatRepository.listFriend()
+    // this.cacheManager.set('listFriend', JSON.stringify(listFriend), {
+    //   ttl: this.configService.get<number>('CHAT_EXPIRED'),
+    // })
+  }
 
   async getAllChat(userId: string) {
     const strings = 'chats-65bceb94ceda5567efc0b629'
@@ -186,6 +199,39 @@ export class ChatService {
         return this.buildChatResponse(chat, ['threads'])
       },
     )
+  }
+
+  async searchFriend(keyword: string, userId: String) {
+    const users = (await this.cacheManager.get('user')) as any
+
+    const friends = (await this.cacheManager.get('listFriend')) as any
+    if (friends) {
+      const usersParse = JSON.parse(users)
+      const friendsParse = JSON.parse(friends)
+      const friendsFilter = friendsParse.filter(
+        (friend) => friend.senderId === userId || friend.receiveId === userId,
+      )
+      if (friendsFilter.length === 0) {
+        return []
+      }
+
+      const usersFilter = usersParse.filter((user) => {
+        return user.name.includes(keyword)
+      }) as Array<any>
+
+      const rs = friendsFilter.filter((friend) => {
+        const user = usersFilter.find((user) => user.id === friend.user.id)
+        if (user) {
+          return friend
+        }
+      })
+
+      if (rs.length > 0) {
+        return this.commonService.deleteField(rs, ['chatIds', 'channels'])
+      } else {
+        return []
+      }
+    }
   }
 
   async unfriend(chatId: string) {

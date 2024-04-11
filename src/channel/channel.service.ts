@@ -78,6 +78,13 @@ export class ChannelService {
           ['userId', 'thread'],
           ['createdAt'],
         )
+        rs.threads = rs.threads.map((thread) => {
+          thread.files = thread.files.map((file) => {
+            file.size = this.commonService.convertToSize(file.size)
+            return file
+          })
+          return thread
+        })
         await this.cacheManager.set(
           `channel-${channelId}`,
           JSON.stringify(rs),
@@ -89,6 +96,12 @@ export class ChannelService {
       }
     }
   }
+
+  async getMembersOfChannel(channelId: string) {
+    const memebers = await this.channelRepository.getMembersOfChannel(channelId)
+    return this.commonService.deleteField(memebers, [])
+  }
+
   async updateCacheChannel(channelId: string, userId: string) {
     const channel = await this.channelRepository.getChannelById(
       channelId,
@@ -198,13 +211,14 @@ export class ChannelService {
     return this.commonService.deleteField(
       { ...channel, lastedThread: channel.threads[channel.threads.length - 1] },
       ['userId', 'thread', 'threads'],
+      ['createdAt'],
     )
   }
 
   async removeUserFromChannel(
     channelId: string,
     userId: string,
-    personRemovedId: string[],
+    personRemovedId: string,
   ) {
     const remove = await this.channelRepository.removeUsersFromChannel(
       channelId,
@@ -221,6 +235,7 @@ export class ChannelService {
           lastedThread: channel.threads[channel.threads.length - 1],
         },
         ['userId', 'thread', 'threads'],
+        ['createdAt'],
       )
     }
   }
@@ -245,6 +260,7 @@ export class ChannelService {
           lastedThread: channel.threads[channel.threads.length - 1],
         },
         ['userId', 'thread', 'threads'],
+        ['createdAt'],
       )
     }
   }
@@ -270,6 +286,7 @@ export class ChannelService {
           lastedThread: channel.threads[channel.threads.length - 1],
         },
         ['userId', 'thread', 'threads'],
+        ['createdAt'],
       )
     }
   }

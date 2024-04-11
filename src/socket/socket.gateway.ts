@@ -294,6 +294,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       typeRecall: string
     } = data
     const rs = await this.threadService.threadExists(stoneId, req.user.id, type)
+    console.log(rs)
     if (rs) {
       this.server.emit('updatedSendThread', {
         ...data,
@@ -411,7 +412,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @param data :{
    * name: string,
    * members: string[] // array of userId
-   * isPublic: boolean
    * }
    * @param req: token
    * @returns: channel
@@ -443,7 +443,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       } else {
         const channelCreateDto = {
           name: data.name,
-          isPublic: data.isPublic,
           userCreated: req.user.id,
           members,
         }
@@ -476,7 +475,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * channelId: string
    * channelUpdate: {
    * name: string,
-   * isPublic: boolean
    * }
    * }
    * @param req: token
@@ -664,7 +662,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const rs = await this.channelService.removeUserFromChannel(
         data.channelId,
         req.user.id,
-        data.users,
+        data.userId,
       )
       if (rs.error) {
         this.server.emit('channelWS', {
@@ -685,7 +683,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 type: 'channel',
               },
               members,
-              removeMembers: data.users,
+              removeMember: data.userId,
             },
           })
         } else {
@@ -773,6 +771,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'You are not authorized to leave this channel',
       })
     } else {
+      console.log(data)
       const rs = await this.channelService.leaveChannel(
         data.channelId,
         req.user.id,

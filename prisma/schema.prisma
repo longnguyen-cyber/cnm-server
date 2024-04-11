@@ -19,7 +19,6 @@ model users {
   avatar                           String    @default("")
   isTwoFactorAuthenticationEnabled Boolean   @default(false)
   twoFactorAuthenticationSecret    String    @default("")
-  isOwner                          Boolean?
   createdAt                        DateTime? @default(now())
   updatedAt                        DateTime? @updatedAt
   deletedAt                        DateTime?
@@ -32,7 +31,6 @@ model users {
 model channels {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   name        String
-  isPublic    Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -76,6 +74,7 @@ model threads {
   channel   channels? @relation(fields: [channelId], references: [id])
   channelId String?   @db.ObjectId
   stoneId   String    @unique
+  seended   String[]  @default([])
 
   //self relation
   threadId String?   @db.ObjectId
