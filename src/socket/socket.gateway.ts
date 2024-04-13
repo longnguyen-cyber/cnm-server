@@ -84,7 +84,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         receiveId,
         channelId,
         chatId,
-        replyId,
+        replyId, //stoneId
       }: {
         messages?: MessageCreateDto
         fileCreateDto?: FileCreateDto[]
@@ -94,7 +94,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         replyId?: string
       } = data
 
-      console.log(data)
       const stoneId = uuidv4()
 
       if (!messages && !fileCreateDto) {
@@ -108,6 +107,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const sender = this.commonService.deleteField(req.user, [])
 
       //retrun data immediately
+      //!return message not reply
+
       if (receiveId) {
         // if (messages === undefined && fileCreateDto.length > 0) {
         //   if (req.user.id !== receiveId) {

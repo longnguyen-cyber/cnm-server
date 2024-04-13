@@ -17,17 +17,16 @@ export class ThreadRepository {
     if (replyId) {
       replyTo = await prisma.threads.findUnique({
         where: {
-          id: replyId,
+          stoneId: replyId,
         },
       })
       if (!replyTo) {
         return false
       }
     }
-
+    console.log('replyTo', replyTo)
     let threadId = ''
     let newThread: any
-    let dataReturn: any
     if (!threadToDB || !threadToDB.senderId) {
       return false
     }
@@ -40,25 +39,48 @@ export class ThreadRepository {
       if (!channelExist) {
         return false
       }
-      newThread = await prisma.threads.create({
-        data: {
-          senderId: threadToDB.senderId,
-          channelId: threadToDB.channelId,
-          stoneId: threadToDB.stoneId,
-          isReply: false,
-          replyToId: replyId || null,
-        },
-      })
+      if (replyId) {
+        const existingThread = await prisma.threads.findUnique({
+          where: { stoneId: threadToDB.replyId },
+        })
+        console.log('existingThread', existingThread)
+
+        if (!existingThread) {
+          return false
+        }
+        newThread = await prisma.threads.create({
+          data: {
+            isReply: true,
+            stoneId: threadToDB.stoneId,
+            user: {
+              connect: {
+                id: threadToDB.senderId,
+              },
+            },
+            channel: {
+              connect: {
+                id: threadToDB.channelId,
+              },
+            },
+            replysTo: {
+              connect: {
+                id: existingThread.id,
+              },
+            },
+          },
+        })
+      } else {
+        newThread = await prisma.threads.create({
+          data: {
+            senderId: threadToDB.senderId,
+            channelId: threadToDB.channelId,
+            stoneId: threadToDB.stoneId,
+            isReply: false,
+            replyToId: replyId || null,
+          },
+        })
+      }
       threadId = newThread.id
-      const channel = await prisma.channels.update({
-        where: {
-          id: threadToDB.channelId,
-        },
-        data: {
-          timeThread: new Date(),
-        },
-      })
-      dataReturn = channel
     } else {
       const chatExist = await prisma.chats.findUnique({
         where: {
@@ -79,7 +101,7 @@ export class ThreadRepository {
         }
         newThread = await prisma.threads.create({
           data: {
-            isReply: false,
+            isReply: true,
             stoneId: threadToDB.stoneId,
             user: {
               connect: {
@@ -94,7 +116,7 @@ export class ThreadRepository {
             },
             replysTo: {
               connect: {
-                id: replyId,
+                id: existingThread.id,
               },
             },
           },
@@ -118,15 +140,7 @@ export class ThreadRepository {
               },
             },
           })
-          const chat = await prisma.chats.update({
-            where: {
-              id: threadToDB.chatId,
-            },
-            data: {
-              timeThread: new Date(),
-            },
-          })
-          dataReturn = chat
+
           threadId = newThread.id
         } catch (error) {
           console.log('error', error)

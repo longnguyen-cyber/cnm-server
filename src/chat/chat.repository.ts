@@ -194,7 +194,6 @@ export class ChatRepository {
           },
         },
       })
-      //find all user of replys and replysTo
       if (thread === null) return null
       const receiveID = thread?.receiveId
       if (receiveID === null) return thread

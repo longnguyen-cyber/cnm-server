@@ -159,7 +159,10 @@ export class ChannelRepository {
         },
       },
     })
-    const getAllMessageOfThread = async (threadId: string) => {
+    const getAllMessageOfThread = async (
+      threadId: string,
+      senderId: string,
+    ) => {
       const thread = await prisma.threads.findUnique({
         where: {
           id: threadId,
@@ -169,29 +172,62 @@ export class ChannelRepository {
           files: true,
           emojis: true,
           user: true,
+          replysTo: {
+            include: {
+              user: true,
+              files: true,
+              emojis: true,
+              messages: true,
+            },
+          },
         },
       })
-      return thread
+      if (thread === null) return null
+      const receiveID = thread?.receiveId
+      if (receiveID === null) return thread
+      let threadReturn = null
+      const userReceive = await prisma.users.findUnique({
+        where: {
+          id: senderId,
+        },
+      })
+      threadReturn = {
+        ...thread,
+        user: userReceive,
+      }
+
+      if (thread.replysTo === null) return threadReturn
+
+      return threadReturn
     }
 
     const newThread = await Promise.all(
       channel.thread.map(async (thread) => {
-        const threads = await getAllMessageOfThread(thread.id)
-        const messages = threads?.messages
-        const files = threads?.files
-        const emojis = threads?.emojis
-        const user = threads?.user
-        return {
-          ...thread,
-          messages,
-          files,
-          emojis,
-          user,
-        }
+        const threads = await getAllMessageOfThread(thread.id, thread.senderId)
+
+        return threads
       }),
     ).then((rs) =>
       rs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
     )
+
+    const final = newThread.map((thread) => {
+      let replysTo
+      if (thread.replysTo !== null) {
+        // const userOfReplysTo = newThread.find(
+        //   (t) => t.id === thread.replyToId,
+        // ).user
+        replysTo = {
+          ...thread.replysTo,
+          // user: userOfReplysTo,
+        }
+      }
+
+      return {
+        ...thread,
+        replysTo,
+      }
+    })
 
     return {
       ...channel,
@@ -202,7 +238,7 @@ export class ChannelRepository {
           ...u,
         }
       }),
-      threads: newThread,
+      threads: final,
     }
   }
 
