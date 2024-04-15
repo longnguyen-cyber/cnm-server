@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common'
+import {
+  CACHE_MANAGER,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common'
 import { AppService } from '../app.service'
 import { CommonService } from '../common/common.service'
 import { Queue as QueueEnum, UploadMethod } from '../enums'
@@ -12,6 +18,8 @@ import { InjectQueue } from '@nestjs/bull'
 import { Interval } from '@nestjs/schedule'
 import { EmojiToDBDto } from './dto/relateDB/emojiToDB.dto'
 import { ChatService } from '../chat/chat.service'
+import { Cache } from 'cache-manager'
+import { ChannelService } from '../channel/channel.service'
 
 @Injectable()
 export class ThreadService {
@@ -23,6 +31,7 @@ export class ThreadService {
     @Inject(AppService) private appService: AppService,
     @InjectQueue('queue') private readonly threadQueue: QueueThread,
     private readonly chatService: ChatService,
+    private readonly channelService: ChannelService,
   ) {}
   // QUEUE
 
@@ -64,27 +73,37 @@ export class ThreadService {
 
         const data = job.data
         console.log('data', data)
-        const time1 = new Date()
+        const timeStart = new Date().getTime()
         const result = await this.sendQueue(data)
         if (result) {
           console.log('Send thread success')
-          this.chatService.updateCacheChat(data.chatId, data.senderId)
+          console.time('updateCacheChannel')
+
+          if (data.channelId) {
+            await this.channelService.updateCacheChannel(
+              data.channelId,
+              data.senderId,
+              data.stoneId,
+            )
+          } else {
+            await this.chatService.updateCacheChat(data.chatId, data.senderId)
+          }
+          console.timeEnd('updateCacheChannel')
         }
         console.log('jobid', job.id)
-        const time2 = new Date()
-        job.remove()
 
-        console.log(
-          'Send Success and remove this: ',
-          time2.getTime() - time1.getTime(),
-          'ms',
-        )
+        job.remove()
+        console.log('time', new Date().getTime() - timeStart)
       })
     }
     if (filteredJobsDelete.length > 0) {
       filteredJobsDelete.forEach(async (job) => {
+        // const threadExists = filteredJobsSend.find((item) => {
+        //   return item.data.stoneId === job.data.stoneId
+        // })
+
         const data = job.data
-        const time1 = new Date()
+        const timeStart = new Date().getTime()
 
         const result = await this.deleteQueue(
           data.stoneId,
@@ -92,37 +111,42 @@ export class ThreadService {
           data.type,
         )
         if (result) {
+          if (data.chatId) {
+            await this.chatService.updateCacheChat(
+              data.chatId,
+              data.userDeleteId,
+            )
+          } else {
+            await this.channelService.updateCacheChannel(data.channelId)
+          }
           console.log('Delete thread success')
         }
-        const time2 = new Date()
+
         job.remove()
-        console.log(
-          'Delete Success and remove this: ',
-          time2.getTime() - time1.getTime(),
-          'ms',
-        )
+        console.log('time', new Date().getTime() - timeStart)
       })
     }
 
     if (filteredJobsRecall.length > 0) {
       filteredJobsRecall.forEach(async (job) => {
         const data = job.data
-        const time1 = new Date()
+        const timeStart = new Date().getTime()
         const result = await this.recallQueue(
           data.stoneId,
           data.recallId,
           data.type,
         )
         if (result) {
+          if (data.chatId) {
+            await this.chatService.updateCacheChat(data.chatId, data.recallId)
+          } else {
+            await this.channelService.updateCacheChannel(data.channelId)
+          }
           console.log('Recall thread success')
         }
-        const time2 = new Date()
+
         job.remove()
-        console.log(
-          'Recall Success and remove this: ',
-          time2.getTime() - time1.getTime(),
-          'ms',
-        )
+        console.log('time', new Date().getTime() - timeStart)
       })
     }
   }
@@ -243,12 +267,18 @@ export class ThreadService {
     return thread
   }
 
-  async deleteThread(stoneId: string, userDeleteId: string, type: string) {
+  async deleteThread(
+    stoneId: string,
+    userDeleteId: string,
+    type: string,
+    chatId?: string,
+    channelId?: string,
+  ) {
     //get file before delete to delete file in s3
 
     await this.threadQueue.add(
       'delete-thread',
-      { stoneId, userDeleteId, type },
+      { stoneId, userDeleteId, type, chatId, channelId },
       { lifo: true },
     )
   }
@@ -266,10 +296,16 @@ export class ThreadService {
     return thread
   }
 
-  async recallSendThread(stoneId: string, recallId: string, type: string) {
+  async recallSendThread(
+    stoneId: string,
+    recallId: string,
+    type: string,
+    chatId?: string,
+    channelId?: string,
+  ) {
     await this.threadQueue.add(
       'recall-thread',
-      { stoneId, recallId, type },
+      { stoneId, recallId, type, chatId, channelId },
       { lifo: true },
     )
   }

@@ -79,10 +79,6 @@ export class AppService {
       }
     })
 
-    this.cacheManager.set(userId, final, {
-      ttl: this.configService.get<number>('ALL_EXPIRED'),
-    }) // 30 days
-
     return final
   }
 }

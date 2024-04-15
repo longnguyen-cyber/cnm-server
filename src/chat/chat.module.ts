@@ -10,6 +10,7 @@ import { ChatController } from './chat.controller'
 import { ChatRepository } from './chat.repository'
 import { ChatService } from './chat.service'
 import { UserModule } from '../user/user.module'
+import { ThreadModule } from '../thread/thread.module'
 @Module({
   controllers: [ChatController],
   providers: [ChatService, ChatRepository],
@@ -17,6 +18,7 @@ import { UserModule } from '../user/user.module'
     PrismaModule,
     CommonModule,
     RabbitMQModule,
+    ThreadModule,
     forwardRef(() => UserModule),
     forwardRef(() => AuthModule),
     CacheModule.registerAsync({

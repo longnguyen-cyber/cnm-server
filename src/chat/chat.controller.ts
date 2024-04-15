@@ -60,7 +60,18 @@ export class ChatController {
       // }
     }
   }
-
+  @Get(':chatId/updateCache')
+  @UseGuards(AuthGuard)
+  async updateCacheChat(
+    @Param('chatId') chatId: string,
+    @Req() req: any,
+  ): Promise<Response> {
+    await this.chatService.updateCacheChat(chatId, req.user.id)
+    return {
+      status: HttpStatus.OK,
+      message: 'Update cache chat success',
+    }
+  }
   @Get(':receiveId/friendChatWaittingAccept')
   async getFriendChatWaittingAccept(
     @Param('receiveId') receiveId: string,

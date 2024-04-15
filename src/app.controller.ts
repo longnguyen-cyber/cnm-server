@@ -23,6 +23,15 @@ export class AppController {
   async getHello(): Promise<string> {
     const value = await this.cacheManager.store.keys()
     console.log(value)
+    for (const key of value) {
+      if (
+        key.includes('chat') ||
+        key.includes('channel') ||
+        key.includes('insert')
+      ) {
+        await this.cacheManager.del(key)
+      }
+    }
     return "I'm alive!"
   }
 

@@ -6,6 +6,7 @@ import { CommonService } from '../common/common.service'
 import { UserOfChannel } from './dto/UserOfChannel.dto'
 import { Cache } from 'cache-manager'
 import { ConfigService } from '@nestjs/config'
+import { threadId } from 'worker_threads'
 
 @Injectable()
 export class ChannelService {
@@ -17,7 +18,7 @@ export class ChannelService {
   ) {}
 
   async getAllChannel(userId: string) {
-    const channelsCache = await this.cacheManager.get(`channels-${userId}`)
+    const channelsCache = await this.cacheManager.get('channels')
     if (false) {
       const parsedCache = JSON.parse(channelsCache as any) as Array<any>
 
@@ -34,20 +35,20 @@ export class ChannelService {
       const final = rs.map((channel) =>
         this.commonService.deleteField(channel, ['thread']),
       )
-      await this.cacheManager.set(`channels-${userId}`, JSON.stringify(final), {
+      await this.cacheManager.set('channels', JSON.stringify(final), {
         ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
       })
       return final
     }
   }
 
-  private async updateCacheChannels(userId: string) {
+  async updateCacheChannels(userId: string) {
     const rs = await this.channelRepository.getAllChannel(userId)
     const final = rs.map((channel) =>
       this.commonService.deleteField(channel, ['thread']),
     )
 
-    await this.cacheManager.set(`channels-${userId}`, JSON.stringify(final), {
+    await this.cacheManager.set('channels', JSON.stringify(final), {
       ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
     })
 
@@ -56,7 +57,8 @@ export class ChannelService {
 
   async getChannelById(channelId: string, userId: string) {
     const channelCache = await this.cacheManager.get(`channel-${channelId}`)
-    if (false) {
+
+    if (channelCache) {
       console.log('cache hit channelId: ', channelId)
       const chanelParsed = JSON.parse(channelCache as any)
       if (chanelParsed.users.some((user) => user.id === userId)) {
@@ -65,10 +67,8 @@ export class ChannelService {
         return null
       }
     } else {
-      const channel = await this.channelRepository.getChannelById(
-        channelId,
-        userId,
-      )
+      console.log('cache miss channelId: ', channelId)
+      const channel = await this.channelRepository.getChannelById(channelId)
 
       if (!channel) {
         return null
@@ -101,26 +101,74 @@ export class ChannelService {
     const memebers = await this.channelRepository.getMembersOfChannel(channelId)
     return this.commonService.deleteField(memebers, [])
   }
+  async getThread(threadId: string, senderId: string) {
+    const thread = await this.channelRepository.getMessageOfThread(threadId)
+    return this.commonService.deleteField(thread, [])
+  }
 
-  async updateCacheChannel(channelId: string, userId: string) {
-    const channel = await this.channelRepository.getChannelById(
-      channelId,
-      userId,
-    )
-    if (!channel) {
-      return false
+  async updateCacheChannel(
+    channelId: string,
+    userId?: string,
+    stoneId?: string,
+  ) {
+    if (stoneId) {
+      const cacheChannelId = await this.cacheManager.get(`channel-${channelId}`)
+      if (!cacheChannelId) {
+        return false
+      }
+
+      //get last thread
+      const chanelParsed = JSON.parse(cacheChannelId as any)
+
+      const threadNew =
+        (await this.channelRepository.getMessageOfThreadByStoneId(
+          stoneId,
+        )) as any
+      if (threadNew.files.length > 0) {
+        threadNew.files = threadNew.files.map((file) => {
+          file.size = this.commonService.convertToSize(file.size)
+          return file
+        })
+      }
+      //push thread to channel
+      chanelParsed.threads.push(
+        this.commonService.deleteField(
+          threadNew,
+          ['userId', 'thread'],
+          ['createdAt'],
+        ),
+      )
+
+      await this.cacheManager.set(
+        `channel-${channelId}`,
+        JSON.stringify(chanelParsed),
+        {
+          ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
+        },
+      )
+    } else {
+      const channel = await this.channelRepository.getChannelById(
+        channelId,
+        userId,
+      )
+      if (!channel) return false
+      const rs = this.commonService.deleteField(
+        channel,
+        ['userId', 'thread'],
+        ['createdAt'],
+      )
+      rs.threads = rs.threads.map((thread) => {
+        thread.files = thread.files.map((file) => {
+          file.size = this.commonService.convertToSize(file.size)
+          return file
+        })
+        return thread
+      })
+      await this.cacheManager.set(`channel-${channelId}`, JSON.stringify(rs), {
+        ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
+      })
     }
-    const rs = this.commonService.deleteField(
-      channel,
-      ['userId', 'thread'],
-      ['createdAt'],
-    )
-    await this.cacheManager.set(`channel-${channelId}`, JSON.stringify(rs), {
-      ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
-    })
     console.log('cache channel update channelId: ', channelId)
-
-    return true
   }
 
   async createChannel(channelCreateDto: ChannelCreateDto, userId?: string) {
@@ -133,12 +181,9 @@ export class ChannelService {
         channelCreate,
         userId,
       )
-      // if (findChannel) {
-      //   findChannel.users.forEach(async (user) => {
-      //     await this.updateCacheChannels(user.id)
-      //   })
-      //   await this.updateCacheChannel(channelCreate, userId)
-      // }
+      if (findChannel) {
+        await this.updateCacheChannels(channelCreateDto.userCreated)
+      }
 
       return this.commonService.deleteField(
         findChannel,
@@ -165,6 +210,9 @@ export class ChannelService {
       channelId,
       userId,
     )
+    if (findChannel) {
+      await this.updateCacheChannel(channelId)
+    }
 
     return this.commonService.deleteField(
       {
@@ -181,9 +229,12 @@ export class ChannelService {
       channelId,
       userId,
     )
+    console.log(deleted)
     if (deleted.error) {
       return deleted
     } else {
+      await this.updateCacheChannels(userId)
+      await this.cacheManager.del(`channel-${channelId}`)
       return this.commonService.deleteField(deleted, [
         'userId',
         'threads',
@@ -207,7 +258,7 @@ export class ChannelService {
       return rs
     }
     const channel = await this.channelRepository.getChannelById(channelId)
-
+    await this.updateCacheChannel(channelId)
     return this.commonService.deleteField(
       { ...channel, lastedThread: channel.threads[channel.threads.length - 1] },
       ['userId', 'thread', 'threads'],
@@ -229,6 +280,7 @@ export class ChannelService {
       return remove
     } else {
       const channel = await this.channelRepository.getChannelById(channelId)
+      await this.updateCacheChannel(channelId)
       return this.commonService.deleteField(
         {
           ...channel,
@@ -254,6 +306,7 @@ export class ChannelService {
       return updated
     } else {
       const channel = await this.channelRepository.getChannelById(channelId)
+      await this.updateCacheChannel(channelId)
       return this.commonService.deleteField(
         {
           ...channel,
@@ -280,6 +333,9 @@ export class ChannelService {
       return leavteChannel
     } else {
       const channel = await this.channelRepository.getChannelById(channelId)
+      await this.updateCacheChannel(channelId)
+      await this.updateCacheChannels(channel.userCreated)
+
       return this.commonService.deleteField(
         {
           ...channel,

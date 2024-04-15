@@ -24,7 +24,6 @@ export class ThreadRepository {
         return false
       }
     }
-    console.log('replyTo', replyTo)
     let threadId = ''
     let newThread: any
     if (!threadToDB || !threadToDB.senderId) {
@@ -43,7 +42,6 @@ export class ThreadRepository {
         const existingThread = await prisma.threads.findUnique({
           where: { stoneId: threadToDB.replyId },
         })
-        console.log('existingThread', existingThread)
 
         if (!existingThread) {
           return false
@@ -80,6 +78,14 @@ export class ThreadRepository {
           },
         })
       }
+      await prisma.channels.update({
+        where: {
+          id: threadToDB.channelId,
+        },
+        data: {
+          timeThread: new Date(),
+        },
+      })
       threadId = newThread.id
     } else {
       const chatExist = await prisma.chats.findUnique({
@@ -122,30 +128,35 @@ export class ThreadRepository {
           },
         })
       } else {
-        try {
-          newThread = await prisma.threads.create({
-            data: {
-              isReply: false,
-              receiveId: threadToDB.receiveId,
-              stoneId: threadToDB.stoneId,
-              user: {
-                connect: {
-                  id: threadToDB.senderId,
-                },
-              },
-              chats: {
-                connect: {
-                  id: threadToDB.chatId,
-                },
+        newThread = await prisma.threads.create({
+          data: {
+            isReply: false,
+            receiveId: threadToDB.receiveId,
+            stoneId: threadToDB.stoneId,
+            user: {
+              connect: {
+                id: threadToDB.senderId,
               },
             },
-          })
+            chats: {
+              connect: {
+                id: threadToDB.chatId,
+              },
+            },
+          },
+        })
 
-          threadId = newThread.id
-        } catch (error) {
-          console.log('error', error)
-        }
+        threadId = newThread.id
       }
+
+      await prisma.chats.update({
+        where: {
+          id: threadToDB.chatId,
+        },
+        data: {
+          timeThread: new Date(),
+        },
+      })
     }
 
     if (threadId) {
@@ -492,6 +503,7 @@ export class ThreadRepository {
   }
 
   async addEmoji(emojiToDB: EmojiToDBDto, prisma: Tx = this.prisma) {
+    console.log('emojiToDB', emojiToDB)
     const stoneId = emojiToDB.stoneId
     const senderId = emojiToDB.senderId
     const thread = await prisma.threads.findUnique({
@@ -499,6 +511,7 @@ export class ThreadRepository {
         stoneId,
       },
     })
+    console.log('thread', thread)
     const emoji = await prisma.emojis.findFirst({
       where: {
         threadId: thread.id,

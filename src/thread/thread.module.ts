@@ -1,6 +1,6 @@
 import { BullModule } from '@nestjs/bull'
 import { CacheModule, Module, forwardRef } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
+import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import { AppService } from '../app.service'
 import { AuthModule } from '../auth/auth.module'
@@ -18,6 +18,7 @@ import { UserService } from '../user/user.service'
 import { ThreadController } from './thread.controller'
 import { ThreadRepository } from './thread.repository'
 import { ThreadService } from './thread.service'
+import * as redisStore from 'cache-manager-redis-store'
 
 @Module({
   controllers: [ThreadController],
@@ -37,6 +38,20 @@ import { ThreadService } from './thread.service'
   imports: [
     forwardRef(() => AuthModule),
     // forwardRef(() => AppModule),
+    CacheModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        isGlobal: true,
+        store: redisStore,
+
+        host: configService.get<string>('REDIS_HOST'),
+
+        port: configService.get<number>('REDIS_PORT'),
+        username: configService.get<string>('REDIS_USERNAME'),
+        password: configService.get<string>('REDIS_PASSWORD'),
+      }),
+    }),
     ConfigModule,
     PrismaModule,
     CommonModule,

@@ -5,12 +5,12 @@ import {
   Injectable,
   OnModuleInit,
 } from '@nestjs/common'
-import { ChatRepository } from './chat.repository'
-import { ChatToDBDto } from './dto/relateDB/ChatToDB.dto'
+import { ConfigService } from '@nestjs/config'
+import { Cache } from 'cache-manager'
 import { CommonService } from '../common/common.service'
 import { UserService } from '../user/user.service'
-import { Cache } from 'cache-manager'
-import { ConfigService } from '@nestjs/config'
+import { ChatRepository } from './chat.repository'
+import { ChatToDBDto } from './dto/relateDB/ChatToDB.dto'
 
 @Injectable()
 export class ChatService implements OnModuleInit {
@@ -30,11 +30,17 @@ export class ChatService implements OnModuleInit {
     // })
   }
 
+  private async updateListFriend() {
+    const listFriend = await this.chatRepository.listFriend()
+    this.cacheManager.set('listFriend', JSON.stringify(listFriend), {
+      ttl: this.configService.get<number>('CHAT_EXPIRED'),
+    })
+  }
+
   async getAllChat(userId: string) {
-    const strings = 'chats-65bceb94ceda5567efc0b629'
-    const chatsCache = await this.cacheManager.get(`chats-${userId}`)
-    const parsedCache = JSON.parse(chatsCache as string) as Array<any>
+    const chatsCache = await this.cacheManager.get(`chats`)
     if (false) {
+      const parsedCache = JSON.parse(chatsCache as string) as Array<any>
       const rs = parsedCache.filter(
         (chat) => chat.senderId === userId || chat.receiveId === userId,
       )
@@ -46,7 +52,7 @@ export class ChatService implements OnModuleInit {
       const final = rs.map((chat) => {
         return this.commonService.deleteField(chat, ['thread'])
       })
-      await this.cacheManager.set(`chats-${userId}`, JSON.stringify(final), {
+      await this.cacheManager.set(`chats`, JSON.stringify(final), {
         ttl: this.configService.get<number>('CHAT_EXPIRED'),
       })
       return final
@@ -61,12 +67,10 @@ export class ChatService implements OnModuleInit {
     await this.cacheManager.set(`chats-${userId}`, JSON.stringify(final), {
       ttl: this.configService.get<number>('CHAT_EXPIRED'),
     })
-    console.log('cache', await this.cacheManager.get(`chats-${userId}`))
     console.log('cache chats update userId: ', userId)
   }
   async getChatById(chatId: string, userId: string) {
     const chatCache = await this.cacheManager.get(`chat-${chatId}`)
-    console.log('chatCache: ', chatCache)
     if (chatCache) {
       console.log('cache hit chatId: ', chatId)
       const chatParse = JSON.parse(chatCache as any)
@@ -99,7 +103,7 @@ export class ChatService implements OnModuleInit {
 
   async updateCacheChat(chatId: string, userId: string) {
     const chat = await this.chatRepository.getChatById(chatId, userId)
-    console.log('before', await this.cacheManager.get(`chat-${chatId}`))
+
     if (!chat) return false
     chat.threads = chat.threads.map((thread) => {
       thread.files = thread.files.map((file) => {
@@ -110,15 +114,12 @@ export class ChatService implements OnModuleInit {
     })
 
     const rs = this.buildChatResponse(chat, ['thread', 'channel'])
-    console.log('rs: ', rs)
 
     await this.cacheManager.set(`chat-${chatId}`, JSON.stringify(rs), {
       ttl: this.configService.get<number>('CHAT_EXPIRED'),
     })
-    console.log('after', await this.cacheManager.get(`chat-${chatId}`))
 
     console.log('cache update chatId: ', chatId, 'userId: ', userId)
-    return true
   }
 
   async getChatByUserId(senderId: string, userId: string) {
@@ -133,7 +134,6 @@ export class ChatService implements OnModuleInit {
       await this.userService.updateCacheUser()
       //update cache chat and chats
       this.updateCacheChat(chat.id, senderId)
-      this.updateCacheChat(chat.id, chat.receiveId)
       this.updateCacheChats(senderId)
     }
     return this.commonService.deleteField(chat, ['thread'])
@@ -173,6 +173,8 @@ export class ChatService implements OnModuleInit {
     const accept = await this.chatRepository.acceptAddFriend(chatId, userId)
     if (accept) {
       await this.userService.updateCacheUser()
+      await this.updateCacheChats(userId)
+      await this.updateListFriend()
     }
     return this.commonService.deleteField(accept, ['thread'], ['status'])
   }
@@ -181,6 +183,7 @@ export class ChatService implements OnModuleInit {
     const req = await this.chatRepository.rejectAddFriend(chatId, userId)
     if (req) {
       await this.userService.updateCacheUser()
+      await this.updateCacheChats(userId)
     }
     return this.commonService.deleteField(req, ['thread'])
   }
@@ -238,6 +241,8 @@ export class ChatService implements OnModuleInit {
     const req = await this.chatRepository.unfriend(chatId)
     if (req) {
       await this.userService.updateCacheUser()
+      await this.updateCacheChats(req.senderId)
+      await this.updateListFriend()
     }
     return this.commonService.deleteField(req, ['thread'], ['status'])
   }

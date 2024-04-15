@@ -17,6 +17,7 @@ import { FileCreateDto } from '../thread/dto/fileCreate.dto'
 import { MessageCreateDto } from '../thread/dto/messageCreate.dto'
 import { ThreadService } from '../thread/thread.service'
 import { v4 as uuidv4 } from 'uuid'
+import { ChatController } from '../chat/chat.controller'
 
 @WebSocketGateway({
   cors: {
@@ -105,10 +106,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const sender = this.commonService.deleteField(req.user, [])
-
       //retrun data immediately
       //!return message not reply
-
+      let files = []
+      if (data.fileCreateDto != undefined && data.fileCreateDto.length > 0) {
+        for (let i = 0; i < data.fileCreateDto.length; i++) {
+          const sizeConvert = this.commonService.convertToSize(
+            data.fileCreateDto[i].size,
+          )
+          const newData = { ...data.fileCreateDto[i], size: sizeConvert }
+          files = [...files, newData]
+        }
+      }
       if (receiveId) {
         // if (messages === undefined && fileCreateDto.length > 0) {
         //   if (req.user.id !== receiveId) {
@@ -121,16 +130,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         //     }
         //   }
         // }
-        let files = []
-        if (data.fileCreateDto != undefined && data.fileCreateDto.length > 0) {
-          for (let i = 0; i < data.fileCreateDto.length; i++) {
-            const sizeConvert = this.commonService.convertToSize(
-              data.fileCreateDto[i].size,
-            )
-            const newData = { ...data.fileCreateDto[i], size: sizeConvert }
-            files = [...files, newData]
-          }
-        }
+
         this.server.emit('updatedSendThread', {
           ...data,
           stoneId,
@@ -150,6 +150,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           user: sender,
           isReply: false,
           isRecall: false,
+          fileCreateDto: files,
+
           type: 'channel',
         })
       }
@@ -288,14 +290,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const {
       stoneId,
       type,
+      chatId,
+      channelId,
     }: {
       stoneId: string
       receiveId?: string
       type: string
       typeRecall: string
+      chatId?: string
+      channelId?: string
     } = data
     const rs = await this.threadService.threadExists(stoneId, req.user.id, type)
-    console.log(rs)
     if (rs) {
       this.server.emit('updatedSendThread', {
         ...data,
@@ -306,7 +311,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         },
       })
 
-      await this.threadService.recallSendThread(stoneId, req.user.id, type)
+      await this.threadService.recallSendThread(
+        stoneId,
+        req.user.id,
+        type,
+        chatId,
+        channelId,
+      )
     }
   }
 
@@ -329,10 +340,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const {
       stoneId,
       type,
+      chatId,
+      channelId,
     }: {
       stoneId: string
       receiveId?: string
       type: string
+      chatId?: string
+      channelId?: string
     } = data
 
     const rs = await this.threadService.threadExists(stoneId, req.user.id, type)
@@ -342,7 +357,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         typeMsg: 'delete',
       })
 
-      await this.threadService.deleteThread(stoneId, req.user.id, type)
+      await this.threadService.deleteThread(
+        stoneId,
+        req.user.id,
+        type,
+        chatId,
+        channelId,
+      )
     }
   }
 
@@ -385,7 +406,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         members?: string[]
         typeEmoji: string
       } = data
-      console.log(data)
+
       if (receiveId) {
         this.server.emit('updatedEmojiThread', {
           ...data,
@@ -447,10 +468,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           userCreated: req.user.id,
           members,
         }
+        console.time('createChannel')
         const rs = await this.channelService.createChannel(
           channelCreateDto,
           req.user.id,
         )
+        console.timeEnd('createChannel')
 
         if (rs) {
           this.server.emit('channelWS', {
@@ -494,11 +517,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'Access to this resource is denied',
       })
     } else {
+      console.time('updateChannel')
       const rs = await this.channelService.updateChannel(
         data.channelId,
         req.user.id,
         data.channelUpdate,
       )
+      console.timeEnd('updateChannel')
       if (rs.error) {
         this.server.emit('channelWS', {
           status: HttpStatus.UNAUTHORIZED,
@@ -546,10 +571,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'You are not authorized to delete this channel',
       })
     } else {
+      console.time('deleteChannel')
       const rs = await this.channelService.deleteChannel(
         data.channelId,
         req.user.id,
       )
+      console.timeEnd('deleteChannel')
 
       if (rs.error) {
         this.server.emit('channelWS', {
@@ -604,12 +631,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'You are not authorized to add user to this channel',
       })
     } else {
-      console.log(data)
+      console.time('addUserToChannel')
       const rs = await this.channelService.addUserToChannel(
         data.channelId,
         data.users,
         req.user.id,
       )
+      console.timeEnd('addUserToChannel')
 
       if (rs.error) {
         this.server.emit('channelWS', {
@@ -660,11 +688,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'You are not authorized to remove user from this channel',
       })
     } else {
+      console.time('removeUserFromChannel')
       const rs = await this.channelService.removeUserFromChannel(
         data.channelId,
         req.user.id,
         data.userId,
       )
+      console.timeEnd('removeUserFromChannel')
       if (rs.error) {
         this.server.emit('channelWS', {
           status: HttpStatus.UNAUTHORIZED,
@@ -718,11 +748,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'You are not authorized to update role of this user',
       })
     } else {
+      console.time('updateRoleUserInChannel')
       const rs = await this.channelService.updateRoleUserInChannel(
         data.channelId,
         data.user,
         req.user.id,
       )
+      console.timeEnd('updateRoleUserInChannel')
       if (rs.error) {
         this.server.emit('channelWS', {
           status: HttpStatus.UNAUTHORIZED,
@@ -772,12 +804,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'You are not authorized to leave this channel',
       })
     } else {
-      console.log(data)
+      console.time('leaveChannel')
       const rs = await this.channelService.leaveChannel(
         data.channelId,
         req.user.id,
         data.transferOwner,
       )
+      console.timeEnd('leaveChannel')
 
       if (rs.error) {
         this.server.emit('channelWS', {
@@ -875,7 +908,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'Access to this resource is denied',
       })
     } else {
-      console.log(data)
       const rs = await this.chatService.reqAddFriend(
         data.receiveId,
         req.user.id,
@@ -1141,7 +1173,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'Access to this resource is denied',
       })
     } else {
-      console.log(data)
       const rs = await this.chatService.unfriend(data.chatId)
       if (rs.error) {
         this.server.emit('chatWS', {
