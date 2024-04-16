@@ -18,6 +18,7 @@ import { MessageCreateDto } from '../thread/dto/messageCreate.dto'
 import { ThreadService } from '../thread/thread.service'
 import { v4 as uuidv4 } from 'uuid'
 import { ChatController } from '../chat/chat.controller'
+import { UserService } from '../user/user.service'
 
 @WebSocketGateway({
   cors: {
@@ -30,6 +31,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private channelService: ChannelService,
     private readonly chatService: ChatService,
     private commonService: CommonService,
+    private userService: UserService,
   ) {}
   user = []
   @WebSocketServer() server: Server
@@ -86,6 +88,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         channelId,
         chatId,
         replyId, //stoneId
+        cloudId,
+        mentions,
+        members,
       }: {
         messages?: MessageCreateDto
         fileCreateDto?: FileCreateDto[]
@@ -93,6 +98,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         channelId?: string
         chatId?: string
         replyId?: string
+        cloudId?: string
+        mentions?: string[]
+        members?: string[]
       } = data
 
       const stoneId = uuidv4()
@@ -119,6 +127,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
       if (receiveId) {
+        const userNoti = await this.userService.searchUserById(data.receiveId)
+        const notify = userNoti.settings.notify
+
         // if (messages === undefined && fileCreateDto.length > 0) {
         //   if (req.user.id !== receiveId) {
         //     data.messages = {
@@ -141,8 +152,34 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           messages: data.messages !== undefined ? data.messages : null,
           fileCreateDto: files,
           type: 'chat',
+          notify,
         })
-      } else {
+      } else if (channelId) {
+        const notifications = []
+        // for (let i = 0; i < members.length; i++) {
+        //   const userNoti = await this.userService.searchUserById(members[i])
+        //   notifications.push({
+        //     userId: members[i],
+        //     notify: userNoti.settings.notify,
+        //   })
+        // }
+        //check mentions
+
+        // const channel = await this.channelService.getChannelById(
+        //   channelId,
+        //   req.user.id,
+        // )
+        // const isDisable = channel.disableThread
+        // const roleMember = channel.users.find(
+        //   (item) => item.id === req.user.id,
+        // ).role
+        // if (isDisable && roleMember !== 'ADMIN') {
+        //   this.server.emit('updatedSendThread', {
+        //     status: HttpStatus.FORBIDDEN,
+        //     message: 'Access to this resource is denied',
+        //   })
+        //   return
+        // }
         this.server.emit('updatedSendThread', {
           ...data,
           stoneId,
@@ -151,8 +188,20 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           isReply: false,
           isRecall: false,
           fileCreateDto: files,
-
+          notifications,
           type: 'channel',
+        })
+      } else {
+        //my cloud
+        this.server.emit('updatedSendThread', {
+          ...data,
+          stoneId,
+          timeThread: new Date(),
+          user: sender,
+          isReply: false,
+          isRecall: false,
+          fileCreateDto: files,
+          type: 'cloud',
         })
       }
 
@@ -173,6 +222,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           chatId,
           replyId,
           stoneId,
+          cloudId,
+          mentions,
         )
       }
     }
@@ -193,81 +244,28 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   @SubscribeMessage('updateThread')
   @UseGuards(AuthGuard)
-  async handleSendUpdateThread(@MessageBody() data: any): Promise<void> {
-    const {
-      threadId,
-      senderId,
-      messages,
-      files,
-      chatId,
-      channelId,
-    }: {
-      threadId: string
-      senderId: string
-      messages?: MessageCreateDto
-      files?: FileCreateDto[]
-      chatId?: string
-      channelId?: string
-    } = data
-    await this.threadService.updateThread(
-      threadId,
-      senderId,
-      messages,
-      files,
-      chatId,
-      channelId,
-    )
-    this.server.emit('updatedSendThread', data)
-  }
-
-  /**
-   * @param data:{
-   * threadId:string
-   * userId:string
-   * messages:MessageCreateDto
-   * fileCreateDto:FileCreateDto[]
-   * chatId:string
-   * channelId:string
-   * }
-   * @param req: token
-   * @returns
-   * status: pass
-   */
-  @SubscribeMessage('replyThread')
-  @UseGuards(AuthGuard)
-  async handleReplyThread(@MessageBody() data: any): Promise<void> {
-    const {
-      threadId,
-      userId,
-      messages,
-      files,
-      chatId,
-      channelId,
-    }: {
-      threadId: string
-      userId: string
-      messages?: MessageCreateDto
-      files?: FileCreateDto[]
-      chatId?: string
-      channelId?: string
-    } = data
-    const rs = await this.threadService.createReplyThread(
-      threadId,
-      userId,
-      messages,
-      files,
-      channelId,
-      chatId,
-    )
-
-    if (chatId) {
-      this.server.emit('updatedSendThread', { ...data, id: rs.id })
-    } else {
+  async handleSendUpdateThread(
+    @MessageBody() data: any,
+    @Req() req: any,
+  ): Promise<void> {
+    if (req.error) {
       this.server.emit('updatedSendThread', {
-        ...data,
-        id: rs.id,
-        members: rs.dataReturn.users,
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
       })
+    } else {
+      const {
+        stoneId,
+        messages,
+        pin,
+      }: {
+        stoneId: string
+        senderId: string
+        messages?: MessageCreateDto
+        pin?: boolean
+      } = data
+      await this.threadService.updateThread(stoneId, req.user.id, messages, pin)
+      this.server.emit('updatedSendThread', data)
     }
   }
 
@@ -292,6 +290,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       type,
       chatId,
       channelId,
+      cloudId,
     }: {
       stoneId: string
       receiveId?: string
@@ -299,6 +298,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       typeRecall: string
       chatId?: string
       channelId?: string
+      cloudId?: string
     } = data
     const rs = await this.threadService.threadExists(stoneId, req.user.id, type)
     if (rs) {
@@ -317,6 +317,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         type,
         chatId,
         channelId,
+        cloudId,
       )
     }
   }
@@ -342,12 +343,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       type,
       chatId,
       channelId,
+      cloudId,
     }: {
       stoneId: string
       receiveId?: string
       type: string
       chatId?: string
       channelId?: string
+      cloudId?: string
     } = data
 
     const rs = await this.threadService.threadExists(stoneId, req.user.id, type)
@@ -363,6 +366,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         type,
         chatId,
         channelId,
+        cloudId,
       )
     }
   }
@@ -643,6 +647,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('channelWS', {
           status: HttpStatus.UNAUTHORIZED,
           message: rs.error,
+          userBlock: rs.userBlocked,
         })
       } else {
         if (rs) {
@@ -865,6 +870,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else {
       const stoneId = uuidv4()
 
+      const userCreate = await this.userService.searchUserById(data.receiveId)
+      if (userCreate.settings.blockGuest) {
+        this.server.emit('chatWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Người dùng đã chặn nhận tin nhắn từ người lạ',
+        })
+        return
+      }
       const rs = await this.chatService.createChat(req.user.id, data, stoneId)
       if (rs.error) {
         this.server.emit('chatWS', {
@@ -877,11 +890,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             status: HttpStatus.CREATED,
             message: 'Create chat success',
             data: rs,
+            noti: userCreate.noti,
           })
         } else {
           this.server.emit('chatWS', {
             status: HttpStatus.BAD_REQUEST,
             message: 'Create chat fail',
+            noti: userCreate.noti,
           })
         }
       }

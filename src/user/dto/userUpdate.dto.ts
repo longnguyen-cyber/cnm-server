@@ -29,13 +29,6 @@ export class UserUpdateDto {
   readonly password?: string
 
   @ApiProperty({
-    example: 'display name',
-    description: 'the display name of the User',
-    required: false,
-  })
-  readonly displayName?: string
-
-  @ApiProperty({
     example: 'phone',
     description: 'the phone of the User',
     required: false,
@@ -51,5 +44,5 @@ export class UserUpdateDto {
     description: 'the avatar of the User',
     required: false,
   })
-  readonly avatar?: string
+  readonly avatar?: any
 }

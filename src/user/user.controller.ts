@@ -175,7 +175,7 @@ export class UserController {
 
   //seen profile
   @UseGuards(AuthGuard)
-  @Get(':id')
+  @Get(':id/profile')
   async getUser(@Param('id') id: string, @Req() req: any): Promise<Response> {
     if (req.error) {
       return {
@@ -214,24 +214,9 @@ export class UserController {
         message: 'Please login again',
       }
     }
-
-    let data: any = userUpdateDto
-    if (file) {
-      const limitSize = this.commonService.limitFileSize(file.size)
-      if (!limitSize) {
-        return {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'File size is too large',
-          errors: `Currently the file size has exceeded our limit (2MB). Your file size is ${this.commonService.convertToSize(file.size)}. Please try again with a smaller file.`,
-        }
-      }
-      data = {
-        ...userUpdateDto,
-        avatar: JSON.stringify({
-          fileName: file.originalname,
-          file: file.buffer,
-        }),
-      }
+    const data = {
+      ...userUpdateDto,
+      avatar: file,
     }
 
     const user = await this.userService.updateUser(data, req)
@@ -331,6 +316,49 @@ export class UserController {
         status: HttpStatus.NOT_FOUND,
         message: 'Change password fail',
       }
+    }
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('update-setting')
+  async updateSetting(@Body() body: any, @Req() req: any): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Please login again',
+        errors: req.error,
+      }
+    }
+    const rs = await this.userService.updateSetting(body, req.user.id)
+    if (rs) {
+      return {
+        status: HttpStatus.OK,
+        message: 'Update setting success',
+        data: rs,
+      }
+    } else {
+      return {
+        status: HttpStatus.NOT_FOUND,
+        message: 'Update setting fail',
+      }
+    }
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('my-cloud')
+  async getCloudsByUserId(@Req() req: any): Promise<Response> {
+    if (req.error) {
+      return {
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Please login again',
+        errors: req.error,
+      }
+    }
+    const rs = await this.userService.getCloudsByUserId(req.user.id)
+    return {
+      status: HttpStatus.OK,
+      message: 'Get cloud success',
+      data: rs,
     }
   }
 }

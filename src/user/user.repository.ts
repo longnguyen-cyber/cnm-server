@@ -7,6 +7,25 @@ import { UserCreateDto } from './dto/userCreate.dto'
 export class UserRepository {
   constructor(private prisma: PrismaService) {}
 
+  async updateSetting(data: any, userId: string) {
+    const settingExist = await this.prisma.settings.findUnique({
+      where: {
+        userId,
+      },
+    })
+
+    if (settingExist) {
+      return this.prisma.settings.update({
+        where: {
+          userId,
+        },
+        data,
+      })
+    }
+
+    return null
+  }
+
   async findOneById(id: string, prisma: Tx = this.prisma) {
     const user = await prisma.users.findUnique({
       where: {
@@ -17,7 +36,11 @@ export class UserRepository {
   }
 
   async findAll(prisma: Tx = this.prisma) {
-    const users = await prisma.users.findMany()
+    const users = await prisma.users.findMany({
+      include: {
+        settings: true,
+      },
+    })
     const final = await Promise.all(
       users.map(async (user) => {
         const channels = await findChannelOfUser(user.id, prisma)
@@ -52,6 +75,47 @@ export class UserRepository {
     return user
   }
 
+  async getCloudsByUserId(userId: string, prisma: Tx = this.prisma) {
+    const clouds = await prisma.clouds.findUnique({
+      where: {
+        userId,
+      },
+      include: {
+        thread: true,
+      },
+    })
+    const getAllMessageOfThread = async (threadId: string) => {
+      const thread = await prisma.threads.findUnique({
+        where: {
+          id: threadId,
+        },
+        include: {
+          messages: true,
+          user: true,
+          files: true,
+          emojis: true,
+        },
+      })
+      if (thread === null) return null
+      return thread
+    }
+
+    const threads = await Promise.all(
+      clouds.thread.map(async (thread) => {
+        const threads = await getAllMessageOfThread(thread.id)
+
+        return threads
+      }),
+    ).then((rs) =>
+      rs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
+    )
+
+    return {
+      ...clouds,
+      threads,
+    }
+  }
+
   async createUser(userCreateDto: UserCreateDto, prisma: Tx = this.prisma) {
     const user = await prisma.users.create({
       data: {
@@ -64,6 +128,17 @@ export class UserRepository {
       return null
     }
 
+    await prisma.settings.create({
+      data: {
+        userId: user.id,
+      },
+    })
+
+    await prisma.clouds.create({
+      data: {
+        userId: user.id,
+      },
+    })
     return user
   }
 

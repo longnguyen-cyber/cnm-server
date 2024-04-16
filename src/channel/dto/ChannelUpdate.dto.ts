@@ -5,5 +5,5 @@ export class ChannelUpdateDto {
   readonly name?: string
 
   @IsOptional()
-  readonly status?: boolean
+  readonly disableThread?: boolean
 }

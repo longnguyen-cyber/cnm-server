@@ -18,8 +18,6 @@ export class ChannelRepository {
 
   async getAllChannel(userId: string, prisma: Tx = this.prisma) {
     let channels: any
-
-    //fix to anyone have in channel not only userCreated
     channels = await prisma.channels.findMany({
       include: {
         thread: true,
@@ -129,6 +127,40 @@ export class ChannelRepository {
       }
     }
   }
+  async getLastChannel(channelId: string, prisma: Tx = this.prisma) {
+    const channel = await prisma.channels.findUnique({
+      where: {
+        id: channelId,
+      },
+      include: {
+        thread: true,
+      },
+    })
+    const userOfChannel = await this.getMembersOfChannel(channelId)
+    if (channel.thread.length === 0) {
+      return {
+        ...channel,
+        users: userOfChannel,
+        lastedThread: null,
+      }
+    } else {
+      const lastedThreadId = channel.thread[channel.thread.length - 1].id
+      const lastedThread = await prisma.threads.findUnique({
+        where: {
+          id: lastedThreadId,
+        },
+        include: {
+          messages: true,
+          files: true,
+        },
+      })
+      return {
+        ...channel,
+        users: userOfChannel,
+        lastedThread,
+      }
+    }
+  }
 
   async getChannelById(id: string, userId?: string, prisma: Tx = this.prisma) {
     let channel: any
@@ -203,7 +235,6 @@ export class ChannelRepository {
   }
 
   async getMessageOfThread(threadId: string) {
-    console.log('threadId', threadId)
     const thread = await this.prisma.threads.findUnique({
       where: {
         id: threadId,
@@ -311,7 +342,7 @@ export class ChannelRepository {
           }),
         },
       })
-      return final.id
+      return final
     }
     return {
       error: 'Create channel failed',
@@ -323,6 +354,7 @@ export class ChannelRepository {
     id: string,
     userId: string,
     channelUpdateDto: ChannelUpdateDto,
+    stoneId: string,
     prisma: Tx = this.prisma,
   ) {
     const channel = await prisma.channels.findUnique({
@@ -347,7 +379,7 @@ export class ChannelRepository {
       },
     })
     if (rs) {
-      return await this.handleSuccessful(rs, userId, 'updateChannel')
+      return await this.handleSuccessful(rs, userId, 'updateChannel', stoneId)
     }
   }
 
@@ -425,6 +457,7 @@ export class ChannelRepository {
     channelId: string,
     users: UserOfChannel[],
     personAddedId: string,
+    stoneId: string,
     prisma: Tx = this.prisma,
   ) {
     const channel = await prisma.channels.findUnique({
@@ -438,6 +471,15 @@ export class ChannelRepository {
 
     if (this.checkUserExistInChannel(channel.users, users)) {
       return { error: 'Have some user in the channel' }
+    }
+
+    const blockUser = channel.blockUser
+    if (blockUser.length !== 0) {
+      const userBlocked = users.map((user) => user.id)
+      const check = blockUser.filter((user) => userBlocked.includes(user))
+      if (check.length > 0) {
+        return { error: 'Some user blocked', userBlocked: check }
+      }
     }
     const add = await prisma.channels.update({
       where: {
@@ -462,6 +504,7 @@ export class ChannelRepository {
         channel,
         personAddedId,
         'add',
+        stoneId,
         userAdded,
       )
     }
@@ -471,6 +514,7 @@ export class ChannelRepository {
     channelId: string,
     userId: string,
     userRemoved: string,
+    stoneId: string,
     prisma: Tx = this.prisma,
   ) {
     const channel = await prisma.channels.findUnique({
@@ -494,14 +538,20 @@ export class ChannelRepository {
     if (remainingUsers.length === channel.users.length) {
       return { error: 'User not found in the channel' }
     }
+    const blockUserCurrent = channel.blockUser
+    const newBlockUser = [...blockUserCurrent, userRemoved]
 
     const removed = await prisma.channels.update({
       where: { id: channelId },
-      data: { users: remainingUsers, timeThread: new Date() },
+      data: {
+        users: remainingUsers,
+        blockUser: newBlockUser,
+        timeThread: new Date(),
+      },
     })
 
     if (removed) {
-      return await this.handleSuccessful(channel, userId, 'remove', [
+      return await this.handleSuccessful(channel, userId, 'remove', stoneId, [
         userRemoved,
       ])
     }
@@ -511,6 +561,7 @@ export class ChannelRepository {
     channelId: string,
     user: UserOfChannel,
     userId: string,
+    stoneId: string,
     prisma: Tx = this.prisma,
   ) {
     const channel = await prisma.channels.findUnique({
@@ -554,13 +605,19 @@ export class ChannelRepository {
       },
     })
     if (rs) {
-      return await this.handleSuccessful(channel, user.id, 'updateRole')
+      return await this.handleSuccessful(
+        channel,
+        user.id,
+        'updateRole',
+        stoneId,
+      )
     }
   }
 
   async leaveChannel(
     channelId: string,
     userId: string,
+    stoneId: string,
     transferOwner?: string,
     prisma: Tx = this.prisma,
   ) {
@@ -641,6 +698,7 @@ export class ChannelRepository {
           channel,
           userId,
           'leave',
+          stoneId,
           null,
           transferOwner,
         )
@@ -687,6 +745,7 @@ export class ChannelRepository {
     channel: any,
     userId: string,
     type: string,
+    stoneId?: string,
     users?: string[],
     transferOwner?: string,
   ) {
@@ -723,13 +782,10 @@ export class ChannelRepository {
     }
 
     if (channel) {
-      const stoneId = uuidv4()
-
       const thread = await this.prisma.threads.create({
         data: {
           channelId: channel.id,
           isReply: false,
-
           stoneId,
         },
         include: { user: true, messages: true },

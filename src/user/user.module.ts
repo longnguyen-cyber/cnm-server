@@ -8,21 +8,21 @@ import { AuthModule } from '../auth/auth.module'
 import { CommonModule } from '../common/common.module'
 import { EmailConsumer } from '../consumers/queue.consummer'
 import { PrismaModule } from '../prisma/prisma.module'
-import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import * as redisStore from 'cache-manager-redis-store'
 import { JwtModule } from '@nestjs/jwt'
 import { ChatModule } from '../chat/chat.module'
+import { UploadModule } from '../upload/upload.module'
 @Module({
   controllers: [UserController],
   providers: [UserService, UserRepository, UserCheck, EmailConsumer],
   imports: [
     forwardRef(() => AuthModule),
-    RabbitMQModule,
     PrismaModule,
     CommonModule,
     ChatModule,
     ConfigModule,
+    UploadModule,
     JwtModule.register({
       secret: 'secret',
       signOptions: { expiresIn: '1d' },

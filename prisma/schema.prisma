@@ -12,9 +12,7 @@ model users {
   id                               String    @id @default(auto()) @map("_id") @db.ObjectId
   name                             String    @unique
   password                         String
-  displayName                      String?
   status                           String
-  phone                            String?
   email                            String    @unique
   avatar                           String    @default("")
   isTwoFactorAuthenticationEnabled Boolean   @default(false)
@@ -26,19 +24,43 @@ model users {
   channel                          String[]  @db.ObjectId
   threads                          threads[]
   emojis                           emojis[]
+  settings                         settings?
+  clouds                           clouds?
+}
+
+model clouds {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  userId    String?   @unique @db.ObjectId
+  user      users?    @relation(fields: [userId], references: [id])
+  thread    threads[]
+}
+
+model settings {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     String?  @unique @db.ObjectId
+  user       users?   @relation(fields: [userId], references: [id])
+  notify     Boolean? @default(true)
+  blockGuest Boolean  @default(false)
 }
 
 model channels {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  thread      threads[]
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  thread        threads[]
+  disableThread Boolean   @default(false)
   // bookmark    bookmarks[]
-  users       Json[]
-  userCreated String?   @db.ObjectId
-  timeThread  DateTime? @default(now())
+  users         Json[]
+  userCreated   String?   @db.ObjectId
+  timeThread    DateTime? @default(now())
+  blockUser     String[]  @default([])
 }
 
 model chats {
@@ -63,18 +85,22 @@ model threads {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
   isEdited  Boolean?
-  isReply   Boolean?
+  isReply   Boolean?  @default(false)
   isRecall  Boolean?  @default(false)
-
+  pin       Boolean?  @default(false)
   receiveId String?   @db.ObjectId
   senderId  String?   @db.ObjectId
   user      users?    @relation(fields: [senderId], references: [id])
   chatId    String?   @db.ObjectId
   chats     chats?    @relation(fields: [chatId], references: [id])
-  channel   channels? @relation(fields: [channelId], references: [id])
   channelId String?   @db.ObjectId
-  stoneId   String    @unique
-  seended   String[]  @default([])
+  channel   channels? @relation(fields: [channelId], references: [id])
+  cloudsId  String?   @db.ObjectId
+  clouds    clouds?   @relation(fields: [cloudsId], references: [id])
+
+  stoneId  String   @unique
+  seen     String[] @default([])
+  mentions String[] @default([])
 
   //self relation
   threadId String?   @db.ObjectId

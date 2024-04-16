@@ -1,34 +1,24 @@
-import {
-  CACHE_MANAGER,
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-} from '@nestjs/common'
+import { InjectQueue } from '@nestjs/bull'
+import { HttpStatus, Inject, Injectable } from '@nestjs/common'
+import { Interval } from '@nestjs/schedule'
+import { Queue as QueueThread } from 'bull'
 import { AppService } from '../app.service'
+import { ChannelService } from '../channel/channel.service'
+import { ChatService } from '../chat/chat.service'
 import { CommonService } from '../common/common.service'
-import { Queue as QueueEnum, UploadMethod } from '../enums'
-import { RabbitMQService } from '../rabbitmq/rabbitmq.service'
 import { FileCreateDto } from './dto/fileCreate.dto'
 import { MessageCreateDto } from './dto/messageCreate.dto'
+import { EmojiToDBDto } from './dto/relateDB/emojiToDB.dto'
 import { ThreadToDBDto } from './dto/relateDB/threadToDB.dto'
 import { ThreadRepository } from './thread.repository'
-import { Queue as QueueThread } from 'bull'
-import { InjectQueue } from '@nestjs/bull'
-import { Interval } from '@nestjs/schedule'
-import { EmojiToDBDto } from './dto/relateDB/emojiToDB.dto'
-import { ChatService } from '../chat/chat.service'
-import { Cache } from 'cache-manager'
-import { ChannelService } from '../channel/channel.service'
 
 @Injectable()
 export class ThreadService {
   constructor(
     private threadRepository: ThreadRepository,
     private commonService: CommonService,
-    @Inject('RabbitMQUploadService')
-    private readonly rabbitMQService: RabbitMQService,
-    @Inject(AppService) private appService: AppService,
+    @Inject(AppService)
+    private appService: AppService,
     @InjectQueue('queue') private readonly threadQueue: QueueThread,
     private readonly chatService: ChatService,
     private readonly channelService: ChannelService,
@@ -78,11 +68,11 @@ export class ThreadService {
         if (result) {
           console.log('Send thread success')
           console.time('updateCacheChannel')
-
-          if (data.channelId) {
+          if (data.cloudId) {
+            console.log('send for my cloud')
+          } else if (data.channelId) {
             await this.channelService.updateCacheChannel(
               data.channelId,
-              data.senderId,
               data.stoneId,
             )
           } else {
@@ -111,7 +101,9 @@ export class ThreadService {
           data.type,
         )
         if (result) {
-          if (data.chatId) {
+          if (data.cloudId) {
+            console.log('delete for my cloud')
+          } else if (data.chatId) {
             await this.chatService.updateCacheChat(
               data.chatId,
               data.userDeleteId,
@@ -139,6 +131,8 @@ export class ThreadService {
         if (result) {
           if (data.chatId) {
             await this.chatService.updateCacheChat(data.chatId, data.recallId)
+          } else if (data.cloudId) {
+            console.log('recall for my cloud')
           } else {
             await this.channelService.updateCacheChannel(data.channelId)
           }
@@ -161,6 +155,8 @@ export class ThreadService {
       channelId,
       chatId,
       stoneId,
+      cloudId,
+      mentions,
     } = threadRaw
     const threadToDb = this.compareToCreateThread(
       messageCreateDto,
@@ -169,8 +165,10 @@ export class ThreadService {
       senderId,
       receiveId,
       channelId,
+      cloudId,
       chatId,
       stoneId,
+      mentions,
     )
 
     const thread = await this.threadRepository.createThread(threadToDb)
@@ -186,6 +184,8 @@ export class ThreadService {
     chatId?: string,
     replyId?: string,
     stoneId?: string,
+    cloudId?: string,
+    mentions?: string[],
   ) {
     const threadToDb = {
       messageCreateDto,
@@ -196,6 +196,8 @@ export class ThreadService {
       channelId,
       chatId,
       stoneId,
+      cloudId,
+      mentions,
     }
 
     await this.threadQueue.add('send-thread', threadToDb, {
@@ -204,66 +206,20 @@ export class ThreadService {
   }
 
   async updateThread(
-    threadId: string,
+    stoneId: string,
     senderId: string,
     messageCreateDto?: MessageCreateDto,
-    fileCreateDto?: FileCreateDto[],
-    chatId?: string,
-    channelId?: string,
+    pin?: boolean,
   ) {
-    const oldThread = await this.threadRepository.getThreadById(threadId)
     const threadToDb = this.compareToUpdateThread(
-      threadId,
+      stoneId,
       senderId,
       messageCreateDto,
-      fileCreateDto,
+      pin,
     )
 
-    if (fileCreateDto) {
-      const limitFileSize = fileCreateDto.some((file) => {
-        return this.commonService.limitFileSize(file.size)
-      })
-
-      if (limitFileSize) {
-        return {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'File size is too large',
-          errors: `Currently the file size has exceeded our limit (2MB). Please try again with a smaller file.`,
-        }
-      } else {
-        const payload = fileCreateDto.map((file) => {
-          return {
-            fileName: file.filename,
-            file: file.buffer,
-          }
-        })
-        const uploadFile = await this.rabbitMQService.addToQueue(
-          QueueEnum.Upload,
-          UploadMethod.UploadMultiple,
-          payload,
-        )
-
-        if (uploadFile) {
-          threadToDb.file = fileCreateDto.map((file) => {
-            return {
-              ...file,
-              path: this.commonService.pathUpload(file.filename),
-            }
-          })
-        }
-      }
-    }
     const thread = await this.threadRepository.updateThread(threadToDb)
-    if (thread && fileCreateDto) {
-      const files = oldThread.files.map((file) => {
-        return this.commonService.getFileName(file.path)
-      })
-      await this.rabbitMQService.addToQueue(
-        QueueEnum.Upload,
-        UploadMethod.DeleteMultiple,
-        files,
-      )
-    }
+
     return thread
   }
 
@@ -273,12 +229,13 @@ export class ThreadService {
     type: string,
     chatId?: string,
     channelId?: string,
+    cloudId?: string,
   ) {
     //get file before delete to delete file in s3
 
     await this.threadQueue.add(
       'delete-thread',
-      { stoneId, userDeleteId, type, chatId, channelId },
+      { stoneId, userDeleteId, type, chatId, channelId, cloudId },
       { lifo: true },
     )
   }
@@ -302,10 +259,11 @@ export class ThreadService {
     type: string,
     chatId?: string,
     channelId?: string,
+    cloudId?: string,
   ) {
     await this.threadQueue.add(
       'recall-thread',
-      { stoneId, recallId, type, chatId, channelId },
+      { stoneId, recallId, type, chatId, channelId, cloudId },
       { lifo: true },
     )
   }
@@ -317,45 +275,6 @@ export class ThreadService {
       type,
     )
     return thread
-  }
-
-  async createReplyThread(
-    threadId: string,
-    senderId?: string,
-    messageCreateDto?: MessageCreateDto,
-    fileCreateDto?: FileCreateDto[],
-    channelId?: string,
-    chatId?: string,
-  ) {
-    const thread = this.compareToCreateThread(
-      messageCreateDto,
-      fileCreateDto,
-      null,
-      senderId,
-      null,
-      channelId,
-      chatId,
-      threadId,
-    )
-
-    if (fileCreateDto) {
-      const limitFileSize = fileCreateDto.some((file) => {
-        return this.commonService.limitFileSize(file.size)
-      })
-
-      if (limitFileSize) {
-        return {
-          status: HttpStatus.BAD_REQUEST,
-          message: 'File size is too large',
-          errors: `Currently the file size has exceeded our limit (2MB). Please try again with a smaller file.`,
-        }
-      }
-    }
-    const reply = await this.threadRepository.createReplyThread(thread)
-    if (reply) {
-      this.appService.getAll(senderId)
-    }
-    return reply
   }
 
   async addEmoji(
@@ -448,8 +367,10 @@ export class ThreadService {
     senderId?: string,
     receiveId?: string,
     channelId?: string,
+    cloudId?: string,
     chatId?: string,
     stoneId?: string,
+    mentions?: string[],
     threadId?: string,
   ): ThreadToDBDto {
     return {
@@ -470,28 +391,22 @@ export class ThreadService {
       threadId,
       replyId,
       stoneId,
+      mentions,
+      cloudId,
     }
   }
 
   private compareToUpdateThread(
-    threadId: string,
+    stoneId: string,
     senderId: string,
     messageCreateDto?: MessageCreateDto,
-    fileCreateDto?: FileCreateDto[],
+    pin?: boolean,
   ): any {
     return {
-      threadId,
+      stoneId,
       senderId,
       messages: messageCreateDto,
-      file: fileCreateDto
-        ? fileCreateDto.map((file) => {
-            return {
-              fileName: file.filename,
-              size: file.size,
-              path: file.path,
-            }
-          })
-        : null,
+      pin,
     }
   }
 

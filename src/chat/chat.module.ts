@@ -5,7 +5,6 @@ import * as redisStore from 'cache-manager-redis-store'
 import { AuthModule } from '../auth/auth.module'
 import { CommonModule } from '../common/common.module'
 import { PrismaModule } from '../prisma/prisma.module'
-import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { ChatController } from './chat.controller'
 import { ChatRepository } from './chat.repository'
 import { ChatService } from './chat.service'
@@ -17,7 +16,6 @@ import { ThreadModule } from '../thread/thread.module'
   imports: [
     PrismaModule,
     CommonModule,
-    RabbitMQModule,
     ThreadModule,
     forwardRef(() => UserModule),
     forwardRef(() => AuthModule),

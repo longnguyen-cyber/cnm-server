@@ -15,20 +15,21 @@ import { Cache } from 'cache-manager'
 import { authenticator } from 'otplib'
 import { toDataURL } from 'qrcode'
 import { AuthService } from '../auth/auth.service'
+import { ChatService } from '../chat/chat.service'
 import { HttpExceptionCustom } from '../common/common.exception'
 import { CommonService } from '../common/common.service'
-import { Queue, UploadMethod } from '../enums'
-import { RabbitMQService } from '../rabbitmq/rabbitmq.service'
 import { LoginDTO } from './dto/login.dto'
 import { ResUserDto } from './dto/resUser.dto'
 import { UserCreateDto } from './dto/userCreate.dto'
 import { UserUpdateDto } from './dto/userUpdate.dto'
 import { UserCheck } from './user.check'
 import { UserRepository } from './user.repository'
-import { ChatService } from '../chat/chat.service'
+import { Interval } from '@nestjs/schedule'
+import { UploadService } from '../upload/upload.service'
 
 @Injectable()
 export class UserService implements OnModuleInit {
+  private readonly EXPIRED = 60 * 60 * 24 * 15 // 15 days
   constructor(
     private authService: AuthService,
     private commonService: CommonService,
@@ -36,17 +37,16 @@ export class UserService implements OnModuleInit {
     private userCheck: UserCheck,
     private chatService: ChatService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    @Inject('RabbitMQUploadService')
-    private readonly rabbitMQService: RabbitMQService,
-    @InjectQueue('queue') private readonly mailQueue: QueueEmail,
+    @InjectQueue('queue')
+    private readonly mailQueue: QueueEmail,
     private readonly configService: ConfigService,
+    private readonly uploadService: UploadService,
   ) {}
 
   async onModuleInit() {
     // const users = await this.userRepository.findAll()
-    // // console.log(users)
     // this.cacheManager.set('user', JSON.stringify(users), {
-    //   ttl: 60 * 60 * 24 * 7, // 1 week
+    //   ttl: this.EXPIRED, // 1 week
     // })
     // const userInCache = (await this.cacheManager.get('user')) as any
     // users.map((user) => {
@@ -63,14 +63,47 @@ export class UserService implements OnModuleInit {
     // }
   }
 
+  @Interval(1000 * 60 * 60 * 24 * 10) // 10 days for update cache user
+  async handleInterval() {
+    await this.updateCacheUser()
+  }
   async updateCacheUser() {
     const users = await this.userRepository.findAll()
     this.cacheManager.set('user', JSON.stringify(users), {
-      ttl: 60 * 60 * 24 * 7, // 1 week
+      ttl: this.EXPIRED, // 15 days
     })
   }
 
+  async updateSetting(data: any, userId: string) {
+    const updatedSetting = await this.userRepository.updateSetting(data, userId)
+    if (updatedSetting) {
+      await this.updateCacheUser()
+      return updatedSetting
+    }
+    return false
+  }
+
+  async getCloudsByUserId(userId: string) {
+    const cloud = await this.userRepository.getCloudsByUserId(userId)
+    cloud.threads = cloud.threads.map((thread) => {
+      thread.files = thread.files.map((file: any) => {
+        file.size = this.commonService.convertToSize(file.size)
+        return file
+      })
+      return thread
+    })
+
+    const rs = this.commonService.deleteField(cloud, [
+      'userId',
+      'thread',
+      'seen',
+      'mentions',
+    ])
+    return rs
+  }
+
   async searchUser(query: string, id: string) {
+    console.log('searchUser', query, id)
     const users = (await this.cacheManager.get('user')) as any
     if (users) {
       const usersParsed = JSON.parse(users)
@@ -94,7 +127,18 @@ export class UserService implements OnModuleInit {
           data.user.id !== id,
       )
 
-      return this.commonService.deleteField(userFilter, ['channels'])
+      return this.commonService.deleteField(userFilter, ['channels', 'userId'])
+    }
+  }
+
+  async searchUserById(id: string) {
+    const users = (await this.cacheManager.get('user')) as any
+    if (users) {
+      const usersParsed = JSON.parse(users)
+
+      const user = usersParsed.find((data: any) => data.id === id)
+
+      return this.commonService.deleteField(user, ['channels'])
     }
   }
 
@@ -126,7 +170,7 @@ export class UserService implements OnModuleInit {
   }
 
   async getUser(id: string) {
-    const user = await this.userRepository.findOneById(id)
+    const user = await this.searchUserById(id)
     const result = this.commonService.deleteField(
       this.buildUserResponse(user),
       [],
@@ -134,14 +178,7 @@ export class UserService implements OnModuleInit {
     return result
   }
 
-  async getUserByEmail(email: string) {
-    const user = await this.userRepository.getUserByEmail(email)
-    return this.commonService.deleteField(user, [])
-  }
-
   async createUser(userCreateDto: UserCreateDto) {
-    //log all cache in cache manager
-
     const userClean = { ...userCreateDto }
     const { email, name } = userClean
     const existingName = await this.checkUserName(name)
@@ -181,8 +218,9 @@ export class UserService implements OnModuleInit {
           removeOnComplete: true,
         },
       )
+      return true
     }
-    return true
+    return false
   }
 
   async verifyUser(token: string) {
@@ -209,8 +247,14 @@ export class UserService implements OnModuleInit {
         const userInCache = (await this.cacheManager.get('user')) as any
         if (userInCache) {
           const userParsed = JSON.parse(userInCache)
-          userParsed.push(userCreated)
-          this.cacheManager.set('user', JSON.stringify(userParsed))
+          const dataPush = {
+            ...userCreated,
+            chatIds: [],
+          }
+          userParsed.push(dataPush)
+          this.cacheManager.set('user', JSON.stringify(userParsed), {
+            ttl: this.EXPIRED,
+          })
         }
         return this.commonService.deleteField(
           {
@@ -236,6 +280,13 @@ export class UserService implements OnModuleInit {
       if (userUpdate) {
         this.cacheManager.del(token)
         this.cacheManager.del(userParsed.email)
+        const userUpdate = {
+          ...userParsed,
+          password: passwordHashed,
+        }
+        await this.cacheManager.set(token, JSON.stringify(userUpdate), {
+          ttl: this.configService.get<number>('LOGIN_EXPIRED'),
+        })
         return true
       }
     }
@@ -245,29 +296,27 @@ export class UserService implements OnModuleInit {
   async updateUser(userUpdateDto: UserUpdateDto, req: any): Promise<any> {
     const userClean = { ...userUpdateDto }
     const { id, password, avatar: oldAvatar } = req.user
+
     //token of user when login
     const token = req.token
 
-    const isNotEmptyObject = this.commonService.isNotEmptyObject(userClean)
+    const isNotEmptyObject = this.commonService.isNotEmptyObject(userUpdateDto)
     this.userCheck.isNotEmptyUpdate(isNotEmptyObject)
     if (userClean.avatar) {
-      const avatar = JSON.parse(userClean.avatar)
-      const payload = {
-        fileName: avatar.fileName,
-        file: avatar.file,
-        oldFileName: this.commonService.getFileName(oldAvatar),
-      }
-      const uploadFile = await this.rabbitMQService.addToQueue(
-        Queue.Upload,
-        UploadMethod.Update,
-        payload,
+      const avatar = userClean.avatar
+      const uploadFile = await this.uploadService.upload(
+        avatar.originalname,
+        avatar.buffer,
       )
-      //! throw error if upload fail
-      userClean.avatar = uploadFile
-        ? this.commonService.pathUpload(avatar.fileName)
-        : oldAvatar
+      if (uploadFile) {
+        userClean.avatar = uploadFile
+      } else {
+        return false
+      }
+    } else {
+      userClean.avatar = oldAvatar
     }
-    const { password: passwordNew, passwordOld } = userClean
+    const { password: passwordNew, passwordOld } = userUpdateDto
     let passwordHashed = ''
     if (passwordNew && passwordOld) {
       await this.validatePassword(passwordNew, passwordOld, password)
@@ -275,15 +324,19 @@ export class UserService implements OnModuleInit {
       passwordHashed = await this.generatePassword(passwordNew)
     }
     const data = this.generateStructureUpdateUser(userClean, passwordHashed)
-
     const userUpdate = await this.userRepository.updateUser(id, data)
-
     if (userUpdate) {
-      this.cacheManager.set(token, JSON.stringify(userUpdate))
+      const userUpdated = {
+        ...req.user,
+        ...data,
+      }
+      await this.cacheManager.set(token, JSON.stringify(userUpdated), {
+        ttl: this.configService.get<number>('LOGIN_EXPIRED'),
+      })
+      await this.updateCacheUserById(id, token, userUpdate)
+      return true
     }
-    return this.commonService.deleteField(this.buildUserResponse(userUpdate), [
-      ,
-    ])
+    return false
   }
 
   async logout(req: any) {
@@ -392,6 +445,10 @@ export class UserService implements OnModuleInit {
     if (user) {
       const userParsed = JSON.parse(user as any)
       const newToken = this.authService.generateJWT(userParsed.email)
+      await this.cacheManager.set(newToken, JSON.stringify(userParsed), {
+        ttl: this.configService.get<number>('LOGIN_EXPIRED'),
+      }) // 30 days
+      await this.cacheManager.del(token) //delete old token after authenticate
       return this.commonService.deleteField(
         {
           ...userParsed,
@@ -502,24 +559,29 @@ export class UserService implements OnModuleInit {
   }
 
   private buildUserResponse(user: ResUserDto): any {
-    const { name, email, phone, status, id } = user
+    const { name, email, status, id } = user
     return {
       id,
       name,
       email,
       avatar: user.avatar ?? '',
-      displayName: user.displayName ?? name,
-      phone,
       status,
     }
   }
-
-  // private generateToken = (email: string): any => {
-  //   const acessToken = this.authService.generateJWT(email)
-  //   const refreshToken = this.authService.generateJWTRefresh(email)
-
-  //   return {
-  //     accessToken: acessToken,
-  //   }
-  // }
+  private async updateCacheUserById(id: string, token: string, data: any) {
+    const user = await this.cacheManager.get('user')
+    if (user) {
+      const userParsed = JSON.parse(user as any)
+      const userIndex = userParsed.findIndex((user: any) => user.id === id)
+      if (userIndex !== -1) {
+        userParsed[userIndex] = {
+          ...userParsed[userIndex],
+          ...data,
+        }
+        this.cacheManager.set('user', JSON.stringify(userParsed), {
+          ttl: this.EXPIRED,
+        })
+      }
+    }
+  }
 }

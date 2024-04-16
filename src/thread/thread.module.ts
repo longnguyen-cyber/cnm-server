@@ -10,7 +10,6 @@ import { ChatRepository } from '../chat/chat.repository'
 import { ChatService } from '../chat/chat.service'
 import { CommonModule } from '../common/common.module'
 import { PrismaModule } from '../prisma/prisma.module'
-import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { UploadModule } from '../upload/upload.module'
 import { UserCheck } from '../user/user.check'
 import { UserRepository } from '../user/user.repository'
@@ -55,8 +54,6 @@ import * as redisStore from 'cache-manager-redis-store'
     ConfigModule,
     PrismaModule,
     CommonModule,
-    CacheModule.register(),
-    RabbitMQModule,
     UploadModule,
     BullModule.registerQueue({
       name: 'queue',

@@ -113,6 +113,32 @@ export class ChatRepository {
     }
   }
 
+  async getLastChat(chatId: string, prisma: Tx = this.prisma) {
+    const channel = await prisma.channels.findUnique({
+      where: {
+        id: chatId,
+      },
+      include: {
+        thread: true,
+      },
+    })
+
+    const lastedThreadId = channel.thread[channel.thread.length - 1].id
+    const lastedThread = await prisma.threads.findUnique({
+      where: {
+        id: lastedThreadId,
+      },
+      include: {
+        messages: true,
+        files: true,
+      },
+    })
+    return {
+      ...channel,
+      lastedThread,
+    }
+  }
+
   async getChatByUserId(
     senderId: string,
     receiveId: string,

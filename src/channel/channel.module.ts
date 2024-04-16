@@ -1,7 +1,6 @@
 import { BullModule } from '@nestjs/bull'
 import { CacheModule, Module, forwardRef } from '@nestjs/common'
 import { PrismaModule } from '../prisma/prisma.module'
-import { RabbitMQModule } from '../rabbitmq/rabbitmq.module'
 import { ChannelController } from './channel.controller'
 import { ChannelRepository } from './channel.repository'
 import { ChannelService } from './channel.service'
@@ -28,7 +27,6 @@ import { CommonService } from '../common/common.service'
         password: configService.get<string>('REDIS_PASSWORD'),
       }),
     }),
-    RabbitMQModule,
     BullModule.registerQueue({
       name: 'queue',
     }),

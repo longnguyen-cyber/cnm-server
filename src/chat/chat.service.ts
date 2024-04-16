@@ -39,7 +39,7 @@ export class ChatService implements OnModuleInit {
 
   async getAllChat(userId: string) {
     const chatsCache = await this.cacheManager.get(`chats`)
-    if (false) {
+    if (chatsCache) {
       const parsedCache = JSON.parse(chatsCache as string) as Array<any>
       const rs = parsedCache.filter(
         (chat) => chat.senderId === userId || chat.receiveId === userId,
@@ -59,16 +59,6 @@ export class ChatService implements OnModuleInit {
     }
   }
 
-  async updateCacheChats(userId: string) {
-    const rs = await this.chatRepository.getAllChat(userId)
-    const final = rs.map((chat) => {
-      return this.commonService.deleteField(chat, ['thread'])
-    })
-    await this.cacheManager.set(`chats-${userId}`, JSON.stringify(final), {
-      ttl: this.configService.get<number>('CHAT_EXPIRED'),
-    })
-    console.log('cache chats update userId: ', userId)
-  }
   async getChatById(chatId: string, userId: string) {
     const chatCache = await this.cacheManager.get(`chat-${chatId}`)
     if (chatCache) {
@@ -99,6 +89,24 @@ export class ChatService implements OnModuleInit {
       })
       return rs
     }
+  }
+
+  async updateCacheChats(chatId: string) {
+    const chatsCache = await this.cacheManager.get(`chats`)
+    const chat = await this.chatRepository.getLastChat(chatId)
+    if (!chat) return false
+    const chatParse = JSON.parse(chatsCache as any)
+    const newChats = [
+      ...chatParse,
+      this.commonService.deleteField(chat, ['thread']),
+    ]
+    newChats.sort((a, b) => {
+      return new Date(b.timeThread).getTime() - new Date(a.timeThread).getTime()
+    })
+    await this.cacheManager.set(`chats`, JSON.stringify(newChats), {
+      ttl: this.configService.get<number>('CHAT_EXPIRED'),
+    })
+    console.log('cache update chats chatId: ', chatId)
   }
 
   async updateCacheChat(chatId: string, userId: string) {
