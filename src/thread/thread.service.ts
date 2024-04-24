@@ -54,10 +54,6 @@ export class ThreadService {
         return a.timestamp - b.timestamp
       })
     if (filteredJobsSend.length > 0) {
-      console.log(
-        'filteredJobsSend',
-        filteredJobsSend.map((job) => job.id),
-      )
       filteredJobsSend.forEach(async (job) => {
         // job.remove()
 
@@ -88,59 +84,63 @@ export class ThreadService {
     }
     if (filteredJobsDelete.length > 0) {
       filteredJobsDelete.forEach(async (job) => {
-        // const threadExists = filteredJobsSend.find((item) => {
-        //   return item.data.stoneId === job.data.stoneId
-        // })
-
-        const data = job.data
-        const timeStart = new Date().getTime()
-
-        const result = await this.deleteQueue(
-          data.stoneId,
-          data.userDeleteId,
-          data.type,
-        )
-        if (result) {
-          if (data.cloudId) {
-            console.log('delete for my cloud')
-          } else if (data.chatId) {
-            await this.chatService.updateCacheChat(
-              data.chatId,
-              data.userDeleteId,
-            )
-          } else {
-            await this.channelService.updateCacheChannel(data.channelId)
+        const threadExists = filteredJobsSend.find((item) => {
+          return item.data.stoneId === job.data.stoneId
+        }) // check thread exists in send queue do not delete
+        if (!threadExists) {
+          const data = job.data
+          const timeStart = new Date().getTime()
+          const result = await this.deleteQueue(
+            data.stoneId,
+            data.userDeleteId,
+            data.type,
+          )
+          if (result) {
+            if (data.cloudId) {
+              console.log('delete for my cloud')
+            } else if (data.chatId) {
+              await this.chatService.updateCacheChat(
+                data.chatId,
+                data.userDeleteId,
+              )
+            } else {
+              await this.channelService.updateCacheChannel(data.channelId)
+            }
+            console.log('Delete thread success')
           }
-          console.log('Delete thread success')
+          job.remove()
+          console.log('time', new Date().getTime() - timeStart)
         }
-
-        job.remove()
-        console.log('time', new Date().getTime() - timeStart)
       })
     }
 
     if (filteredJobsRecall.length > 0) {
       filteredJobsRecall.forEach(async (job) => {
-        const data = job.data
-        const timeStart = new Date().getTime()
-        const result = await this.recallQueue(
-          data.stoneId,
-          data.recallId,
-          data.type,
-        )
-        if (result) {
-          if (data.chatId) {
-            await this.chatService.updateCacheChat(data.chatId, data.recallId)
-          } else if (data.cloudId) {
-            console.log('recall for my cloud')
-          } else {
-            await this.channelService.updateCacheChannel(data.channelId)
+        const threadExists = filteredJobsSend.find((item) => {
+          return item.data.stoneId === job.data.stoneId
+        }) // check thread exists in send queue do not recall
+        if (!threadExists) {
+          const data = job.data
+          const timeStart = new Date().getTime()
+          const result = await this.recallQueue(
+            data.stoneId,
+            data.recallId,
+            data.type,
+          )
+          if (result) {
+            if (data.chatId) {
+              await this.chatService.updateCacheChat(data.chatId, data.recallId)
+            } else if (data.cloudId) {
+              console.log('recall for my cloud')
+            } else {
+              await this.channelService.updateCacheChannel(data.channelId)
+            }
+            console.log('Recall thread success')
           }
-          console.log('Recall thread success')
-        }
 
-        job.remove()
-        console.log('time', new Date().getTime() - timeStart)
+          job.remove()
+          console.log('time', new Date().getTime() - timeStart)
+        }
       })
     }
   }

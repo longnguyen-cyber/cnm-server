@@ -13,7 +13,6 @@ export class ThreadRepository {
     const messages = threadToDB.messages
     const replyId = threadToDB.replyId
     const mentions = threadToDB.mentions ?? []
-    console.log('mentions', mentions)
 
     let replyTo: any
     if (replyId) {
@@ -349,7 +348,6 @@ export class ThreadRepository {
         })
         return true
       } else if (pin) {
-        console.log('pin', pin)
         await prisma.threads.update({
           where: {
             stoneId,

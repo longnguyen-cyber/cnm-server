@@ -114,7 +114,7 @@ export class ChatRepository {
   }
 
   async getLastChat(chatId: string, prisma: Tx = this.prisma) {
-    const channel = await prisma.channels.findUnique({
+    const chat = await prisma.chats.findUnique({
       where: {
         id: chatId,
       },
@@ -123,7 +123,7 @@ export class ChatRepository {
       },
     })
 
-    const lastedThreadId = channel.thread[channel.thread.length - 1].id
+    const lastedThreadId = chat.thread[chat.thread.length - 1].id
     const lastedThread = await prisma.threads.findUnique({
       where: {
         id: lastedThreadId,
@@ -134,7 +134,7 @@ export class ChatRepository {
       },
     })
     return {
-      ...channel,
+      ...chat,
       lastedThread,
     }
   }

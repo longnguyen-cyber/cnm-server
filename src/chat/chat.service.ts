@@ -30,7 +30,7 @@ export class ChatService implements OnModuleInit {
     // })
   }
 
-  private async updateListFriend() {
+  async updateListFriend() {
     const listFriend = await this.chatRepository.listFriend()
     this.cacheManager.set('listFriend', JSON.stringify(listFriend), {
       ttl: this.configService.get<number>('CHAT_EXPIRED'),
@@ -91,22 +91,16 @@ export class ChatService implements OnModuleInit {
     }
   }
 
-  async updateCacheChats(chatId: string) {
-    const chatsCache = await this.cacheManager.get(`chats`)
-    const chat = await this.chatRepository.getLastChat(chatId)
-    if (!chat) return false
-    const chatParse = JSON.parse(chatsCache as any)
-    const newChats = [
-      ...chatParse,
-      this.commonService.deleteField(chat, ['thread']),
-    ]
-    newChats.sort((a, b) => {
-      return new Date(b.timeThread).getTime() - new Date(a.timeThread).getTime()
+  async updateCacheChats(userId: string) {
+    console.time('updateCacheChats')
+    const rs = await this.chatRepository.getAllChat(userId)
+    const final = rs.map((chat) => {
+      return this.commonService.deleteField(chat, ['thread'])
     })
-    await this.cacheManager.set(`chats`, JSON.stringify(newChats), {
+    await this.cacheManager.set(`chats`, JSON.stringify(final), {
       ttl: this.configService.get<number>('CHAT_EXPIRED'),
     })
-    console.log('cache update chats chatId: ', chatId)
+    console.timeEnd('updateCacheChats')
   }
 
   async updateCacheChat(chatId: string, userId: string) {
@@ -137,13 +131,7 @@ export class ChatService implements OnModuleInit {
   async createChat(senderId: string, data: any, stoneId: string) {
     const chatToDb = this.compareToCreateChat(senderId, data)
     const chat = await this.chatRepository.createChat(chatToDb, stoneId)
-    if (chat) {
-      //update cache user to search
-      await this.userService.updateCacheUser()
-      //update cache chat and chats
-      this.updateCacheChat(chat.id, senderId)
-      this.updateCacheChats(senderId)
-    }
+
     return this.commonService.deleteField(chat, ['thread'])
   }
 
@@ -152,24 +140,18 @@ export class ChatService implements OnModuleInit {
       chatId,
       receiveId,
     )
-    if (req) {
-      await this.userService.updateCacheUser()
-    }
+
     return this.commonService.deleteField(req, ['thread'], ['status'])
   }
 
   async reqAddFriend(receiveId: string, senderId: string) {
     const req = await this.chatRepository.reqAddFriend(receiveId, senderId)
-    if (req) {
-      await this.userService.updateCacheUser()
-    }
+
     return this.commonService.deleteField(req, ['thread'])
   }
   async unReqAddFriend(chatId: string, userId: string) {
     const req = await this.chatRepository.unReqAddFriend(chatId, userId)
-    if (req) {
-      await this.userService.updateCacheUser()
-    }
+
     return this.commonService.deleteField(req, ['thread'])
   }
 
@@ -179,20 +161,13 @@ export class ChatService implements OnModuleInit {
 
   async acceptAddFriend(chatId: string, userId: string) {
     const accept = await this.chatRepository.acceptAddFriend(chatId, userId)
-    if (accept) {
-      await this.userService.updateCacheUser()
-      await this.updateCacheChats(userId)
-      await this.updateListFriend()
-    }
+
     return this.commonService.deleteField(accept, ['thread'], ['status'])
   }
 
   async rejectAddFriend(chatId: string, userId: string) {
     const req = await this.chatRepository.rejectAddFriend(chatId, userId)
-    if (req) {
-      await this.userService.updateCacheUser()
-      await this.updateCacheChats(userId)
-    }
+
     return this.commonService.deleteField(req, ['thread'])
   }
 
@@ -248,8 +223,6 @@ export class ChatService implements OnModuleInit {
   async unfriend(chatId: string) {
     const req = await this.chatRepository.unfriend(chatId)
     if (req) {
-      await this.userService.updateCacheUser()
-      await this.updateCacheChats(req.senderId)
       await this.updateListFriend()
     }
     return this.commonService.deleteField(req, ['thread'], ['status'])

@@ -316,10 +316,10 @@ export class UserService implements OnModuleInit {
     } else {
       userClean.avatar = oldAvatar
     }
-    const { password: passwordNew, passwordOld } = userUpdateDto
+    const { password: passwordNew, oldPassword } = userUpdateDto
     let passwordHashed = ''
-    if (passwordNew && passwordOld) {
-      await this.validatePassword(passwordNew, passwordOld, password)
+    if (passwordNew && oldPassword) {
+      await this.validatePassword(passwordNew, oldPassword, password)
 
       passwordHashed = await this.generatePassword(passwordNew)
     }
@@ -502,16 +502,16 @@ export class UserService implements OnModuleInit {
 
   private async validatePassword(
     passwordNew: string,
-    passwordOld: string,
+    oldPassword: string,
     password: string,
   ): Promise<void> {
-    this.checkPasswordData(passwordNew, passwordOld)
+    this.checkPasswordData(passwordNew, oldPassword)
 
-    if (!passwordNew && !passwordOld) {
+    if (!passwordNew && !oldPassword) {
       return
     }
 
-    await this.checkValidatePassword(passwordOld, password)
+    await this.checkValidatePassword(oldPassword, password)
   }
 
   private async generatePassword(password: string): Promise<string> {
@@ -549,7 +549,7 @@ export class UserService implements OnModuleInit {
     passwordHashed?: string,
   ): any {
     const user = { ...userUpdateDto }
-    delete user.passwordOld
+    delete user.oldPassword
     if (passwordHashed) {
       user.password = passwordHashed
     }

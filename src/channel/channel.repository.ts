@@ -11,6 +11,7 @@ import { ChannelCreateDto } from './dto/ChannelCreate.dto'
 import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
 import { UserOfChannel } from './dto/UserOfChannel.dto'
 import { v4 as uuidv4 } from 'uuid'
+import { ChannelType } from '../enums'
 
 @Injectable()
 export class ChannelRepository {
@@ -127,40 +128,6 @@ export class ChannelRepository {
       }
     }
   }
-  async getLastChannel(channelId: string, prisma: Tx = this.prisma) {
-    const channel = await prisma.channels.findUnique({
-      where: {
-        id: channelId,
-      },
-      include: {
-        thread: true,
-      },
-    })
-    const userOfChannel = await this.getMembersOfChannel(channelId)
-    if (channel.thread.length === 0) {
-      return {
-        ...channel,
-        users: userOfChannel,
-        lastedThread: null,
-      }
-    } else {
-      const lastedThreadId = channel.thread[channel.thread.length - 1].id
-      const lastedThread = await prisma.threads.findUnique({
-        where: {
-          id: lastedThreadId,
-        },
-        include: {
-          messages: true,
-          files: true,
-        },
-      })
-      return {
-        ...channel,
-        users: userOfChannel,
-        lastedThread,
-      }
-    }
-  }
 
   async getChannelById(id: string, userId?: string, prisma: Tx = this.prisma) {
     let channel: any
@@ -192,7 +159,6 @@ export class ChannelRepository {
         },
       },
     })
-    console.log('channel')
     const newThread = await Promise.all(
       channel.thread.map(async (thread) => {
         const threads = await this.getMessageOfThread(thread.id)
@@ -379,7 +345,12 @@ export class ChannelRepository {
       },
     })
     if (rs) {
-      return await this.handleSuccessful(rs, userId, 'updateChannel', stoneId)
+      return await this.handleSuccessful(
+        rs,
+        userId,
+        ChannelType.UpdateChannel,
+        stoneId,
+      )
     }
   }
 
@@ -503,14 +474,14 @@ export class ChannelRepository {
       return await this.handleSuccessful(
         channel,
         personAddedId,
-        'add',
+        ChannelType.AddUserToChannel,
         stoneId,
         userAdded,
       )
     }
   }
 
-  async removeUsersFromChannel(
+  async removeUserFromChannel(
     channelId: string,
     userId: string,
     userRemoved: string,
@@ -551,9 +522,13 @@ export class ChannelRepository {
     })
 
     if (removed) {
-      return await this.handleSuccessful(channel, userId, 'remove', stoneId, [
-        userRemoved,
-      ])
+      return await this.handleSuccessful(
+        channel,
+        userId,
+        ChannelType.RemoveUserFromChannel,
+        stoneId,
+        [userRemoved],
+      )
     }
   }
 
@@ -608,7 +583,7 @@ export class ChannelRepository {
       return await this.handleSuccessful(
         channel,
         user.id,
-        'updateRole',
+        ChannelType.UpdateRoleUserInChannel,
         stoneId,
       )
     }
@@ -697,7 +672,7 @@ export class ChannelRepository {
         return await this.handleSuccessful(
           channel,
           userId,
-          'leave',
+          ChannelType.LeaveChannel,
           stoneId,
           null,
           transferOwner,
@@ -750,7 +725,11 @@ export class ChannelRepository {
     transferOwner?: string,
   ) {
     let user
-    if ((type === 'updateRole' || type === 'leave') && channel) {
+    if (
+      (type === ChannelType.UpdateRoleUserInChannel ||
+        type === ChannelType.LeaveChannel) &&
+      channel
+    ) {
       user = await this.prisma.users.findUnique({
         where: {
           id: userId,
@@ -758,14 +737,13 @@ export class ChannelRepository {
       })
     }
 
-    let usersChange: any[] = []
+    let usersAdded: any[] = []
     let transferOwnerUser: any
+    let oldOwner: any
     if (transferOwner) {
-      usersChange = await this.prisma.users.findMany({
+      oldOwner = await this.prisma.users.findUnique({
         where: {
-          id: {
-            in: [userId],
-          },
+          id: userId,
         },
       })
       transferOwnerUser = await this.prisma.users.findUnique({
@@ -775,7 +753,7 @@ export class ChannelRepository {
       })
     } else {
       if (users) {
-        usersChange = await this.prisma.users.findMany({
+        usersAdded = await this.prisma.users.findMany({
           where: { id: { in: users } },
         })
       }
@@ -795,15 +773,15 @@ export class ChannelRepository {
           threadId: thread.id,
           message:
             transferOwner !== undefined
-              ? `Nhóm sẽ được chuyển giao cho ${transferOwnerUser.name} bởi ${usersChange[0].name}`
-              : type === 'updateRole'
+              ? `Nhóm sẽ được chuyển giao cho ${transferOwnerUser.name} bởi ${oldOwner.name}`
+              : type === ChannelType.UpdateRoleUserInChannel
                 ? `Quyền của ${user.name} vừa được cập nhật`
-                : type === 'updateChannel'
+                : type === ChannelType.UpdateChannel
                   ? `Nhóm vừa được cập nhật`
-                  : type === 'leave'
+                  : type === ChannelType.LeaveChannel
                     ? `Người dùng ${user.name} vừa rời khỏi nhóm`
-                    : usersChange.map((user) => user.name).join(', ') +
-                      ` vừa được ${type == 'remove' ? 'xoá' : 'thêm vào nhóm'}`,
+                    : usersAdded.map((user) => user.name).join(', ') +
+                      ` vừa được ${type == ChannelType.RemoveUserFromChannel ? 'xoá' : 'thêm vào nhóm'}`,
           type: 'system',
         },
       })

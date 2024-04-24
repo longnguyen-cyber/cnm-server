@@ -9,15 +9,15 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
+import { v4 as uuidv4 } from 'uuid'
 import { AuthGuard } from '../auth/guard/auth.guard'
 import { ChannelService } from '../channel/channel.service'
 import { ChatService } from '../chat/chat.service'
 import { CommonService } from '../common/common.service'
+import { ChannelType } from '../enums'
 import { FileCreateDto } from '../thread/dto/fileCreate.dto'
 import { MessageCreateDto } from '../thread/dto/messageCreate.dto'
 import { ThreadService } from '../thread/thread.service'
-import { v4 as uuidv4 } from 'uuid'
-import { ChatController } from '../chat/chat.controller'
 import { UserService } from '../user/user.service'
 
 @WebSocketGateway({
@@ -473,10 +473,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           members,
         }
         console.time('createChannel')
-        const rs = await this.channelService.createChannel(
-          channelCreateDto,
-          req.user.id,
-        )
+        const rs = await this.channelService.createChannel(channelCreateDto)
         console.timeEnd('createChannel')
 
         if (rs) {
@@ -488,6 +485,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
               type: 'channel',
             },
           })
+          await this.channelService.updatedCacheChannels(
+            ChannelType.CreateChannel,
+            req.user.id,
+          )
         } else {
           this.server.emit('channelWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -522,12 +523,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     } else {
       console.time('updateChannel')
+      const stoneId = uuidv4()
+
       const rs = await this.channelService.updateChannel(
         data.channelId,
         req.user.id,
         data.channelUpdate,
+        stoneId,
       )
       console.timeEnd('updateChannel')
+
       if (rs.error) {
         this.server.emit('channelWS', {
           status: HttpStatus.UNAUTHORIZED,
@@ -539,13 +544,15 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             status: HttpStatus.OK,
             message: 'Update channel success',
             data: {
-              type: 'updateChannel',
+              type: ChannelType.UpdateChannel,
               channel: {
                 ...rs,
                 type: 'channel',
               },
             },
           })
+          await this.channelService.updateCacheChannel(data.channelId, stoneId)
+          await this.channelService.updatedCacheChannels('', req.user.id)
         } else {
           this.server.emit('channelWS', {
             status: HttpStatus.NOT_FOUND,
@@ -593,13 +600,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             status: HttpStatus.OK,
             message: 'Delete channel success',
             data: {
-              type: 'deleteChannel',
+              type: ChannelType.DeleteChannel,
               channel: {
                 ...rs,
                 type: 'channel',
               },
             },
           })
+          await this.channelService.updatedCacheChannels(
+            ChannelType.DeleteChannel,
+            data.channelId,
+          )
         } else {
           this.server.emit('channelWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -636,13 +647,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     } else {
       console.time('addUserToChannel')
+      const stoneId = uuidv4()
       const rs = await this.channelService.addUserToChannel(
         data.channelId,
         data.users,
         req.user.id,
+        stoneId,
       )
       console.timeEnd('addUserToChannel')
-
       if (rs.error) {
         this.server.emit('channelWS', {
           status: HttpStatus.UNAUTHORIZED,
@@ -655,13 +667,15 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             status: HttpStatus.OK,
             message: 'Add user to channel success',
             data: {
-              type: 'addUserToChannel',
+              type: ChannelType.AddUserToChannel,
               channel: {
                 ...rs,
                 type: 'channel',
               },
             },
           })
+          await this.channelService.updateCacheChannel(data.channelId, stoneId)
+          await this.channelService.updatedCacheChannels('', req.user.id)
         } else {
           this.server.emit('channelWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -694,10 +708,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     } else {
       console.time('removeUserFromChannel')
+      const stoneId = uuidv4()
       const rs = await this.channelService.removeUserFromChannel(
         data.channelId,
         req.user.id,
         data.userId,
+        stoneId,
       )
       console.timeEnd('removeUserFromChannel')
       if (rs.error) {
@@ -708,12 +724,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       } else {
         if (rs) {
           const members = rs.users.map((item) => item.id)
-
           this.server.emit('channelWS', {
             status: HttpStatus.OK,
             message: 'Remove user from channel success',
             data: {
-              type: 'removeUserFromChannel',
+              type: ChannelType.RemoveUserFromChannel,
               channel: {
                 ...rs,
                 type: 'channel',
@@ -722,6 +737,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
               removeMember: data.userId,
             },
           })
+          await this.channelService.updateCacheChannel(data.channelId, stoneId)
+          await this.channelService.updatedCacheChannels('', req.user.id)
         } else {
           this.server.emit('channelWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -754,10 +771,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     } else {
       console.time('updateRoleUserInChannel')
+      const stoneId = uuidv4()
       const rs = await this.channelService.updateRoleUserInChannel(
         data.channelId,
         data.user,
         req.user.id,
+        stoneId,
       )
       console.timeEnd('updateRoleUserInChannel')
       if (rs.error) {
@@ -771,13 +790,15 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             status: HttpStatus.OK,
             message: 'Update role user in channel success',
             data: {
-              type: 'updateRoleUserInChannel',
+              type: ChannelType.UpdateRoleUserInChannel,
               channel: {
                 ...rs,
                 type: 'channel',
               },
             },
           })
+          await this.channelService.updateCacheChannel(data.channelId, stoneId)
+          await this.channelService.updatedCacheChannels('', req.user.id)
         } else {
           this.server.emit('channelWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -810,13 +831,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     } else {
       console.time('leaveChannel')
+      const stoneId = uuidv4()
       const rs = await this.channelService.leaveChannel(
         data.channelId,
         req.user.id,
         data.transferOwner,
       )
       console.timeEnd('leaveChannel')
-
       if (rs.error) {
         this.server.emit('channelWS', {
           status: rs.status,
@@ -828,7 +849,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             status: HttpStatus.OK,
             message: 'Leave channel success',
             data: {
-              type: 'leaveChannel',
+              type: ChannelType.LeaveChannel,
               channel: {
                 ...rs,
                 type: 'channel',
@@ -836,6 +857,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
               userLeave: req.user.id,
             },
           })
+          await this.channelService.updateCacheChannel(data.channelId, stoneId)
+          await this.channelService.updatedCacheChannels('', req.user.id)
         } else {
           this.server.emit('channelWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -892,6 +915,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             data: rs,
             noti: userCreate.noti,
           })
+          await this.chatService.updateCacheChats(req.user.id)
+          await this.userService.updateCacheUser()
+
+          await this.chatService.updateCacheChat(rs.id, req.user.id)
         } else {
           this.server.emit('chatWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -944,6 +971,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
               senderId: req.user.id,
             },
           })
+          await this.chatService.updateCacheChats(req.user.id)
+          await this.userService.updateCacheUser()
         } else {
           this.server.emit('chatWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -994,6 +1023,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
               senderId: req.user.id,
             },
           })
+          await this.chatService.updateCacheChats(req.user.id)
+          await this.userService.updateCacheUser()
         } else {
           this.server.emit('chatWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -1055,6 +1086,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
               type: 'reqAddFriendHaveChat',
             },
           })
+          await this.chatService.updateCacheChats(req.user.id)
+          await this.userService.updateCacheUser()
         } else {
           this.server.emit('chatWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -1107,6 +1140,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 rs.receiveId === req.user.id ? rs.senderId : rs.receiveId,
             },
           })
+          await this.chatService.updateCacheChats(req.user.id)
+          await this.userService.updateCacheUser()
+          await this.chatService.updateListFriend()
         } else {
           this.server.emit('chatWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -1158,6 +1194,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
               senderId: req.user.id,
             },
           })
+          await this.chatService.updateCacheChats(req.user.id)
+          await this.userService.updateCacheUser()
         } else {
           this.server.emit('chatWS', {
             status: HttpStatus.BAD_REQUEST,
@@ -1207,6 +1245,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 rs.receiveId === req.user.id ? rs.senderId : rs.receiveId,
             },
           })
+          await this.chatService.updateCacheChats(req.user.id)
+          await this.userService.updateCacheUser()
+          await this.chatService.updateListFriend()
         } else {
           this.server.emit('chatWS', {
             status: HttpStatus.BAD_REQUEST,

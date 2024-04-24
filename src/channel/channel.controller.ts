@@ -57,29 +57,6 @@ export class ChannelController {
   //   return true
   // }
 
-  @Get(':threadId/thread')
-  @UseGuards(AuthGuard)
-  async getThread(@Param('threadId') threadId: string, @Req() req: any) {
-    if (req.error) {
-      return {
-        status: HttpStatus.FORBIDDEN,
-        message: 'You are not allowed to access this resource',
-      }
-    } else {
-      const thread = await this.channelService.getThread(threadId, req.user.id)
-      if (!thread) {
-        return {
-          status: HttpStatus.NOT_FOUND,
-          message: 'Thread not found',
-        }
-      }
-      return {
-        status: HttpStatus.OK,
-        message: 'Get thread success',
-        data: thread,
-      }
-    }
-  }
   @Get()
   async getAllChannel(@Req() req: any): Promise<Response> {
     if (req.error) {

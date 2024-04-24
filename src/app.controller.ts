@@ -24,11 +24,7 @@ export class AppController {
     const value = await this.cacheManager.store.keys()
     console.log(value)
     for (const key of value) {
-      if (
-        key.includes('chat') ||
-        key.includes('channel') ||
-        key.includes('insert')
-      ) {
+      if (key.includes('chat') || key.includes('channel')) {
         await this.cacheManager.del(key)
       }
     }

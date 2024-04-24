@@ -1,13 +1,15 @@
 import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { Cache } from 'cache-manager'
+import { v4 as uuidv4 } from 'uuid'
+import { CommonService } from '../common/common.service'
 import { ChannelRepository } from './channel.repository'
 import { ChannelCreateDto } from './dto/ChannelCreate.dto'
 import { ChannelUpdateDto } from './dto/ChannelUpdate.dto'
-import { CommonService } from '../common/common.service'
 import { UserOfChannel } from './dto/UserOfChannel.dto'
-import { Cache } from 'cache-manager'
-import { ConfigService } from '@nestjs/config'
-import { threadId } from 'worker_threads'
-import { v4 as uuidv4 } from 'uuid'
+import { ChannelType } from '../enums'
+import { UserService } from '../user/user.service'
+import { retry } from 'rxjs'
 
 @Injectable()
 export class ChannelService {
@@ -16,6 +18,7 @@ export class ChannelService {
     private readonly commonService: CommonService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly configService: ConfigService,
+    private readonly userService: UserService,
   ) {}
 
   async getAllChannel(userId: string) {
@@ -23,23 +26,16 @@ export class ChannelService {
     if (channelsCache) {
       const parsedCache = JSON.parse(channelsCache as any) as Array<any>
 
-      const rs = parsedCache.map((channel) => {
+      const rs = parsedCache.filter((channel) => {
         return channel.users.some((user) => user.id === userId)
       })
       if (rs) {
-        return parsedCache
+        return rs
       } else {
         return []
       }
     } else {
-      const rs = await this.channelRepository.getAllChannel(userId)
-      const final = rs.map((channel) =>
-        this.commonService.deleteField(channel, ['thread']),
-      )
-      await this.cacheManager.set('channels', JSON.stringify(final), {
-        ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
-      })
-      return final
+      return await this.getChannelsOfUser(userId)
     }
   }
 
@@ -84,32 +80,70 @@ export class ChannelService {
     }
   }
 
+  private async getChannelsOfUser(userId: string) {
+    const rs = await this.channelRepository.getAllChannel(userId)
+    const final = rs.map((channel) =>
+      this.commonService.deleteField(channel, ['thread']),
+    )
+    await this.cacheManager.set('channels', JSON.stringify(final), {
+      ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
+    })
+    return final
+  }
+
   async getMembersOfChannel(channelId: string) {
     const memebers = await this.channelRepository.getMembersOfChannel(channelId)
     return this.commonService.deleteField(memebers, [])
   }
-  async getThread(threadId: string, senderId: string) {
-    const thread = await this.channelRepository.getMessageOfThread(threadId)
-    return this.commonService.deleteField(thread, [])
-  }
+  async updatedCacheChannels(type: string = 'default', id?: string) {
+    console.time('updateCacheChannels')
 
-  async updateCacheChannels(channelId: string) {
-    const channelsCache = await this.cacheManager.get('channels')
-    const channel = await this.channelRepository.getLastChannel(channelId)
-
-    const channelsParsed = JSON.parse(channelsCache as any) as Array<any>
-    const newChannels = [
-      ...channelsParsed,
-      this.commonService.deleteField(channel, ['userId', 'thread']),
-    ]
-    newChannels.sort((a, b) => {
-      return new Date(b.timeThread).getTime() - new Date(a.timeThread).getTime()
-    })
-    await this.cacheManager.set('channels', JSON.stringify(newChannels), {
-      ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
-    })
-
-    console.log('cache channels updated: ', channelId)
+    if (type === ChannelType.CreateChannel) {
+      //case for createChannel
+      await this.getChannelsOfUser(id)
+      console.log('cache channels updated: ', id)
+    } else {
+      const cacheChannels = await this.cacheManager.get('channels')
+      const channels = JSON.parse(cacheChannels as any) as Array<any>
+      if (type === ChannelType.DeleteChannel) {
+        //case for deleteChannel
+        const channelId = id
+        const updatedChannel = channels.filter(
+          (channel) => channel.id !== channelId,
+        )
+        await this.cacheManager.set(
+          'channels',
+          JSON.stringify(updatedChannel),
+          {
+            ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
+          },
+        )
+      } else {
+        if (id) {
+          //update all channels for user
+          await this.getChannelsOfUser(id)
+        } else {
+          //update all channels for all user
+          const newSetUserUpdate = new Set()
+          channels.forEach((channel) => {
+            newSetUserUpdate.add(channel.userCreated)
+          })
+          for (const user of newSetUserUpdate) {
+            const rs = await this.channelRepository.getAllChannel(
+              user as string,
+            )
+            const final = rs.map((channel) =>
+              this.commonService.deleteField(channel, ['thread']),
+            )
+            await this.cacheManager.set('channels', JSON.stringify(final), {
+              ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
+            })
+            console.log('cache channels updated: ', user)
+          }
+        }
+      }
+    }
+    console.timeEnd('updateCacheChannels')
   }
 
   async updateCacheChannel(channelId: string, stoneId?: string) {
@@ -153,13 +187,12 @@ export class ChannelService {
     console.log('cache channel update channelId: ', channelId)
   }
 
-  async createChannel(channelCreateDto: ChannelCreateDto, userId?: string) {
+  async createChannel(channelCreateDto: ChannelCreateDto) {
     const channelCreate =
       await this.channelRepository.createChannel(channelCreateDto)
     if (channelCreate.error) {
       return channelCreate
     } else {
-      await this.updateCacheChannels(channelCreate.id)
       return this.commonService.deleteField(
         channelCreate,
         ['userId', 'thread'],
@@ -172,8 +205,8 @@ export class ChannelService {
     channelId: string,
     userId: string,
     channelUpdateDto: ChannelUpdateDto,
+    stoneId: string,
   ) {
-    const stoneId = uuidv4()
     const updated = await this.channelRepository.updateChannel(
       channelId,
       userId,
@@ -209,7 +242,6 @@ export class ChannelService {
     if (deleted.error) {
       return deleted
     } else {
-      await this.updateCacheChannels(userId)
       await this.cacheManager.del(`channel-${channelId}`)
       return this.commonService.deleteField(deleted, [
         'userId',
@@ -223,8 +255,8 @@ export class ChannelService {
     channelId: string,
     users: UserOfChannel[],
     personAddedId: string,
+    stoneId: string,
   ) {
-    const stoneId = uuidv4()
     const rs = await this.channelRepository.addUserToChannel(
       channelId,
       users,
@@ -236,7 +268,6 @@ export class ChannelService {
       return rs
     }
     const channel = await this.channelRepository.getChannelById(channelId)
-    await this.updateCacheChannel(channelId, stoneId)
 
     return this.commonService.deleteField(
       { ...channel, lastedThread: channel.threads[channel.threads.length - 1] },
@@ -249,9 +280,9 @@ export class ChannelService {
     channelId: string,
     userId: string,
     personRemovedId: string,
+    stoneId: string,
   ) {
-    const stoneId = uuidv4()
-    const remove = await this.channelRepository.removeUsersFromChannel(
+    const remove = await this.channelRepository.removeUserFromChannel(
       channelId,
       userId,
       personRemovedId,
@@ -261,7 +292,6 @@ export class ChannelService {
       return remove
     } else {
       const channel = await this.channelRepository.getChannelById(channelId)
-      await this.updateCacheChannel(channelId, stoneId)
 
       return this.commonService.deleteField(
         {
@@ -278,8 +308,8 @@ export class ChannelService {
     channelId: string,
     user: UserOfChannel,
     userId: string,
+    stoneId: string,
   ) {
-    const stoneId = uuidv4()
     const updated = await this.channelRepository.updateRoleUserInChannel(
       channelId,
       user,
@@ -291,7 +321,6 @@ export class ChannelService {
       return updated
     } else {
       const channel = await this.channelRepository.getChannelById(channelId)
-      await this.updateCacheChannel(channelId, stoneId)
 
       return this.commonService.deleteField(
         {
@@ -307,23 +336,20 @@ export class ChannelService {
   async leaveChannel(
     channelId: string,
     userId: string,
+    stoneId: string,
     transferOwner?: string,
   ) {
-    const stoneId = uuidv4()
-    const leavteChannel = await this.channelRepository.leaveChannel(
+    const leaveChannel = await this.channelRepository.leaveChannel(
       channelId,
       userId,
       stoneId,
       transferOwner,
     )
 
-    if (leavteChannel.error) {
-      return leavteChannel
+    if (leaveChannel.error) {
+      return leaveChannel
     } else {
       const channel = await this.channelRepository.getChannelById(channelId)
-      await this.updateCacheChannel(channelId, stoneId)
-
-      await this.updateCacheChannels(channel.userCreated)
 
       return this.commonService.deleteField(
         {
@@ -335,4 +361,54 @@ export class ChannelService {
       )
     }
   }
+
+  // async messageReturn(
+  //   userId: string,
+  //   type: string,
+  //   users?: any[],
+  //   transferOwner?: string,
+  // ) {
+  //   let user
+  //   if (
+  //     type === ChannelType.UpdateRoleUserInChannel ||
+  //     type === ChannelType.LeaveChannel
+  //   ) {
+  //     user = await this.userService.searchUserById(userId)
+  //   }
+
+  //   let usersAdded: any[] = []
+  //   let transferOwnerUser: any
+  //   let oldOwner: any
+  //   if (transferOwner) {
+  //     oldOwner = await this.userService.searchUserById(userId)
+  //     transferOwnerUser = await this.userService.searchUserById(transferOwner)
+  //   } else {
+  //     if (type === ChannelType.AddUserToChannel && users !== undefined) {
+  //       for (const u of users) {
+  //         const id = u.id
+  //         const user = await this.userService.searchUserById(id)
+  //         usersAdded.push(user)
+  //       }
+  //     } else if (type === ChannelType.RemoveUserFromChannel) {
+  //       user = await this.userService.searchUserById(userId)
+  //     }
+  //   }
+
+  //   const messages = {
+  //     message:
+  //       transferOwner !== undefined
+  //         ? `Nhóm sẽ được chuyển giao cho ${transferOwnerUser.name} bởi ${oldOwner.name}`
+  //         : type === ChannelType.UpdateRoleUserInChannel
+  //           ? `Quyền của ${user.name} vừa được cập nhật`
+  //           : type === ChannelType.UpdateChannel
+  //             ? `Nhóm vừa được cập nhật`
+  //             : type === ChannelType.LeaveChannel
+  //               ? `Người dùng ${user.name} vừa rời khỏi nhóm`
+  //               : type === ChannelType.AddUserToChannel
+  //                 ? usersAdded.map((user) => user.name).join(', ') +
+  //                   ` vừa được thêm vào nhóm}`
+  //                 : `${user.name} vừa bị xóa khỏi nhóm`,
+  //   }
+  //   return messages
+  // }
 }
