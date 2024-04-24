@@ -44,8 +44,26 @@ export class ChatService implements OnModuleInit {
       const rs = parsedCache.filter(
         (chat) => chat.senderId === userId || chat.receiveId === userId,
       )
+
+      const newRs = await Promise.all(
+        rs.map(async (chat) => {
+          const userReceiveId =
+            chat.senderId === userId ? chat.receiveId : chat.senderId
+          console.log(userReceiveId)
+          const userReceive =
+            await this.userService.searchUserById(userReceiveId)
+          this.commonService.deleteField(userReceive, ['settings', 'chatIds'])
+
+          console.log(userReceive)
+          return {
+            ...chat,
+            user: userReceive,
+          }
+        }),
+      )
+
       console.log('cache hit userId: ', userId)
-      return rs.length > 0 ? rs : []
+      return newRs.length > 0 ? newRs : []
     } else {
       console.log('cache miss userId: ', userId)
       const rs = await this.chatRepository.getAllChat(userId)
@@ -68,21 +86,33 @@ export class ChatService implements OnModuleInit {
         (chatParse.senderId === userId || chatParse.receiveId === userId) &&
         chatParse.id === chatId
       ) {
-        return chatParse
+        const receiveId =
+          chatParse.senderId === userId
+            ? chatParse.receiveId
+            : chatParse.senderId
+        const userReceive = await this.userService.searchUserById(receiveId)
+        return {
+          ...chatParse,
+          user: userReceive,
+        }
       }
     } else {
       console.log('cache miss chatId: ', chatId)
       const chat = await this.chatRepository.getChatById(chatId, userId)
       if (!chat) return null
-      chat.threads = chat.threads.map((thread) => {
-        thread.files = thread.files.map((file) => {
-          file.size = this.commonService.convertToSize(file.size)
-          return file
+      if (chat.threads) {
+        chat.threads = chat.threads.map((thread) => {
+          if (thread.files) {
+            thread.files = thread.files.map((file) => {
+              file.size = this.commonService.convertToSize(file.size)
+              return file
+            })
+          }
+          return thread
         })
-        return thread
-      })
+      }
 
-      const rs = this.buildChatResponse(chat, ['thread', 'channel'])
+      const rs = this.buildChatResponse(chat, ['thread', 'channel', 'chatIds'])
 
       await this.cacheManager.set(`chat-${chatId}`, JSON.stringify(rs), {
         ttl: this.configService.get<number>('CHAT_EXPIRED'),

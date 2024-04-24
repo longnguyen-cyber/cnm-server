@@ -61,13 +61,17 @@ export class ChannelService {
           ['userId', 'thread'],
           ['createdAt'],
         )
-        rs.threads = rs.threads.map((thread) => {
-          thread.files = thread.files.map((file) => {
-            file.size = this.commonService.convertToSize(file.size)
-            return file
+        if (rs.threads) {
+          rs.threads = rs.threads.map((thread) => {
+            if (thread.files.length > 0) {
+              thread.files = thread.files.map((file) => {
+                file.size = this.commonService.convertToSize(file.size)
+                return file
+              })
+            }
+            return thread
           })
-          return thread
-        })
+        }
         await this.cacheManager.set(
           `channel-${channelId}`,
           JSON.stringify(rs),
