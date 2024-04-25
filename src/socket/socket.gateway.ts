@@ -300,26 +300,23 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       channelId?: string
       cloudId?: string
     } = data
-    const rs = await this.threadService.threadExists(stoneId, req.user.id, type)
-    if (rs) {
-      this.server.emit('updatedSendThread', {
-        ...data,
-        typeMsg: 'recall',
-        messages: {
-          message: 'Tin nhắn đã bị thu hồi',
-          isRecall: true,
-        },
-      })
+    this.server.emit('updatedSendThread', {
+      ...data,
+      typeMsg: 'recall',
+      messages: {
+        message: 'Tin nhắn đã bị thu hồi',
+        isRecall: true,
+      },
+    })
 
-      await this.threadService.recallSendThread(
-        stoneId,
-        req.user.id,
-        type,
-        chatId,
-        channelId,
-        cloudId,
-      )
-    }
+    await this.threadService.recallSendThread(
+      stoneId,
+      req.user.id,
+      type,
+      chatId,
+      channelId,
+      cloudId,
+    )
   }
 
   /**
@@ -353,22 +350,19 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       cloudId?: string
     } = data
 
-    const rs = await this.threadService.threadExists(stoneId, req.user.id, type)
-    if (rs) {
-      this.server.emit('updatedSendThread', {
-        ...data,
-        typeMsg: 'delete',
-      })
+    this.server.emit('updatedSendThread', {
+      ...data,
+      typeMsg: 'delete',
+    })
 
-      await this.threadService.deleteThread(
-        stoneId,
-        req.user.id,
-        type,
-        chatId,
-        channelId,
-        cloudId,
-      )
-    }
+    await this.threadService.deleteThread(
+      stoneId,
+      req.user.id,
+      type,
+      chatId,
+      channelId,
+      cloudId,
+    )
   }
 
   /**
@@ -383,6 +377,22 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @returns
    * status: pass
    */
+
+  @SubscribeMessage('typing')
+  @UseGuards(AuthGuard)
+  async handleTyping(@MessageBody() data: any, @Req() req: any): Promise<void> {
+    if (req.error) {
+      this.server.emit('updatedTyping', {
+        status: HttpStatus.FORBIDDEN,
+        message: 'Access to this resource is denied',
+      })
+    } else {
+      this.server.emit('typing', {
+        ...data,
+      })
+    }
+  }
+
   @SubscribeMessage('emoji')
   @UseGuards(AuthGuard)
   async handleaddEmoji(
