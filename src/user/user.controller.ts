@@ -141,6 +141,7 @@ export class UserController {
   @Post('login')
   @UseGuards(AuthGuard)
   async login(@Body() userLoginDto: any, @Req() req: any): Promise<Response> {
+    console.log('login')
     if (req.error) {
       const user = await this.userService.login(userLoginDto)
       if (user) {
@@ -201,12 +202,9 @@ export class UserController {
 
   @Put('update')
   @UseGuards(AuthGuard)
-  @UseInterceptors(FileInterceptor('avatar'))
   async updateCurrentUser(
     @Body() userUpdateDto: UserUpdateDto,
     @Req() req: any,
-    @UploadedFile()
-    file: Express.Multer.File,
   ): Promise<Response> {
     if (req.error) {
       return {
@@ -216,7 +214,6 @@ export class UserController {
     }
     const data = {
       ...userUpdateDto,
-      avatar: file,
     }
 
     const user = await this.userService.updateUser(data, req)
@@ -320,7 +317,7 @@ export class UserController {
   }
 
   @UseGuards(AuthGuard)
-  @Post('update-setting')
+  @Put('update-setting')
   async updateSetting(@Body() body: any, @Req() req: any): Promise<Response> {
     if (req.error) {
       return {

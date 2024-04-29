@@ -326,12 +326,21 @@ export class ChannelRepository {
     const channel = await prisma.channels.findUnique({
       where: {
         id: id,
-        userCreated: userId,
       },
     })
 
     if (!channel) {
       return { error: 'Channel not found' }
+    }
+    const roleOfPersonUpdate = this.getRoleOfPerson(channel, userId)
+
+    if (
+      channelUpdateDto.disableThread != null &&
+      roleOfPersonUpdate === 'MEMBER'
+    ) {
+      return {
+        error: "You don't have permission to disable thread to this channel",
+      }
     }
 
     const rs = await prisma.channels.update({

@@ -707,6 +707,7 @@ export class ChatRepository {
         isFriend: true,
       },
     })
+    console.log(whitelistFriendAccept)
     const final = await Promise.all(
       whitelistFriendAccept.map(async (chat) => {
         const anotherId =

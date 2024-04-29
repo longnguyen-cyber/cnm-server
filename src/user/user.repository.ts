@@ -71,6 +71,9 @@ export class UserRepository {
       where: {
         email: email,
       },
+      include: {
+        settings: true,
+      },
     })
     return user
   }
@@ -106,10 +109,7 @@ export class UserRepository {
 
         return threads
       }),
-    ).then((rs) =>
-      rs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
     )
-
     return {
       ...clouds,
       threads,

@@ -50,6 +50,11 @@ export class ThreadRepository {
                 id: threadToDB.cloudId,
               },
             },
+            user: {
+              connect: {
+                id: threadToDB.senderId,
+              },
+            },
           },
         })
 
@@ -330,13 +335,15 @@ export class ThreadRepository {
     const senderId = threadToDB.senderId
     const messages = threadToDB.messages
     const pin = threadToDB.pin
+    console.log('data', threadToDB)
     const threadUpdate = await prisma.threads.findUnique({
       where: {
         stoneId,
       },
     })
 
-    if (threadUpdate && threadUpdate.senderId === senderId) {
+    if (threadUpdate) {
+      console.log('threadUpdate', threadUpdate)
       if (messages) {
         await prisma.messages.update({
           where: {
@@ -347,7 +354,9 @@ export class ThreadRepository {
           },
         })
         return true
-      } else if (pin) {
+      } else {
+        //pin thread
+        console.log('pin', pin)
         await prisma.threads.update({
           where: {
             stoneId,
@@ -356,6 +365,7 @@ export class ThreadRepository {
             pin: pin,
           },
         })
+
         return true
       }
     }

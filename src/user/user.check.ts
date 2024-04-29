@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common'
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
 import { HttpExceptionCustom } from '../common/common.exception'
 
 @Injectable()
@@ -32,7 +32,7 @@ export class UserCheck {
 
   isNotExistBothPassword(bool: boolean): boolean {
     if (bool) {
-      throw new HttpExceptionCustom(
+      throw new HttpException(
         'New password and old password are required',
         HttpStatus.BAD_REQUEST,
       )

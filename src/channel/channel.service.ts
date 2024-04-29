@@ -25,10 +25,25 @@ export class ChannelService {
     const channelsCache = await this.cacheManager.get('channels')
     if (channelsCache) {
       const parsedCache = JSON.parse(channelsCache as any) as Array<any>
+      const updatedChannels = await Promise.all(
+        parsedCache.map(async (channel) => {
+          const users = await Promise.all(
+            channel.users.map(async (user) => {
+              const newUser = await this.userService.searchUserById(user.id)
+              return newUser
+            }),
+          )
+          return {
+            ...channel,
+            users,
+          }
+        }),
+      )
 
-      const rs = parsedCache.filter((channel) => {
+      const rs = updatedChannels.filter((channel) => {
         return channel.users.some((user) => user.id === userId)
       })
+
       if (rs) {
         return rs
       } else {
@@ -45,6 +60,22 @@ export class ChannelService {
       console.log('cache hit channelId: ', channelId)
       const chanelParsed = JSON.parse(channelCache as any)
       if (chanelParsed.users.some((user) => user.id === userId)) {
+        //update users
+        const users = await Promise.all(
+          chanelParsed.users.map(async (user) => {
+            const newUser = await this.userService.searchUserById(user.id)
+            return this.commonService.deleteField(
+              {
+                ...newUser,
+                role: user.role,
+                createdAt: user.createdAt,
+              },
+              ['settings', 'chatIds'],
+              ['createdAt'],
+            )
+          }),
+        )
+        chanelParsed.users = users
         return chanelParsed
       } else {
         return null
@@ -165,20 +196,41 @@ export class ChannelService {
           stoneId,
         )) as any
 
+      //check is update or create
+      const threadExist = chanelParsed.threads.find(
+        (thread) => thread.id === threadNew.id,
+      )
+
       if (threadNew.files.length > 0) {
         threadNew.files = threadNew.files.map((file) => {
           file.size = this.commonService.convertToSize(file.size)
           return file
         })
       }
-      //push thread to channel
-      chanelParsed.threads.push(
-        this.commonService.deleteField(
-          threadNew,
-          ['userId', 'thread'],
-          ['createdAt'],
-        ),
-      )
+
+      if (!threadExist) {
+        console.log('create')
+        chanelParsed.threads.push(
+          this.commonService.deleteField(
+            threadNew,
+            ['userId', 'thread'],
+            ['createdAt'],
+          ),
+        )
+      } else {
+        //update
+        console.log('update')
+        chanelParsed.threads = chanelParsed.threads.map((thread) => {
+          if (thread.id === threadNew.id) {
+            return this.commonService.deleteField(
+              threadNew,
+              ['userId', 'thread'],
+              ['createdAt'],
+            )
+          }
+          return thread
+        })
+      }
 
       await this.cacheManager.set(
         `channel-${channelId}`,
@@ -187,6 +239,39 @@ export class ChannelService {
           ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
         },
       )
+    } else {
+      // thread system
+      console.log('system thread')
+      const channel = await this.channelRepository.getChannelById(channelId)
+
+      if (!channel) {
+        return null
+      } else {
+        const rs = this.commonService.deleteField(
+          channel,
+          ['userId', 'thread'],
+          ['createdAt'],
+        )
+        if (rs.threads) {
+          rs.threads = rs.threads.map((thread) => {
+            if (thread.files.length > 0) {
+              thread.files = thread.files.map((file) => {
+                file.size = this.commonService.convertToSize(file.size)
+                return file
+              })
+            }
+            return thread
+          })
+        }
+        await this.cacheManager.set(
+          `channel-${channelId}`,
+          JSON.stringify(rs),
+          {
+            ttl: this.configService.get<number>('CHANNEL_EXPIRED'),
+          },
+        )
+        return rs
+      }
     }
     console.log('cache channel update channelId: ', channelId)
   }

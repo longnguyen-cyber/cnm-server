@@ -44,5 +44,7 @@ export class UserUpdateDto {
     description: 'the avatar of the User',
     required: false,
   })
+  @IsOptional()
+  @IsString()
   readonly avatar?: any
 }

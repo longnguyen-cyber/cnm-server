@@ -49,12 +49,10 @@ export class ChatService implements OnModuleInit {
         rs.map(async (chat) => {
           const userReceiveId =
             chat.senderId === userId ? chat.receiveId : chat.senderId
-          console.log(userReceiveId)
           const userReceive =
             await this.userService.searchUserById(userReceiveId)
           this.commonService.deleteField(userReceive, ['settings', 'chatIds'])
 
-          console.log(userReceive)
           return {
             ...chat,
             user: userReceive,
@@ -247,6 +245,8 @@ export class ChatService implements OnModuleInit {
       } else {
         return []
       }
+    } else {
+      return []
     }
   }
 

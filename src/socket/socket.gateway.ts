@@ -90,7 +90,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         replyId, //stoneId
         cloudId,
         mentions,
-        members,
       }: {
         messages?: MessageCreateDto
         fileCreateDto?: FileCreateDto[]
@@ -100,7 +99,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         replyId?: string
         cloudId?: string
         mentions?: string[]
-        members?: string[]
       } = data
 
       const stoneId = uuidv4()
@@ -258,14 +256,38 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         stoneId,
         messages,
         pin,
+        type,
+        id, //handle id before send to server id maybe is chatId or channelId
       }: {
         stoneId: string
-        senderId: string
+        type: string
+        id: string
         messages?: MessageCreateDto
         pin?: boolean
       } = data
-      await this.threadService.updateThread(stoneId, req.user.id, messages, pin)
-      this.server.emit('updatedSendThread', data)
+
+      this.server.emit('updatedSendThread', {
+        ...data,
+        typeMsg: 'update',
+      })
+
+      console.time('updateThread')
+      const rs = await this.threadService.updateThread(
+        stoneId,
+        req.user.id,
+        messages,
+        pin,
+      )
+      console.log('rs', rs)
+      if (rs) {
+        if (type === 'chat') {
+          await this.chatService.updateCacheChat(id, req.user.id)
+        } else {
+          console.log('id', id)
+          await this.channelService.updateCacheChannel(id, stoneId)
+        }
+        console.timeEnd('updateThread')
+      }
     }
   }
 
@@ -550,6 +572,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         })
       } else {
         if (rs) {
+          console.log('rs', rs)
           this.server.emit('channelWS', {
             status: HttpStatus.OK,
             message: 'Update channel success',
@@ -561,7 +584,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
               },
             },
           })
-          await this.channelService.updateCacheChannel(data.channelId, stoneId)
+          await this.channelService.updateCacheChannel(data.channelId)
           await this.channelService.updatedCacheChannels('', req.user.id)
         } else {
           this.server.emit('channelWS', {

@@ -77,7 +77,9 @@ export class UserService implements OnModuleInit {
   async updateSetting(data: any, userId: string) {
     const updatedSetting = await this.userRepository.updateSetting(data, userId)
     if (updatedSetting) {
-      await this.updateCacheUser()
+      await this.updateCacheUserById(userId, {
+        settings: updatedSetting,
+      })
       return updatedSetting
     }
     return false
@@ -93,17 +95,18 @@ export class UserService implements OnModuleInit {
       return thread
     })
 
-    const rs = this.commonService.deleteField(cloud, [
-      'userId',
-      'thread',
-      'seen',
-      'mentions',
-    ])
+    const rs = this.commonService.deleteField(
+      {
+        ...cloud,
+        type: 'cloud',
+      },
+      ['userId', 'thread', 'seen', 'mentions'],
+      ['createdAt'],
+    )
     return rs
   }
 
   async searchUser(query: string, id: string) {
-    console.log('searchUser', query, id)
     const users = (await this.cacheManager.get('user')) as any
     if (users) {
       const usersParsed = JSON.parse(users)
@@ -143,7 +146,7 @@ export class UserService implements OnModuleInit {
   }
 
   async login({ email, password }: any): Promise<any> {
-    const user = await this.checkLoginData(email, password)
+    const user = await this.checkLoginData(email.trim(), password)
     if (user.isTwoFactorAuthenticationEnabled) {
       const token = this.authService.generateJWTRegisterAndLogin2FA(email)
       await this.cacheManager.set(token, JSON.stringify(user), {
@@ -162,7 +165,7 @@ export class UserService implements OnModuleInit {
     await this.cacheManager.set(token, JSON.stringify(user), {
       ttl: this.configService.get<number>('LOGIN_EXPIRED'),
     }) // 30 days
-    this.commonService.deleteField(user, [])
+    this.commonService.deleteField(user, ['userId'])
     return {
       ...user,
       token,
@@ -172,8 +175,11 @@ export class UserService implements OnModuleInit {
   async getUser(id: string) {
     const user = await this.searchUserById(id)
     const result = this.commonService.deleteField(
-      this.buildUserResponse(user),
-      [],
+      {
+        ...this.buildUserResponse(user),
+        setting: user.settings,
+      },
+      ['userId'],
     )
     return result
   }
@@ -295,27 +301,14 @@ export class UserService implements OnModuleInit {
 
   async updateUser(userUpdateDto: UserUpdateDto, req: any): Promise<any> {
     const userClean = { ...userUpdateDto }
-    const { id, password, avatar: oldAvatar } = req.user
+    const { id, password } = req.user
 
     //token of user when login
     const token = req.token
 
     const isNotEmptyObject = this.commonService.isNotEmptyObject(userUpdateDto)
     this.userCheck.isNotEmptyUpdate(isNotEmptyObject)
-    if (userClean.avatar) {
-      const avatar = userClean.avatar
-      const uploadFile = await this.uploadService.upload(
-        avatar.originalname,
-        avatar.buffer,
-      )
-      if (uploadFile) {
-        userClean.avatar = uploadFile
-      } else {
-        return false
-      }
-    } else {
-      userClean.avatar = oldAvatar
-    }
+
     const { password: passwordNew, oldPassword } = userUpdateDto
     let passwordHashed = ''
     if (passwordNew && oldPassword) {
@@ -330,10 +323,11 @@ export class UserService implements OnModuleInit {
         ...req.user,
         ...data,
       }
+
       await this.cacheManager.set(token, JSON.stringify(userUpdated), {
         ttl: this.configService.get<number>('LOGIN_EXPIRED'),
       })
-      await this.updateCacheUserById(id, token, userUpdate)
+      await this.updateCacheUserById(id, userUpdate)
       return true
     }
     return false
@@ -505,8 +499,9 @@ export class UserService implements OnModuleInit {
     oldPassword: string,
     password: string,
   ): Promise<void> {
-    this.checkPasswordData(passwordNew, oldPassword)
+    //check old password and with current pass
 
+    this.checkPasswordData(passwordNew, oldPassword)
     if (!passwordNew && !oldPassword) {
       return
     }
@@ -527,7 +522,6 @@ export class UserService implements OnModuleInit {
   ): boolean {
     const bool =
       (passwordLeft && !passwordRight) || (!passwordLeft && passwordRight)
-
     return this.userCheck.isNotExistBothPassword(!!bool)
   }
 
@@ -559,16 +553,25 @@ export class UserService implements OnModuleInit {
   }
 
   private buildUserResponse(user: ResUserDto): any {
-    const { name, email, status, id } = user
+    const {
+      name,
+      email,
+      status,
+      id,
+      isTwoFactorAuthenticationEnabled,
+      twoFactorAuthenticationSecret,
+    } = user
     return {
       id,
       name,
       email,
       avatar: user.avatar ?? '',
       status,
+      isTwoFactorAuthenticationEnabled,
+      twoFactorAuthenticationSecret,
     }
   }
-  private async updateCacheUserById(id: string, token: string, data: any) {
+  private async updateCacheUserById(id: string, data: any) {
     const user = await this.cacheManager.get('user')
     if (user) {
       const userParsed = JSON.parse(user as any)
@@ -578,6 +581,7 @@ export class UserService implements OnModuleInit {
           ...userParsed[userIndex],
           ...data,
         }
+
         this.cacheManager.set('user', JSON.stringify(userParsed), {
           ttl: this.EXPIRED,
         })
