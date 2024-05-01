@@ -181,7 +181,7 @@ export class ChannelService {
     console.timeEnd('updateCacheChannels')
   }
 
-  async updateCacheChannel(channelId: string, stoneId?: string) {
+  async updateCacheChannel(channelId: string, stoneId?: string, type?: string) {
     if (stoneId) {
       //thread normal
       const cacheChannelId = await this.cacheManager.get(`channel-${channelId}`)
@@ -209,16 +209,30 @@ export class ChannelService {
       }
 
       if (!threadExist) {
-        console.log('create')
-        chanelParsed.threads.push(
-          this.commonService.deleteField(
-            threadNew,
-            ['userId', 'thread'],
-            ['createdAt'],
-          ),
-        )
+        if (type === 'delete') {
+          console.log('delete')
+          chanelParsed.threads = chanelParsed.threads.filter(
+            (thread) => thread.stoneId !== stoneId,
+          )
+
+          if (chanelParsed.threads.length === 0) {
+            await this.cacheManager.del(`channel-${channelId}`)
+            return true
+          }
+        } else {
+          console.log('create')
+          chanelParsed.threads.push(
+            this.commonService.deleteField(
+              threadNew,
+              ['userId', 'thread'],
+              ['createdAt'],
+            ),
+          )
+        }
       } else {
+        //missing case recall and delete
         //update
+
         console.log('update')
         chanelParsed.threads = chanelParsed.threads.map((thread) => {
           if (thread.id === threadNew.id) {

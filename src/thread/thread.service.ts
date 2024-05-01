@@ -11,6 +11,7 @@ import { MessageCreateDto } from './dto/messageCreate.dto'
 import { EmojiToDBDto } from './dto/relateDB/emojiToDB.dto'
 import { ThreadToDBDto } from './dto/relateDB/threadToDB.dto'
 import { ThreadRepository } from './thread.repository'
+import { UserService } from '../user/user.service'
 
 @Injectable()
 export class ThreadService {
@@ -22,6 +23,7 @@ export class ThreadService {
     @InjectQueue('queue') private readonly threadQueue: QueueThread,
     private readonly chatService: ChatService,
     private readonly channelService: ChannelService,
+    private readonly userService: UserService,
   ) {}
   // QUEUE
 
@@ -63,9 +65,8 @@ export class ThreadService {
         const result = await this.sendQueue(data)
         if (result) {
           console.log('Send thread success')
-          console.time('updateCacheChannel')
           if (data.cloudId) {
-            console.log('send for my cloud')
+            await this.userService.updateCacheCloud(data.senderId)
           } else if (data.channelId) {
             await this.channelService.updateCacheChannel(
               data.channelId,
@@ -74,7 +75,6 @@ export class ThreadService {
           } else {
             await this.chatService.updateCacheChat(data.chatId, data.senderId)
           }
-          console.timeEnd('updateCacheChannel')
         }
         console.log('jobid', job.id)
 
@@ -97,14 +97,18 @@ export class ThreadService {
           )
           if (result) {
             if (data.cloudId) {
-              console.log('delete for my cloud')
+              await this.userService.updateCacheCloud(data.userDeleteId)
             } else if (data.chatId) {
               await this.chatService.updateCacheChat(
                 data.chatId,
                 data.userDeleteId,
               )
             } else {
-              await this.channelService.updateCacheChannel(data.channelId)
+              await this.channelService.updateCacheChannel(
+                data.channelId,
+                data.stoneId,
+                'delete',
+              )
             }
             console.log('Delete thread success')
           }
@@ -131,9 +135,12 @@ export class ThreadService {
             if (data.chatId) {
               await this.chatService.updateCacheChat(data.chatId, data.recallId)
             } else if (data.cloudId) {
-              console.log('recall for my cloud')
+              await this.userService.updateCacheCloud(data.recallId)
             } else {
-              await this.channelService.updateCacheChannel(data.channelId)
+              await this.channelService.updateCacheChannel(
+                data.channelId,
+                data.stoneId,
+              )
             }
             console.log('Recall thread success')
           }

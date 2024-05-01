@@ -85,7 +85,8 @@ export class UserService implements OnModuleInit {
     return false
   }
 
-  async getCloudsByUserId(userId: string) {
+  async updateCacheCloud(userId: string) {
+    console.time('updateCacheCloud')
     const cloud = await this.userRepository.getCloudsByUserId(userId)
     cloud.threads = cloud.threads.map((thread) => {
       thread.files = thread.files.map((file: any) => {
@@ -103,7 +104,40 @@ export class UserService implements OnModuleInit {
       ['userId', 'thread', 'seen', 'mentions'],
       ['createdAt'],
     )
-    return rs
+    await this.cacheManager.set(`cloud-${userId}`, JSON.stringify(rs), {
+      ttl: this.configService.get<number>('CLOUD_EXPIRED'),
+    })
+
+    console.timeEnd('updateCacheCloud')
+  }
+
+  async getCloudsByUserId(userId: string) {
+    const cloudCache = await this.cacheManager.get(`cloud-${userId}`)
+    if (cloudCache) {
+      return JSON.parse(cloudCache as any)
+    } else {
+      const cloud = await this.userRepository.getCloudsByUserId(userId)
+      cloud.threads = cloud.threads.map((thread) => {
+        thread.files = thread.files.map((file: any) => {
+          file.size = this.commonService.convertToSize(file.size)
+          return file
+        })
+        return thread
+      })
+
+      const rs = this.commonService.deleteField(
+        {
+          ...cloud,
+          type: 'cloud',
+        },
+        ['userId', 'thread', 'seen', 'mentions'],
+        ['createdAt'],
+      )
+      await this.cacheManager.set(`cloud-${userId}`, JSON.stringify(rs), {
+        ttl: this.configService.get<number>('CLOUD_EXPIRED'),
+      })
+      return rs
+    }
   }
 
   async searchUser(query: string, id: string) {

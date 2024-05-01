@@ -90,6 +90,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         replyId, //stoneId
         cloudId,
         mentions,
+        members,
       }: {
         messages?: MessageCreateDto
         fileCreateDto?: FileCreateDto[]
@@ -99,6 +100,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         replyId?: string
         cloudId?: string
         mentions?: string[]
+        members?: string[]
       } = data
 
       const stoneId = uuidv4()
@@ -128,18 +130,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const userNoti = await this.userService.searchUserById(data.receiveId)
         const notify = userNoti.settings.notify
 
-        // if (messages === undefined && fileCreateDto.length > 0) {
-        //   if (req.user.id !== receiveId) {
-        //     data.messages = {
-        //       message: `Bạn vừa gửi ${fileCreateDto.length} file`,
-        //     }
-        //   } else {
-        //     data.messages = {
-        //       message: `Bạn vừa nhận dược ${fileCreateDto.length} file`,
-        //     }
-        //   }
-        // }
-
         this.server.emit('updatedSendThread', {
           ...data,
           stoneId,
@@ -154,30 +144,15 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         })
       } else if (channelId) {
         const notifications = []
-        // for (let i = 0; i < members.length; i++) {
-        //   const userNoti = await this.userService.searchUserById(members[i])
-        //   notifications.push({
-        //     userId: members[i],
-        //     notify: userNoti.settings.notify,
-        //   })
-        // }
+        for (let i = 0; i < members.length; i++) {
+          const userNoti = await this.userService.searchUserById(members[i])
+          notifications.push({
+            userId: members[i],
+            notify: userNoti.settings.notify,
+          })
+        }
         //check mentions
 
-        // const channel = await this.channelService.getChannelById(
-        //   channelId,
-        //   req.user.id,
-        // )
-        // const isDisable = channel.disableThread
-        // const roleMember = channel.users.find(
-        //   (item) => item.id === req.user.id,
-        // ).role
-        // if (isDisable && roleMember !== 'ADMIN') {
-        //   this.server.emit('updatedSendThread', {
-        //     status: HttpStatus.FORBIDDEN,
-        //     message: 'Access to this resource is denied',
-        //   })
-        //   return
-        // }
         this.server.emit('updatedSendThread', {
           ...data,
           stoneId,
@@ -211,18 +186,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           return
         }
       } else {
-        await this.threadService.createThread(
-          messages,
-          fileCreateDto,
-          userId,
-          receiveId,
-          channelId,
-          chatId,
-          replyId,
-          stoneId,
-          cloudId,
-          mentions,
-        )
+        // await this.threadService.createThread(
+        //   messages,
+        //   fileCreateDto,
+        //   userId,
+        //   receiveId,
+        //   channelId,
+        //   chatId,
+        //   replyId,
+        //   stoneId,
+        //   cloudId,
+        //   mentions,
+        // )
       }
     }
   }
@@ -411,6 +386,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else {
       this.server.emit('typing', {
         ...data,
+        user: this.commonService.deleteField(req.user, []),
       })
     }
   }
@@ -780,6 +756,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
     }
+  }
+
+  @SubscribeMessage('test')
+  handleTest(@MessageBody() data: any): void {
+    console.log('data', data)
+    this.server.emit('test', data)
   }
 
   /**
