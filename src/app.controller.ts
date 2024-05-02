@@ -6,11 +6,13 @@ import {
   Inject,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common'
 import { AppService } from './app.service'
 import { Cache } from 'cache-manager'
 import { AuthGuard } from './auth/guard/auth.guard'
+import { Request, Response } from 'express'
 
 @Controller()
 export class AppController {
@@ -20,7 +22,9 @@ export class AppController {
   ) {}
 
   @Get('/health-check')
-  async getHello(): Promise<string> {
+  async getHello(
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<string> {
     const value = await this.cacheManager.store.keys()
     console.log(value)
     // for (const key of value) {
@@ -28,6 +32,9 @@ export class AppController {
     //     await this.cacheManager.del(key)
     //   }
     // }
+    // console.log(request.cookies)
+    // console.log(request.signedCookies)
+    response.cookie('key', 'value')
     return "I'm alive!"
   }
 

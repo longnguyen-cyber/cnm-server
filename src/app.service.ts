@@ -1,16 +1,12 @@
-import { CACHE_MANAGER, Inject, Injectable, UseGuards } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { ChannelService } from './channel/channel.service'
 import { ChatService } from './chat/chat.service'
-import { Cache } from 'cache-manager'
-import { ConfigService } from '@nestjs/config'
 
 @Injectable()
 export class AppService {
   constructor(
     private readonly channelService: ChannelService,
     private readonly chatService: ChatService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    private readonly configService: ConfigService,
   ) {}
   async getHello() {
     return 'Health check'

@@ -127,8 +127,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
       if (receiveId) {
-        const userNoti = await this.userService.searchUserById(data.receiveId)
-        const notify = userNoti.settings.notify
+        const userReceive = await this.userService.searchUserById(
+          data.receiveId,
+        )
+        const notify = userReceive.settings.notify
+        if (userReceive.settings.blockGuest) {
+          this.server.emit('updatedSendThread', {
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Người dùng đã chặn nhận tin nhắn từ người lạ',
+          })
+          return
+        }
 
         this.server.emit('updatedSendThread', {
           ...data,
@@ -186,18 +195,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           return
         }
       } else {
-        // await this.threadService.createThread(
-        //   messages,
-        //   fileCreateDto,
-        //   userId,
-        //   receiveId,
-        //   channelId,
-        //   chatId,
-        //   replyId,
-        //   stoneId,
-        //   cloudId,
-        //   mentions,
-        // )
+        await this.threadService.createThread(
+          messages,
+          fileCreateDto,
+          userId,
+          receiveId,
+          channelId,
+          chatId,
+          replyId,
+          stoneId,
+          cloudId,
+          mentions,
+        )
       }
     }
   }

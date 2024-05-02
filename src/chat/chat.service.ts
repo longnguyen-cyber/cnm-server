@@ -91,7 +91,10 @@ export class ChatService implements OnModuleInit {
         const userReceive = await this.userService.searchUserById(receiveId)
         return {
           ...chatParse,
-          user: userReceive,
+          user: this.commonService.deleteField(userReceive, [
+            'chatIds',
+            'userId',
+          ]),
         }
       }
     } else {
