@@ -489,16 +489,28 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           userCreated: req.user.id,
           members,
         }
+
         console.time('createChannel')
         const rs = await this.channelService.createChannel(channelCreateDto)
         console.timeEnd('createChannel')
 
         if (rs) {
+          const usersRes = await Promise.all(
+            rs.users.map(async (item) => {
+              const user = await this.userService.searchUserById(item.id)
+              return this.commonService.deleteField(
+                { ...user, role: item.role },
+                ['chatIds', 'settings'],
+              )
+            }),
+          )
+
           this.server.emit('channelWS', {
             status: HttpStatus.CREATED,
             message: 'Create channel success',
             data: {
               ...rs,
+              users: usersRes,
               type: 'channel',
             },
           })

@@ -30,7 +30,15 @@ export class ChannelService {
           const users = await Promise.all(
             channel.users.map(async (user) => {
               const newUser = await this.userService.searchUserById(user.id)
-              return newUser
+              return this.commonService.deleteField(
+                {
+                  ...newUser,
+                  role: user.role,
+                  createdAt: user.createdAt,
+                },
+                ['settings', 'chatIds'],
+                ['createdAt'],
+              )
             }),
           )
           return {
