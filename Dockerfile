@@ -25,6 +25,3 @@ COPY --from=builder /app/cnm-server .
 
 CMD [ "node", "dist/main.js" ]
 
-# COPY deploy.prod.sh ./
-# RUN chmod +x deploy.prod.sh
-# RUN sudo sh deploy-prod.sh
