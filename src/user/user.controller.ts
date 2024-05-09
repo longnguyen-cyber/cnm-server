@@ -30,16 +30,18 @@ import { Request } from 'express'
 export class UserController {
   constructor(
     private readonly userService: UserService,
-    private readonly commonService: CommonService,
+    private readonly commonService: CommonService
   ) {}
 
   @Post('register')
   // @UsePipes(new CustomValidationPipe())
   async createUsers(
     @Body() userCreateDto: UserCreateDto,
-    @Req() req: Request,
+    @Req() req: Request
   ): Promise<Response | any> {
-    const rs = await this.userService.createUser(userCreateDto)
+    const host = req.protocol + '://' + req.get('host')
+
+    const rs = await this.userService.createUser(userCreateDto, host)
     if (rs) {
       return {
         status: HttpStatus.CREATED,
@@ -96,11 +98,11 @@ export class UserController {
   @UseGuards(AuthGuard)
   async turnOnTwoFactorAuthentication(
     @Req() request: any,
-    @Body() body: any,
+    @Body() body: any
   ): Promise<Response> {
     const isCodeValid = this.userService.isTwoFactorAuthenticationCodeValid(
       body.twoFactorAuthenticationCode,
-      request.user,
+      request.user
     )
     if (!isCodeValid) {
       throw new UnauthorizedException('Wrong authentication code')
@@ -120,11 +122,11 @@ export class UserController {
   @UseGuards(AuthGuard)
   async authenticate(
     @Req() request: any,
-    @Body() body: any,
+    @Body() body: any
   ): Promise<Response> {
     const isCodeValid = this.userService.isTwoFactorAuthenticationCodeValid(
       body.twoFactorAuthenticationCode,
-      request.user,
+      request.user
     )
 
     if (!isCodeValid) {
@@ -204,7 +206,7 @@ export class UserController {
   @UseGuards(AuthGuard)
   async updateCurrentUser(
     @Body() userUpdateDto: UserUpdateDto,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<Response> {
     if (req.error) {
       return {
@@ -234,7 +236,7 @@ export class UserController {
   @UseGuards(AuthGuard)
   async search(
     @Param('name') name: string,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<Response> {
     if (req.error) {
       return {
@@ -268,8 +270,9 @@ export class UserController {
   }
 
   @Post('forgot-password')
-  async forgotPassword(@Body() body: any): Promise<Response> {
-    const rs = await this.userService.forgotPassword(body.email)
+  async forgotPassword(@Body() body: any, @Req() req: any): Promise<Response> {
+    const host = req.protocol + '://' + req.get('host')
+    const rs = await this.userService.forgotPassword(body.email, host)
     if (rs) {
       return {
         status: HttpStatus.OK,
@@ -301,7 +304,7 @@ export class UserController {
     }
     const rs = await this.userService.resetPassword(
       req.token,
-      req.body.newPassword,
+      req.body.newPassword
     )
     if (rs) {
       return {

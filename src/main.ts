@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import { AppModule } from './app.module'
-import * as cookieParser from 'cookie-parser'
 async function bootstrap() {
   //use file env.dev
 
@@ -16,7 +15,6 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api')
   app.set('trust proxy', true)
-  app.use(cookieParser())
   app.enableCors({
     origin: '*',
     methods: '*',

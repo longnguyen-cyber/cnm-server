@@ -40,7 +40,7 @@ export class UserService implements OnModuleInit {
     @InjectQueue('queue')
     private readonly mailQueue: QueueEmail,
     private readonly configService: ConfigService,
-    private readonly uploadService: UploadService,
+    private readonly uploadService: UploadService
   ) {}
 
   async onModuleInit() {
@@ -102,7 +102,7 @@ export class UserService implements OnModuleInit {
         type: 'cloud',
       },
       ['userId', 'thread', 'seen', 'mentions'],
-      ['createdAt'],
+      ['createdAt']
     )
     await this.cacheManager.set(`cloud-${userId}`, JSON.stringify(rs), {
       ttl: this.configService.get<number>('CLOUD_EXPIRED'),
@@ -131,7 +131,7 @@ export class UserService implements OnModuleInit {
           type: 'cloud',
         },
         ['userId', 'thread', 'seen', 'mentions'],
-        ['createdAt'],
+        ['createdAt']
       )
       await this.cacheManager.set(`cloud-${userId}`, JSON.stringify(rs), {
         ttl: this.configService.get<number>('CLOUD_EXPIRED'),
@@ -148,7 +148,7 @@ export class UserService implements OnModuleInit {
         const chatId = user.chatIds.find(
           (chat: any) =>
             (chat.receiveId === user.id && chat.senderId === id) ||
-            (chat.receiveId === id && chat.senderId === user.id),
+            (chat.receiveId === id && chat.senderId === user.id)
         )
         return {
           user: {
@@ -161,7 +161,7 @@ export class UserService implements OnModuleInit {
       const userFilter = usersWithChatId.filter(
         (data: any) =>
           data.user.name.toLowerCase().includes(query.toLowerCase()) &&
-          data.user.id !== id,
+          data.user.id !== id
       )
 
       return this.commonService.deleteField(userFilter, ['channels', 'userId'])
@@ -191,7 +191,7 @@ export class UserService implements OnModuleInit {
           message: 'Please provide two factor authentication code',
           token,
         },
-        HttpStatus.OK,
+        HttpStatus.OK
       )
     }
 
@@ -213,19 +213,19 @@ export class UserService implements OnModuleInit {
         ...this.buildUserResponse(user),
         setting: user.settings,
       },
-      ['userId'],
+      ['userId']
     )
     return result
   }
 
-  async createUser(userCreateDto: UserCreateDto) {
+  async createUser(userCreateDto: UserCreateDto, host: string) {
     const userClean = { ...userCreateDto }
     const { email, name } = userClean
     const existingName = await this.checkUserName(name)
     if (!existingName) {
       throw new HttpExceptionCustom(
         'name already exists',
-        HttpStatus.BAD_REQUEST,
+        HttpStatus.BAD_REQUEST
       )
     }
 
@@ -234,7 +234,7 @@ export class UserService implements OnModuleInit {
     if (emailExist) {
       throw new HttpExceptionCustom(
         'email already exists',
-        HttpStatus.BAD_REQUEST,
+        HttpStatus.BAD_REQUEST
       )
     }
 
@@ -252,11 +252,11 @@ export class UserService implements OnModuleInit {
         {
           to: userClean.email,
           name: userClean.name,
-          link: `${this.configService.get('HOST')}/auth/verify-email?token=${accessToken}`,
+          link: `${host}/auth/verify-email?token=${accessToken}`,
         },
         {
           removeOnComplete: true,
-        },
+        }
       )
       return true
     }
@@ -268,7 +268,7 @@ export class UserService implements OnModuleInit {
     if (user) {
       const userParsed = JSON.parse(user as any)
       const passwordHashed = await this.authService.hashPassword(
-        userParsed.password,
+        userParsed.password
       )
 
       const data = {
@@ -301,7 +301,7 @@ export class UserService implements OnModuleInit {
             ...userCreated,
             token: accessToken,
           },
-          [],
+          []
         )
       }
     }
@@ -372,7 +372,7 @@ export class UserService implements OnModuleInit {
     await this.cacheManager.del(token)
   }
 
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string, host: string) {
     const emailExist = await this.cacheManager.get(email)
 
     if (emailExist) {
@@ -396,11 +396,11 @@ export class UserService implements OnModuleInit {
           {
             to: email,
             name: user.name,
-            link: `${this.configService.get('HOST')}/auth/reset-password?token=${token}`,
+            link: `${host}/auth/reset-password?token=${token}`,
           },
           {
             removeOnComplete: true,
-          },
+          }
         )
         return true
       }
@@ -417,7 +417,7 @@ export class UserService implements OnModuleInit {
     const otpAuthUrl = authenticator.keyuri(
       user.email,
       this.configService.get('PROJECT_NAME'),
-      secret,
+      secret
     )
 
     const isSet = await this.setTwoFactorAuthenticationSecret(secret, user.id)
@@ -435,7 +435,7 @@ export class UserService implements OnModuleInit {
 
   private async setTwoFactorAuthenticationSecret(
     secret: string,
-    userId: string,
+    userId: string
   ): Promise<any> {
     const update = await this.userRepository.updateUser(userId, {
       twoFactorAuthenticationSecret: secret,
@@ -460,7 +460,7 @@ export class UserService implements OnModuleInit {
 
   isTwoFactorAuthenticationCodeValid(
     twoFactorAuthenticationCode: string,
-    user: any,
+    user: any
   ) {
     return authenticator.verify({
       token: twoFactorAuthenticationCode,
@@ -482,7 +482,7 @@ export class UserService implements OnModuleInit {
           ...userParsed,
           token: newToken,
         },
-        [''],
+        ['']
       )
     }
     return false
@@ -490,7 +490,7 @@ export class UserService implements OnModuleInit {
 
   private async checkLoginData(
     email: string,
-    password: string,
+    password: string
   ): Promise<LoginDTO> {
     try {
       await this.checkEmailExist(email)
@@ -502,7 +502,7 @@ export class UserService implements OnModuleInit {
     } catch (e) {
       throw new HttpExceptionCustom(
         'email or password incorrect',
-        HttpStatus.BAD_REQUEST,
+        HttpStatus.BAD_REQUEST
       )
     }
   }
@@ -514,7 +514,7 @@ export class UserService implements OnModuleInit {
 
   private async checkValidatePassword(
     passwordLeft: string,
-    passwordRight: string,
+    passwordRight: string
   ): Promise<void> {
     let isValid: boolean
 
@@ -523,7 +523,7 @@ export class UserService implements OnModuleInit {
     }
     isValid = await this.authService.validatePassword(
       passwordLeft,
-      passwordRight,
+      passwordRight
     )
     this.userCheck.isValidPassword(isValid)
   }
@@ -531,7 +531,7 @@ export class UserService implements OnModuleInit {
   private async validatePassword(
     passwordNew: string,
     oldPassword: string,
-    password: string,
+    password: string
   ): Promise<void> {
     //check old password and with current pass
 
@@ -552,7 +552,7 @@ export class UserService implements OnModuleInit {
 
   private checkPasswordData(
     passwordLeft: string,
-    passwordRight: string,
+    passwordRight: string
   ): boolean {
     const bool =
       (passwordLeft && !passwordRight) || (!passwordLeft && passwordRight)
@@ -574,7 +574,7 @@ export class UserService implements OnModuleInit {
 
   private generateStructureUpdateUser(
     userUpdateDto: any,
-    passwordHashed?: string,
+    passwordHashed?: string
   ): any {
     const user = { ...userUpdateDto }
     delete user.oldPassword
@@ -582,7 +582,7 @@ export class UserService implements OnModuleInit {
       user.password = passwordHashed
     }
     return Object.fromEntries(
-      Object.entries(user).filter(([_, value]) => value !== ''),
+      Object.entries(user).filter(([_, value]) => value !== '')
     )
   }
 

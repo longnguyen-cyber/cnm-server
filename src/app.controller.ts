@@ -18,15 +18,11 @@ import { Request, Response } from 'express'
 export class AppController {
   constructor(
     private readonly appService: AppService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache
   ) {}
 
   @Get('/health-check')
-  async getHello(
-    @Res({ passthrough: true }) response: Response,
-  ): Promise<string> {
-    const value = await this.cacheManager.store.keys()
-    console.log(value)
+  async getHello(@Req() request: Request): Promise<string> {
     // for (const key of value) {
     //   if (key.includes('chat') || key.includes('channel')) {
     //     await this.cacheManager.del(key)
@@ -34,7 +30,8 @@ export class AppController {
     // }
     // console.log(request.cookies)
     // console.log(request.signedCookies)
-    response.cookie('key', 'value')
+    // i wanna get full url
+
     return "I'm alive!"
   }
 
