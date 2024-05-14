@@ -24,7 +24,7 @@ import { CommonService } from '../common/common.service'
 export class UploadController {
   constructor(
     private readonly uploadService: UploadService,
-    private readonly conmmonService: CommonService,
+    private readonly conmmonService: CommonService
   ) {}
   @Get()
   async getFileUpload(): Promise<Response> {
@@ -38,7 +38,7 @@ export class UploadController {
   @UseInterceptors(AnyFilesInterceptor())
   async sd(@UploadedFiles() files?: Express.Multer.File[]): Promise<any> {
     const isLimit = files.every((file) =>
-      this.conmmonService.limitFileSize(file.size),
+      this.conmmonService.limitFileSize(file.size)
     )
 
     if (!isLimit) {
@@ -54,7 +54,7 @@ export class UploadController {
           filename: file.originalname,
           size: file.size,
         }
-      }),
+      })
     )
 
     console.log('upload success', rs)
@@ -68,9 +68,8 @@ export class UploadController {
   @Post('single')
   @UseInterceptors(FileInterceptor('file'))
   async uploadSingleFile(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File
   ): Promise<any> {
-    console.log('file', file)
     if (!this.conmmonService.limitFileSize(file.size)) {
       return {
         status: HttpStatus.BAD_REQUEST,
@@ -79,7 +78,7 @@ export class UploadController {
     }
     const upload = await this.uploadService.upload(
       file.originalname,
-      file.buffer,
+      file.buffer
     )
     const data = {
       path: upload,

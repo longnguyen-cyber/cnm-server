@@ -23,7 +23,7 @@ export class ThreadService {
     @InjectQueue('queue') private readonly threadQueue: QueueThread,
     private readonly chatService: ChatService,
     private readonly channelService: ChannelService,
-    private readonly userService: UserService,
+    private readonly userService: UserService
   ) {}
   // QUEUE
 
@@ -60,17 +60,15 @@ export class ThreadService {
         // job.remove()
 
         const data = job.data
-        console.log('data', data)
         const timeStart = new Date().getTime()
         const result = await this.sendQueue(data)
         if (result) {
-          console.log('Send thread success')
           if (data.cloudId) {
             await this.userService.updateCacheCloud(data.senderId)
           } else if (data.channelId) {
             await this.channelService.updateCacheChannel(
               data.channelId,
-              data.stoneId,
+              data.stoneId
             )
           } else {
             await this.chatService.updateCacheChat(data.chatId, data.senderId)
@@ -93,7 +91,7 @@ export class ThreadService {
           const result = await this.deleteQueue(
             data.stoneId,
             data.userDeleteId,
-            data.type,
+            data.type
           )
           if (result) {
             if (data.cloudId) {
@@ -101,13 +99,13 @@ export class ThreadService {
             } else if (data.chatId) {
               await this.chatService.updateCacheChat(
                 data.chatId,
-                data.userDeleteId,
+                data.userDeleteId
               )
             } else {
               await this.channelService.updateCacheChannel(
                 data.channelId,
                 data.stoneId,
-                'delete',
+                'delete'
               )
             }
             console.log('Delete thread success')
@@ -129,7 +127,7 @@ export class ThreadService {
           const result = await this.recallQueue(
             data.stoneId,
             data.recallId,
-            data.type,
+            data.type
           )
           if (result) {
             if (data.chatId) {
@@ -139,7 +137,7 @@ export class ThreadService {
             } else {
               await this.channelService.updateCacheChannel(
                 data.channelId,
-                data.stoneId,
+                data.stoneId
               )
             }
             console.log('Recall thread success')
@@ -175,7 +173,7 @@ export class ThreadService {
       cloudId,
       chatId,
       stoneId,
-      mentions,
+      mentions
     )
 
     const thread = await this.threadRepository.createThread(threadToDb)
@@ -192,7 +190,7 @@ export class ThreadService {
     replyId?: string,
     stoneId?: string,
     cloudId?: string,
-    mentions?: string[],
+    mentions?: string[]
   ) {
     const threadToDb = {
       messageCreateDto,
@@ -216,13 +214,13 @@ export class ThreadService {
     stoneId: string,
     senderId: string,
     messageCreateDto?: MessageCreateDto,
-    pin?: boolean,
+    pin?: boolean
   ) {
     const threadToDb = this.compareToUpdateThread(
       stoneId,
       senderId,
       messageCreateDto,
-      pin,
+      pin
     )
 
     const thread = await this.threadRepository.updateThread(threadToDb)
@@ -236,26 +234,26 @@ export class ThreadService {
     type: string,
     chatId?: string,
     channelId?: string,
-    cloudId?: string,
+    cloudId?: string
   ) {
     //get file before delete to delete file in s3
 
     await this.threadQueue.add(
       'delete-thread',
       { stoneId, userDeleteId, type, chatId, channelId, cloudId },
-      { lifo: true },
+      { lifo: true }
     )
   }
 
   private async deleteQueue(
     stoneId: string,
     userDeleteId: string,
-    type: string,
+    type: string
   ) {
     const thread = await this.threadRepository.deleteThread(
       stoneId,
       userDeleteId,
-      type,
+      type
     )
     return thread
   }
@@ -266,12 +264,12 @@ export class ThreadService {
     type: string,
     chatId?: string,
     channelId?: string,
-    cloudId?: string,
+    cloudId?: string
   ) {
     await this.threadQueue.add(
       'recall-thread',
       { stoneId, recallId, type, chatId, channelId, cloudId },
-      { lifo: true },
+      { lifo: true }
     )
   }
 
@@ -279,7 +277,7 @@ export class ThreadService {
     const thread = await this.threadRepository.recallSendThread(
       stoneId,
       recallId,
-      type,
+      type
     )
     return thread
   }
@@ -288,7 +286,7 @@ export class ThreadService {
     emoji: string,
     quantity: number,
     stoneId: string,
-    senderId: string,
+    senderId: string
   ) {
     const emojiToDB = this.compareToCreateEmoji(emoji, stoneId, senderId)
     const thread = await this.threadRepository.addEmoji(emojiToDB)
@@ -297,7 +295,6 @@ export class ThreadService {
 
   async removeEmoji(emoji: string, stoneId: string, senderId: string) {
     const emojiToDb = this.compareToCreateEmoji(emoji, stoneId, senderId)
-    console.log('emojiToDb', emojiToDb)
     const thread = await this.threadRepository.removeEmoji(emojiToDb)
     return thread
   }
@@ -337,7 +334,7 @@ export class ThreadService {
     const thread = await this.threadRepository.threadExists(
       stoneId,
       recallId,
-      type,
+      type
     )
     return thread
   }
@@ -378,7 +375,7 @@ export class ThreadService {
     chatId?: string,
     stoneId?: string,
     mentions?: string[],
-    threadId?: string,
+    threadId?: string
   ): ThreadToDBDto {
     return {
       messages: messageCreateDto,
@@ -407,7 +404,7 @@ export class ThreadService {
     stoneId: string,
     senderId: string,
     messageCreateDto?: MessageCreateDto,
-    pin?: boolean,
+    pin?: boolean
   ): any {
     return {
       stoneId,
@@ -420,7 +417,7 @@ export class ThreadService {
   private compareToCreateEmoji(
     emoji?: string,
     stoneId?: string,
-    senderId?: string,
+    senderId?: string
   ): EmojiToDBDto {
     return {
       emoji,
