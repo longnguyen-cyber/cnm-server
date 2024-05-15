@@ -25,37 +25,8 @@ import { Cache } from 'cache-manager'
 export class ChannelController {
   constructor(
     private readonly channelService: ChannelService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache
   ) {}
-
-  // @Post('/insert')
-  // async insert() {
-  //   try {
-  //     // this.update()
-  //     const cachedData = await this.cacheManager.get('insert')
-  //     if (cachedData) console.log('cachedData', cachedData)
-  //     else {
-  //       const data = 'insert'
-  //       await this.cacheManager.set('insert', data, { ttl: 60 * 60 * 24 * 30 })
-  //       console.log('insert', cachedData)
-  //     }
-  //   } catch (error) {
-  //     console.error('Error writing to cache:', error)
-  //   }
-  // }
-  // @Post('/get')
-  // async get() {
-  //   // console.log('get', await this.cacheManager.get('insert'))
-  //   return this.cacheManager.get('insert')
-  // }
-
-  // @Post('/update')
-  // async update() {
-  //   const data = 'update333'
-  //   await this.cacheManager.set('insert', data, { ttl: 60 * 60 * 24 * 30 })
-  //   console.log('update', await this.cacheManager.get('insert'))
-  //   return true
-  // }
 
   @Get()
   async getAllChannel(@Req() req: any): Promise<Response> {
@@ -74,7 +45,7 @@ export class ChannelController {
   @Get(':channelId')
   async getChannelById(
     @Param('channelId') channelId: string,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<Response> {
     if (req.error) {
       return {
@@ -84,7 +55,7 @@ export class ChannelController {
     } else {
       const channel = await this.channelService.getChannelById(
         channelId,
-        req.user.id,
+        req.user.id
       )
       if (!channel) {
         return {
@@ -102,7 +73,7 @@ export class ChannelController {
 
   @Get(':channelId/members')
   async getMembersOfChannel(
-    @Param('channelId') channelId: string,
+    @Param('channelId') channelId: string
   ): Promise<any> {
     return await this.channelService.getMembersOfChannel(channelId)
   }

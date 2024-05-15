@@ -20,7 +20,7 @@ export class ChatService implements OnModuleInit {
     @Inject(forwardRef(() => UserService))
     private userService: UserService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService
   ) {}
 
   async onModuleInit() {
@@ -28,6 +28,20 @@ export class ChatService implements OnModuleInit {
     // this.cacheManager.set('listFriend', JSON.stringify(listFriend), {
     //   ttl: this.configService.get<number>('CHAT_EXPIRED'),
     // })
+  }
+
+  async isFriend(senderId: string, receiveId: string) {
+    const listFriend = await this.cacheManager.get('listFriend')
+    if (listFriend) {
+      const listFriendParse = JSON.parse(listFriend as any)
+      const isFriend = listFriendParse.find(
+        (friend) =>
+          (friend.senderId === senderId && friend.receiveId === receiveId) ||
+          (friend.senderId === receiveId && friend.receiveId === senderId)
+      )
+
+      return isFriend.isFriend ? true : false
+    }
   }
 
   async updateListFriend() {
@@ -42,22 +56,23 @@ export class ChatService implements OnModuleInit {
     if (chatsCache) {
       const parsedCache = JSON.parse(chatsCache as string) as Array<any>
       const rs = parsedCache.filter(
-        (chat) => chat.senderId === userId || chat.receiveId === userId,
+        (chat) => chat.senderId === userId || chat.receiveId === userId
       )
 
       const newRs = await Promise.all(
         rs.map(async (chat) => {
           const userReceiveId =
             chat.senderId === userId ? chat.receiveId : chat.senderId
-          const userReceive =
-            await this.userService.searchUserById(userReceiveId)
+          const userReceive = await this.userService.searchUserById(
+            userReceiveId
+          )
           this.commonService.deleteField(userReceive, ['settings', 'chatIds'])
 
           return {
             ...chat,
             user: userReceive,
           }
-        }),
+        })
       )
 
       console.log('cache hit userId: ', userId)
@@ -169,7 +184,7 @@ export class ChatService implements OnModuleInit {
   async reqAddFriendHaveChat(chatId: string, receiveId: string) {
     const req = await this.chatRepository.reqAddFriendHaveChat(
       chatId,
-      receiveId,
+      receiveId
     )
 
     return this.commonService.deleteField(req, ['thread'], ['status'])
@@ -206,7 +221,7 @@ export class ChatService implements OnModuleInit {
     return (await this.chatRepository.whitelistFriendAccept(userId)).map(
       (chat) => {
         return this.buildChatResponse(chat, ['thread'])
-      },
+      }
     )
   }
 
@@ -214,7 +229,7 @@ export class ChatService implements OnModuleInit {
     return (await this.chatRepository.waitlistFriendAccept(userId)).map(
       (chat) => {
         return this.buildChatResponse(chat, ['threads'])
-      },
+      }
     )
   }
 
@@ -226,7 +241,7 @@ export class ChatService implements OnModuleInit {
       const usersParse = JSON.parse(users)
       const friendsParse = JSON.parse(friends)
       const friendsFilter = friendsParse.filter(
-        (friend) => friend.senderId === userId || friend.receiveId === userId,
+        (friend) => friend.senderId === userId || friend.receiveId === userId
       )
       if (friendsFilter.length === 0) {
         return []
@@ -271,7 +286,7 @@ export class ChatService implements OnModuleInit {
   private buildChatResponse(
     chat: any,
     removeFields: string[],
-    addFields?: string[],
+    addFields?: string[]
   ) {
     const buildChat = this.commonService.deleteField(chat, removeFields, [
       'createdAt',

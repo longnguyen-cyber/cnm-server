@@ -57,7 +57,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core'
         },
 
         defaults: {
-          from: `"No Reply" <${config.get('MAIL_FROM')}>`,
+          from: `"No Reply" <${config.get('MAIL_USER')}>`,
         },
         template: {
           dir: join(__dirname, 'src/templates/email'),

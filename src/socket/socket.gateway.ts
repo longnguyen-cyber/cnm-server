@@ -31,7 +31,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private channelService: ChannelService,
     private readonly chatService: ChatService,
     private commonService: CommonService,
-    private userService: UserService,
+    private userService: UserService
   ) {}
   user = []
   @WebSocketServer() server: Server
@@ -51,7 +51,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const isAuthenticated = socket.handshake.auth
 
     this.user = this.user.filter(
-      (item) => item.userId !== isAuthenticated.userId,
+      (item) => item.userId !== isAuthenticated.userId
     )
     this.server.emit('online', this.user)
   }
@@ -72,7 +72,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleSendThread(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('updatedSendThread', {
@@ -120,7 +120,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (data.fileCreateDto != undefined && data.fileCreateDto.length > 0) {
         for (let i = 0; i < data.fileCreateDto.length; i++) {
           const sizeConvert = this.commonService.convertToSize(
-            data.fileCreateDto[i].size,
+            data.fileCreateDto[i].size
           )
           const newData = { ...data.fileCreateDto[i], size: sizeConvert }
           files = [...files, newData]
@@ -128,10 +128,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       if (receiveId) {
         const userReceive = await this.userService.searchUserById(
-          data.receiveId,
+          data.receiveId
         )
+        const isFriend = await this.chatService.isFriend(userId, receiveId)
         const notify = userReceive.settings.notify
-        if (userReceive.settings.blockGuest) {
+        if (userReceive.settings.blockGuest && !isFriend) {
           this.server.emit('updatedSendThread', {
             status: HttpStatus.BAD_REQUEST,
             message: 'Người dùng đã chặn nhận tin nhắn từ người lạ',
@@ -205,7 +206,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           replyId,
           stoneId,
           cloudId,
-          mentions,
+          mentions
         )
       }
     }
@@ -228,7 +229,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleSendUpdateThread(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('updatedSendThread', {
@@ -260,14 +261,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         stoneId,
         req.user.id,
         messages,
-        pin,
+        pin
       )
-      console.log('rs', rs)
       if (rs) {
         if (type === 'chat') {
           await this.chatService.updateCacheChat(id, req.user.id)
         } else {
-          console.log('id', id)
           await this.channelService.updateCacheChannel(id, stoneId)
         }
         console.timeEnd('updateThread')
@@ -289,7 +288,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleRecallThread(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     const {
       stoneId,
@@ -321,7 +320,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       type,
       chatId,
       channelId,
-      cloudId,
+      cloudId
     )
   }
 
@@ -339,7 +338,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleDeleteThread(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     const {
       stoneId,
@@ -367,7 +366,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       type,
       chatId,
       channelId,
-      cloudId,
+      cloudId
     )
   }
 
@@ -404,7 +403,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleaddEmoji(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('updatedEmojiThread', {
@@ -464,7 +463,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleCreateChannel(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('channelWS', {
@@ -500,9 +499,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
               const user = await this.userService.searchUserById(item.id)
               return this.commonService.deleteField(
                 { ...user, role: item.role },
-                ['chatIds', 'settings'],
+                ['chatIds', 'settings']
               )
-            }),
+            })
           )
 
           this.server.emit('channelWS', {
@@ -516,7 +515,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           })
           await this.channelService.updatedCacheChannels(
             ChannelType.CreateChannel,
-            req.user.id,
+            req.user.id
           )
         } else {
           this.server.emit('channelWS', {
@@ -543,7 +542,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleUpdateChannel(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('channelWS', {
@@ -558,7 +557,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.channelId,
         req.user.id,
         data.channelUpdate,
-        stoneId,
+        stoneId
       )
       console.timeEnd('updateChannel')
 
@@ -569,7 +568,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         })
       } else {
         if (rs) {
-          console.log('rs', rs)
           this.server.emit('channelWS', {
             status: HttpStatus.OK,
             message: 'Update channel success',
@@ -604,7 +602,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleDeleteChannel(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('channelWS', {
@@ -615,7 +613,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.time('deleteChannel')
       const rs = await this.channelService.deleteChannel(
         data.channelId,
-        req.user.id,
+        req.user.id
       )
       console.timeEnd('deleteChannel')
 
@@ -639,7 +637,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           })
           await this.channelService.updatedCacheChannels(
             ChannelType.DeleteChannel,
-            data.channelId,
+            data.channelId
           )
         } else {
           this.server.emit('channelWS', {
@@ -668,7 +666,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleAddUserToChannel(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('channelWS', {
@@ -682,7 +680,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.channelId,
         data.users,
         req.user.id,
-        stoneId,
+        stoneId
       )
       console.timeEnd('addUserToChannel')
       if (rs.error) {
@@ -729,7 +727,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleRemoveUserFromChannel(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('channelWS', {
@@ -743,7 +741,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.channelId,
         req.user.id,
         data.userId,
-        stoneId,
+        stoneId
       )
       console.timeEnd('removeUserFromChannel')
       if (rs.error) {
@@ -779,12 +777,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('test')
-  handleTest(@MessageBody() data: any): void {
-    console.log('data', data)
-    this.server.emit('test', data)
-  }
-
   /**
    * @param data:{
    * channelId:string,
@@ -798,7 +790,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleUpdateRoleUserInChannel(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('channelWS', {
@@ -812,7 +804,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.channelId,
         data.user,
         req.user.id,
-        stoneId,
+        stoneId
       )
       console.timeEnd('updateRoleUserInChannel')
       if (rs.error) {
@@ -858,7 +850,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleLeaveChannel(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('channelWS', {
@@ -871,7 +863,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const rs = await this.channelService.leaveChannel(
         data.channelId,
         req.user.id,
-        data.transferOwner,
+        data.transferOwner
       )
       console.timeEnd('leaveChannel')
       if (rs.error) {
@@ -919,7 +911,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleCreateChat(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('chatWS', {
@@ -978,7 +970,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleReqAddFriend(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('chatWS', {
@@ -988,7 +980,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else {
       const rs = await this.chatService.reqAddFriend(
         data.receiveId,
-        req.user.id,
+        req.user.id
       )
       if (rs.error) {
         this.server.emit('chatWS', {
@@ -1032,7 +1024,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleUnReqAddFriend(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('chatWS', {
@@ -1085,7 +1077,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleReqAddFriendHaveChat(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('chatWS', {
@@ -1102,7 +1094,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       const rs = await this.chatService.reqAddFriendHaveChat(
         data.chatId,
-        data.receiveId,
+        data.receiveId
       )
 
       if (rs.error) {
@@ -1146,7 +1138,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleAcceptAddFriend(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('chatWS', {
@@ -1156,7 +1148,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else {
       const rs = await this.chatService.acceptAddFriend(
         data.chatId,
-        req.user.id,
+        req.user.id
       )
       if (rs.error) {
         this.server.emit('chatWS', {
@@ -1201,7 +1193,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleRejectAddFriend(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('chatWS', {
@@ -1211,7 +1203,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else {
       const rs = await this.chatService.rejectAddFriend(
         data.chatId,
-        req.user.id,
+        req.user.id
       )
 
       if (rs.error) {
@@ -1254,7 +1246,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(AuthGuard)
   async handleUnfriend(
     @MessageBody() data: any,
-    @Req() req: any,
+    @Req() req: any
   ): Promise<void> {
     if (req.error) {
       this.server.emit('chatWS', {
