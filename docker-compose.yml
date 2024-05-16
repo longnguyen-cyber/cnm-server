@@ -25,7 +25,7 @@ services:
       - '8080:8080'
 
     depends_on:
-      - rabbitmq_prod
+      - redis_prod
     networks:
       - backend_network
 networks:
