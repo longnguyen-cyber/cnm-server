@@ -271,7 +271,7 @@ export class UserController {
 
   @Post('forgot-password')
   async forgotPassword(@Body() body: any, @Req() req: any): Promise<Response> {
-    const host = req.protocol + '://' + req.get('host')
+    const host = req.get('origin')
     const rs = await this.userService.forgotPassword(body.email, host)
     if (rs) {
       return {
