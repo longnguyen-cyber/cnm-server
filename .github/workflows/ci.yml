@@ -7,19 +7,13 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       matrix:
         node-version: [18.x]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
-      - name: Set up environment variables
-        run: |
-          echo "ENV=PROD" >> $GITHUB_ENV
-          echo "NODE_ENV=production" >> $GITHUB_ENV
-          echo "CONFIG_FILE=./config/production.env" >> $GITHUB_ENV
 
       - name: Run deployment script
         run: sudo sh deploy-prod.sh
