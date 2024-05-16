@@ -1,22 +1,25 @@
-name: NodeJS with Webpack
+name: Deploy to Production
 
 on:
   push:
-    branches: ['cicd']
+    branches:
+      - cicd
 
 jobs:
-  build:
-    runs-on: self-hosted
-
+  deploy:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [18.x]
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+      - name: Set up environment variables
+        run: |
+          echo "ENV=PROD" >> $GITHUB_ENV
+          echo "NODE_ENV=production" >> $GITHUB_ENV
+          echo "CONFIG_FILE=./config/production.env" >> $GITHUB_ENV
+
+      - name: Run deployment script
+        run: sudo sh deploy-prod.sh

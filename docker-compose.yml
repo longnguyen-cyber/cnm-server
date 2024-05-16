@@ -12,27 +12,21 @@ services:
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - HOST=${REDIS_HOST}
+    restart: always
     env_file:
       - .env
-    networks:
-      - backend_network
 
-  # server:
-  #   build:
-  #     context: ./
-  #     dockerfile: Dockerfile
-  #   image: server_prod
-  #   container_name: server_prod
-  #   ports:
-  #     - '8080:8080'
-
-  #   depends_on:
-  #     - redis_prod
-  #   networks:
-  #     - backend_network
-networks:
-  backend_network:
-    driver: bridge
+  server:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: server_prod
+    container_name: server_prod
+    ports:
+      - '8080:8080'
+    restart: always
+    depends_on:
+      - redis_prod
 
 volumes:
   redis:
