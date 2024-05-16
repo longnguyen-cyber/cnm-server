@@ -1,0 +1,19 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - cicd
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Run Docker Container
+        run: sudo docker compose up -d
