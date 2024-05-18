@@ -6,7 +6,7 @@ import { ChatService } from './chat/chat.service'
 export class AppService {
   constructor(
     private readonly channelService: ChannelService,
-    private readonly chatService: ChatService,
+    private readonly chatService: ChatService
   ) {}
   async getHello() {
     return 'Health check'
@@ -14,6 +14,7 @@ export class AppService {
 
   async getAll(userId: string) {
     const channels = await this.channelService.getAllChannel(userId)
+    console.log(channels)
     const chats = await this.chatService.getAllChat(userId)
     chats.map((item) => {
       const lastedThread = item.lastedThread

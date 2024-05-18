@@ -70,8 +70,10 @@ export class ThreadService {
               data.channelId,
               data.stoneId
             )
+            await this.channelService.updatedCacheChannels('', data.senderId)
           } else {
             await this.chatService.updateCacheChat(data.chatId, data.senderId)
+            await this.chatService.updateCacheChats(data.senderId)
           }
         }
         console.log('jobid', job.id)
