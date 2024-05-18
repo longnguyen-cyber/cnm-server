@@ -100,6 +100,7 @@ export class UserService implements OnModuleInit {
       {
         ...cloud,
         type: 'cloud',
+        timeThread: cloud.updatedAt,
       },
       ['userId', 'thread', 'seen', 'mentions'],
       ['createdAt']
@@ -129,6 +130,7 @@ export class UserService implements OnModuleInit {
         {
           ...cloud,
           type: 'cloud',
+          timeThread: cloud.updatedAt,
         },
         ['userId', 'thread', 'seen', 'mentions'],
         ['createdAt']
@@ -587,6 +589,7 @@ export class UserService implements OnModuleInit {
   }
 
   private buildUserResponse(user: ResUserDto): any {
+    console.log(user)
     const {
       name,
       email,
