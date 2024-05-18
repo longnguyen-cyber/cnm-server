@@ -21,6 +21,8 @@ services:
       context: ./
       dockerfile: Dockerfile
     container_name: server_prod
+    image: cnm-server
+    restart: always
     ports:
       - '8080:8080'
 
