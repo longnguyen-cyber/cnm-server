@@ -57,6 +57,14 @@ export class ThreadRepository {
             },
           },
         })
+        await prisma.clouds.update({
+          where: {
+            id: threadToDB.cloudId,
+          },
+          data: {
+            updatedAt: new Date(),
+          },
+        })
 
         threadId = newThread.id
       } else {
