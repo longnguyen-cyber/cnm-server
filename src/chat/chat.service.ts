@@ -24,10 +24,10 @@ export class ChatService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // const listFriend = await this.chatRepository.listFriend()
-    // this.cacheManager.set('listFriend', JSON.stringify(listFriend), {
-    //   ttl: this.configService.get<number>('CHAT_EXPIRED'),
-    // })
+    const listFriend = await this.chatRepository.listFriend()
+    this.cacheManager.set('listFriend', JSON.stringify(listFriend), {
+      ttl: this.configService.get<number>('CHAT_EXPIRED'),
+    })
   }
 
   async isFriend(senderId: string, receiveId: string) {
