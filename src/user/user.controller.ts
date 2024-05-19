@@ -143,7 +143,6 @@ export class UserController {
   @Post('login')
   @UseGuards(AuthGuard)
   async login(@Body() userLoginDto: any, @Req() req: any): Promise<Response> {
-    console.log('login')
     if (req.error) {
       const user = await this.userService.login(userLoginDto)
       if (user) {
