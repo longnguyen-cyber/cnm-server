@@ -34,7 +34,6 @@ export class UserController {
   ) {}
 
   @Post('register')
-  // @UsePipes(new CustomValidationPipe())
   async createUsers(
     @Body() userCreateDto: UserCreateDto,
     @Req() req: Request
