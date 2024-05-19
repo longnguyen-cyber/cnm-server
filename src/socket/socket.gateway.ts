@@ -482,6 +482,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           status: HttpStatus.BAD_REQUEST,
           message: 'Tên nhóm không được để trống',
         })
+      } else if (data.name.length > 50) {
+        this.server.emit('channelWS', {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Tên nhóm không được quá 50 ký tự',
+        })
       } else {
         const channelCreateDto = {
           name: data.name,
