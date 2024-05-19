@@ -22,7 +22,6 @@ services:
       dockerfile: Dockerfile
 
     container_name: server_prod
-    image: cnm-server:latest
     restart: always
     ports:
       - '8080:8080'
