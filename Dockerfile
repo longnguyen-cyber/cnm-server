@@ -1,5 +1,5 @@
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:21-alpine3.18 AS builder
 
 WORKDIR /app/cnm-server
 
@@ -17,7 +17,7 @@ COPY . .
 RUN yarn build
 
 # Run stage
-FROM node:18-alpine
+FROM node:21-alpine3.18
 
 WORKDIR /app/cnm-server
 
