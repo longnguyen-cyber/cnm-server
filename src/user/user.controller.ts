@@ -39,7 +39,7 @@ export class UserController {
     @Body() userCreateDto: UserCreateDto,
     @Req() req: Request
   ): Promise<Response | any> {
-    const host = req.protocol + '://' + req.get('host')
+    const host = req.get('origin')
 
     const rs = await this.userService.createUser(userCreateDto, host)
     if (rs) {
