@@ -44,10 +44,10 @@ export class UserService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // const users = await this.userRepository.findAll()
-    // this.cacheManager.set('user', JSON.stringify(users), {
-    //   ttl: this.EXPIRED, // 1 week
-    // })
+    const users = await this.userRepository.findAll()
+    this.cacheManager.set('user', JSON.stringify(users), {
+      ttl: this.EXPIRED, // 1 week
+    })
     // const userInCache = (await this.cacheManager.get('user')) as any
     // users.map((user) => {
     //   this.commonService.deleteField(user, [])
