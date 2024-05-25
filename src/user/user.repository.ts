@@ -61,7 +61,7 @@ export class UserRepository {
           channels,
           chatIds,
         }
-      }),
+      })
     )
     return final
   }
@@ -69,7 +69,7 @@ export class UserRepository {
   async getUserByEmail(email: string, prisma: Tx = this.prisma) {
     const user = await prisma.users.findUnique({
       where: {
-        email: email,
+        id: email,
       },
       include: {
         settings: true,
@@ -108,7 +108,7 @@ export class UserRepository {
         const threads = await getAllMessageOfThread(thread.id)
 
         return threads
-      }),
+      })
     )
     return {
       ...clouds,

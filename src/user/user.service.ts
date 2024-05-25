@@ -196,7 +196,7 @@ export class UserService implements OnModuleInit {
   }
 
   async getUser(id: string) {
-    const user = await this.searchUserById(id)
+    const user = await this.userRepository.getUserByEmail(id)
     const result = this.commonService.deleteField(
       {
         ...this.buildUserResponse(user),
