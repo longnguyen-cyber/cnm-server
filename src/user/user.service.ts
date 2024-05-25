@@ -48,19 +48,6 @@ export class UserService implements OnModuleInit {
     this.cacheManager.set('user', JSON.stringify(users), {
       ttl: this.EXPIRED, // 1 week
     })
-    // const userInCache = (await this.cacheManager.get('user')) as any
-    // users.map((user) => {
-    //   this.commonService.deleteField(user, [])
-    // })
-    // if (!userInCache) {
-    //   this.cacheManager.set('user', JSON.stringify(users), {
-    //     ttl: 60 * 60 * 24 * 7, // 1 week
-    //   })
-    // } else if (users.length !== JSON.parse(userInCache).length) {
-    //   this.cacheManager.set('user', JSON.stringify(users), {
-    //     ttl: 60 * 60 * 24 * 7, // 1 week
-    //   })
-    // }
   }
 
   @Interval(1000 * 60 * 60 * 24 * 10) // 10 days for update cache user
