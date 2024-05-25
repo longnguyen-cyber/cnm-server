@@ -25,7 +25,12 @@ export class AppController {
   async getHello(@Req() request: Request): Promise<string> {
     const value = await this.cacheManager.store.keys()
     for (const key of value) {
-      if (key.includes('chat') || key.includes('channel')) {
+      if (
+        key.includes('chat') ||
+        key.includes('chats') ||
+        key.includes('channels') ||
+        key.includes('channel')
+      ) {
         await this.cacheManager.del(key)
       }
     }
