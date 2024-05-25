@@ -23,11 +23,13 @@ export class AppController {
 
   @Get('/health-check')
   async getHello(@Req() request: Request): Promise<string> {
-    // for (const key of value) {
-    //   if (key.includes('chat') || key.includes('channel')) {
-    //     await this.cacheManager.del(key)
-    //   }
-    // }
+    const value = await this.cacheManager.store.keys()
+    for (const key of value) {
+      if (key.includes('chat') || key.includes('channel')) {
+        await this.cacheManager.del(key)
+      }
+    }
+    console.log('clear cache', value)
     // console.log(request.cookies)
     // console.log(request.signedCookies)
     // i wanna get full url

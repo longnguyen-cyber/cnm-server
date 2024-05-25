@@ -29,7 +29,7 @@ export class ChatRepository {
     })
 
     chats = chats.filter(
-      (chat) => chat.thread.length > 0 || chat.isFriend === true,
+      (chat) => chat.thread.length > 0 || chat.isFriend === true
     )
 
     let latestThread = new Map()
@@ -40,7 +40,7 @@ export class ChatRepository {
         latestThread.set(chat.id, '')
       } else {
         const lastThread = thread.sort(
-          (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
         )
 
         latestThread.set(chat.id, lastThread[0].id)
@@ -72,7 +72,7 @@ export class ChatRepository {
             user: userReceive,
             lastedThread: null,
           }
-        }),
+        })
       )
 
       return final
@@ -106,7 +106,7 @@ export class ChatRepository {
             user: userReceive,
             lastedThread,
           }
-        }),
+        })
       )
 
       return final
@@ -142,7 +142,7 @@ export class ChatRepository {
   async getChatByUserId(
     senderId: string,
     receiveId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ) {
     const chat = await prisma.chats.findFirst({
       where: {
@@ -191,7 +191,7 @@ export class ChatRepository {
     const getAllMessageOfThread = async (
       threadId: string,
       senderId: string,
-      receiveId: string,
+      receiveId: string
     ) => {
       const thread = await prisma.threads.findUnique({
         where: {
@@ -263,13 +263,13 @@ export class ChatRepository {
         const threads = await getAllMessageOfThread(
           thread.id,
           chat.senderId,
-          chat.receiveId,
+          chat.receiveId
         )
 
         return threads
-      }),
+      })
     ).then((rs) =>
-      rs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
+      rs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
     )
 
     //find userReply of replysTo and replys
@@ -277,7 +277,7 @@ export class ChatRepository {
       let replysTo
       if (thread.replysTo !== null) {
         const userOfReplysTo = threads.find(
-          (t) => t.id === thread.replyToId,
+          (t) => t.id === thread.replyToId
         ).user
         replysTo = {
           ...thread.replysTo,
@@ -312,7 +312,7 @@ export class ChatRepository {
   async chatExist(
     senderId: string,
     receiveId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ) {
     const chatExist = await prisma.chats.findFirst({
       where: {
@@ -338,7 +338,7 @@ export class ChatRepository {
   async createChat(
     chatToDB: ChatToDBDto,
     stoneId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ): Promise<any> {
     const { receiveId, senderId, file, messages } = chatToDB
     let newMsg: any
@@ -407,7 +407,7 @@ export class ChatRepository {
                 status: HttpStatus.BAD_REQUEST,
                 message: 'File error. Please check again',
               },
-              HttpStatus.BAD_REQUEST,
+              HttpStatus.BAD_REQUEST
             )
           }
         }
@@ -428,7 +428,7 @@ export class ChatRepository {
   async reqAddFriendHaveChat(
     chatId: string,
     receiveId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ) {
     const reqAddExist = await prisma.chats.findUnique({
       where: {
@@ -469,7 +469,7 @@ export class ChatRepository {
   async reqAddFriend(
     receiveId: string,
     senderId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ) {
     if (receiveId === senderId)
       return {
@@ -512,7 +512,7 @@ export class ChatRepository {
   async unReqAddFriend(
     chatId: string,
     userId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ): Promise<any> {
     const chat = await prisma.chats.findUnique({
       where: {
@@ -551,7 +551,7 @@ export class ChatRepository {
   async getFriendChatWaittingAccept(
     receiveId: string,
     userId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ) {
     const friendChatWaittingAccept = await prisma.chats.findFirst({
       where: {
@@ -574,7 +574,7 @@ export class ChatRepository {
   async acceptAddFriend(
     chatId: string,
     userId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ): Promise<any> {
     const existing = await prisma.chats.findUnique({
       where: {
@@ -624,7 +624,7 @@ export class ChatRepository {
   async rejectAddFriend(
     chatId: string,
     userId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ): Promise<any> {
     const existing = await prisma.chats.findUnique({
       where: {
@@ -722,13 +722,14 @@ export class ChatRepository {
           ...chat,
           user: userReceive,
         }
-      }),
+      })
     )
 
     return final
   }
 
   async waitlistFriendAccept(userId: string, prisma: Tx = this.prisma) {
+    console.log(userId)
     const waitlistFriendAccept = await prisma.chats.findMany({
       where: {
         OR: [
@@ -746,18 +747,20 @@ export class ChatRepository {
     const final = (
       await Promise.all(
         waitlistFriendAccept.map(async (chat) => {
-          if (chat.userRequest !== userId) {
-            const userReceive = await prisma.users.findUnique({
-              where: {
-                id: chat.senderId,
-              },
-            })
-            return {
-              ...chat,
-              user: userReceive,
-            }
+          const anotherId =
+            chat.senderId === userId ? chat.receiveId : chat.senderId
+          // if (chat.userRequest !== userId) {
+          const userReceive = await prisma.users.findUnique({
+            where: {
+              id: anotherId,
+            },
+          })
+          return {
+            ...chat,
+            user: userReceive,
           }
-        }),
+          // }
+        })
       )
     ).filter(Boolean)
 

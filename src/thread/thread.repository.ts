@@ -152,7 +152,7 @@ export class ThreadRepository {
           where: { stoneId: threadToDB.stoneId },
         })
 
-        if (existingThread) {
+        if (existingThread === null) {
           return false
         }
         newThread = await prisma.threads.create({

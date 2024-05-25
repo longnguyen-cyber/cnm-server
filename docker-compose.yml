@@ -16,19 +16,19 @@ services:
     env_file:
       - .env
 
-  server:
-    build:
-      context: ./
-      dockerfile: Dockerfile
+  # server:
+  #   build:
+  #     context: ./
+  #     dockerfile: Dockerfile
 
-    container_name: server_prod
-    image: cnm-server
-    restart: always
-    ports:
-      - '8080:8080'
+  #   container_name: server_prod
+  #   image: cnm-server
+  #   restart: always
+  #   ports:
+  #     - '8080:8080'
 
-    depends_on:
-      - redis_prod
+  #   depends_on:
+  #     - redis_prod
 
 volumes:
   redis:

@@ -131,6 +131,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           data.receiveId
         )
         const isFriend = await this.chatService.isFriend(userId, receiveId)
+        console.log('isFriend', isFriend)
         const notify = userReceive.settings.notify
         if (userReceive.settings.blockGuest && !isFriend) {
           this.server.emit('updatedSendThread', {
@@ -868,7 +869,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const rs = await this.channelService.leaveChannel(
         data.channelId,
         req.user.id,
-        data.transferOwner
+        data.transferOwner,
+        stoneId
       )
       console.timeEnd('leaveChannel')
       if (rs.error) {

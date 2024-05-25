@@ -46,9 +46,11 @@ export class ChannelService {
           }
         })
       )
-
       const rs = updatedChannels.filter((channel) => {
-        return channel.users.some((user) => user.id === userId)
+        return (
+          channel.users.some((user) => user.id === userId) ||
+          channel.userCreated === userId
+        )
       })
 
       if (rs) {
@@ -210,7 +212,7 @@ export class ChannelService {
         (thread) => thread.id === threadNew.id
       )
 
-      if (threadNew.files.length > 0) {
+      if (threadNew && threadNew.files.length > 0) {
         threadNew.files = threadNew.files.map((file) => {
           file.size = this.commonService.convertToSize(file.size)
           return file
@@ -449,9 +451,10 @@ export class ChannelService {
   async leaveChannel(
     channelId: string,
     userId: string,
-    stoneId: string,
-    transferOwner?: string
+    transferOwner?: string,
+    stoneId?: string
   ) {
+    console.log('leaveChannel', channelId, userId, stoneId, transferOwner)
     const leaveChannel = await this.channelRepository.leaveChannel(
       channelId,
       userId,

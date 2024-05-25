@@ -28,7 +28,7 @@ export class ChannelRepository {
       },
     })
     channels = channels.filter((channel) =>
-      channel.users.some((user: { id: string }) => user.id === userId),
+      channel.users.some((user: { id: string }) => user.id === userId)
     )
 
     if (channels.length === 0) {
@@ -42,7 +42,7 @@ export class ChannelRepository {
       })
 
       channels = all.filter((channel) =>
-        channel.users.some((user: { id: string }) => user.id === userId),
+        channel.users.some((user: { id: string }) => user.id === userId)
       )
     }
     const userOfChannel = await Promise.all(
@@ -60,7 +60,7 @@ export class ChannelRepository {
           ...channel,
           users: users.map((user) => {
             const role: any = userOfChannel.find(
-              (u: { id: string; role: string }) => u.id === user.id,
+              (u: { id: string; role: string }) => u.id === user.id
             )
             return {
               ...user,
@@ -68,7 +68,7 @@ export class ChannelRepository {
             }
           }),
         }
-      }),
+      })
     )
 
     if (channels.length === 0) {
@@ -82,7 +82,7 @@ export class ChannelRepository {
           latestThread.set(chat.id, '')
         } else {
           const lastThread = thread.sort(
-            (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+            (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
           )
 
           latestThread.set(chat.id, lastThread[0].id)
@@ -114,7 +114,7 @@ export class ChannelRepository {
               ...channel,
               lastedThread,
             }
-          }),
+          })
         )
 
         return final
@@ -143,7 +143,7 @@ export class ChannelRepository {
     if (channel && userId) {
       //check user have in channel or not
       const isChannel = channel?.users.some(
-        (user: { id: string }) => user.id === userId,
+        (user: { id: string }) => user.id === userId
       )
       channel = isChannel ? channel : null
     }
@@ -164,9 +164,9 @@ export class ChannelRepository {
         const threads = await this.getMessageOfThread(thread.id)
 
         return threads
-      }),
+      })
     ).then((rs) =>
-      rs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
+      rs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
     )
 
     const final = newThread.map((thread) => {
@@ -278,7 +278,7 @@ export class ChannelRepository {
 
   async createChannel(
     ChannelCreateDto: ChannelCreateDto,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ): Promise<any> {
     const members = ChannelCreateDto.members
     const newChannel = await prisma.channels.create({
@@ -321,7 +321,7 @@ export class ChannelRepository {
     userId: string,
     channelUpdateDto: ChannelUpdateDto,
     stoneId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ) {
     const channel = await prisma.channels.findUnique({
       where: {
@@ -358,7 +358,7 @@ export class ChannelRepository {
         rs,
         userId,
         ChannelType.UpdateChannel,
-        stoneId,
+        stoneId
       )
     }
   }
@@ -366,7 +366,7 @@ export class ChannelRepository {
   async deleteChannel(
     id: string,
     userId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ): Promise<any> {
     const channel = await prisma.channels.findUnique({
       where: {
@@ -438,7 +438,7 @@ export class ChannelRepository {
     users: UserOfChannel[],
     personAddedId: string,
     stoneId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ) {
     const channel = await prisma.channels.findUnique({
       where: {
@@ -485,7 +485,7 @@ export class ChannelRepository {
         personAddedId,
         ChannelType.AddUserToChannel,
         stoneId,
-        userAdded,
+        userAdded
       )
     }
   }
@@ -495,7 +495,7 @@ export class ChannelRepository {
     userId: string,
     userRemoved: string,
     stoneId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ) {
     const channel = await prisma.channels.findUnique({
       where: { id: channelId },
@@ -536,7 +536,7 @@ export class ChannelRepository {
         userId,
         ChannelType.RemoveUserFromChannel,
         stoneId,
-        [userRemoved],
+        [userRemoved]
       )
     }
   }
@@ -546,7 +546,7 @@ export class ChannelRepository {
     user: UserOfChannel,
     userId: string,
     stoneId: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ) {
     const channel = await prisma.channels.findUnique({
       where: {
@@ -593,7 +593,7 @@ export class ChannelRepository {
         channel,
         user.id,
         ChannelType.UpdateRoleUserInChannel,
-        stoneId,
+        stoneId
       )
     }
   }
@@ -603,7 +603,7 @@ export class ChannelRepository {
     userId: string,
     stoneId: string,
     transferOwner?: string,
-    prisma: Tx = this.prisma,
+    prisma: Tx = this.prisma
   ) {
     const channel = await prisma.channels.findUnique({
       where: {
@@ -633,7 +633,7 @@ export class ChannelRepository {
       }
     }
     const remainingUsers = channel?.users?.filter(
-      (user: { id: string }) => user.id !== userId,
+      (user: { id: string }) => user.id !== userId
     )
 
     let leave = null
@@ -684,7 +684,7 @@ export class ChannelRepository {
           ChannelType.LeaveChannel,
           stoneId,
           null,
-          transferOwner,
+          transferOwner
         )
       }
     }
@@ -692,7 +692,7 @@ export class ChannelRepository {
 
   private getRoleOfPerson(channel: any, userId: string) {
     const user = channel?.users.find(
-      (user: { id: string }) => user.id === userId,
+      (user: { id: string }) => user.id === userId
     )
     if (!user) {
       return null
@@ -703,22 +703,22 @@ export class ChannelRepository {
 
   private getRemainingUsers(channel: any, usersRemoved: string[]) {
     return channel?.users?.filter(
-      (user: { id: string }) => !usersRemoved.includes(user.id),
+      (user: { id: string }) => !usersRemoved.includes(user.id)
     )
   }
 
   private getRemainingUser(channel: any, userRemoved: string) {
     return channel?.users?.filter(
-      (user: { id: string }) => user.id !== userRemoved,
+      (user: { id: string }) => user.id !== userRemoved
     )
   }
 
   private checkUserExistInChannel(
     usersInChannel: any[],
-    usersAdded: UserOfChannel[],
+    usersAdded: UserOfChannel[]
   ) {
     const usersExistInChannel = usersInChannel.map(
-      (user: { id: string }) => user.id,
+      (user: { id: string }) => user.id
     )
     const userAdded = usersAdded.map((user) => user.id)
     const check = usersExistInChannel?.some((id) => userAdded.includes(id))
@@ -731,7 +731,7 @@ export class ChannelRepository {
     type: string,
     stoneId?: string,
     users?: string[],
-    transferOwner?: string,
+    transferOwner?: string
   ) {
     let user
     if (
@@ -784,13 +784,17 @@ export class ChannelRepository {
             transferOwner !== undefined
               ? `Nhóm sẽ được chuyển giao cho ${transferOwnerUser.name} bởi ${oldOwner.name}`
               : type === ChannelType.UpdateRoleUserInChannel
-                ? `Quyền của ${user.name} vừa được cập nhật`
-                : type === ChannelType.UpdateChannel
-                  ? `Nhóm vừa được cập nhật`
-                  : type === ChannelType.LeaveChannel
-                    ? `Người dùng ${user.name} vừa rời khỏi nhóm`
-                    : usersAdded.map((user) => user.name).join(', ') +
-                      ` vừa được ${type == ChannelType.RemoveUserFromChannel ? 'xoá' : 'thêm vào nhóm'}`,
+              ? `Quyền của ${user.name} vừa được cập nhật`
+              : type === ChannelType.UpdateChannel
+              ? `Nhóm vừa được cập nhật`
+              : type === ChannelType.LeaveChannel
+              ? `Người dùng ${user.name} vừa rời khỏi nhóm`
+              : usersAdded.map((user) => user.name).join(', ') +
+                ` vừa được ${
+                  type == ChannelType.RemoveUserFromChannel
+                    ? 'xoá'
+                    : 'thêm vào nhóm'
+                }`,
           type: 'system',
         },
       })

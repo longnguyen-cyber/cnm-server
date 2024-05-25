@@ -14,7 +14,6 @@ export class AppService {
 
   async getAll(userId: string) {
     const channels = await this.channelService.getAllChannel(userId)
-    console.log(channels)
     const chats = await this.chatService.getAllChat(userId)
     chats.map((item) => {
       const lastedThread = item.lastedThread
