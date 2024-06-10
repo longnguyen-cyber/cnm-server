@@ -17,19 +17,19 @@ services:
     networks:
       - backend_network
 
-  # server:
-  #   build:
-  #     context: ./
-  #     dockerfile: Dockerfile
-  #   container_name: server_prod
-  #   ports:
-  #     - '8080:8080'
+  server:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: server_prod
+    ports:
+      - '8080:8080'
 
-  #   depends_on:
-  #     - rabbitmq_prod
-  #     - redis_prod
-  #   networks:
-  #     - backend_network
+    depends_on:
+      - rabbitmq_prod
+      - redis_prod
+    networks:
+      - backend_network
 networks:
   backend_network:
     driver: bridge
@@ -37,27 +37,3 @@ networks:
 volumes:
   redis:
     driver: local
-# networks:
-#   cnm-network:
-#     internal: true
-# restart: on-failure
-#   mongodb_container:
-#     build: ./mongors
-#     restart: always
-#     environment:
-#       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
-#       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
-#       MONGO_INITDB_DATABASE: ${MONGO_DB}
-#       MONGO_REPLICA_SET: ${MONGO_REPLICA_SET}
-#       MONOGO_REPLICA_PORT: ${MONGO_REPLICA_PORT}
-#     container_name: mongodb
-#     ports:
-#       - 27017:27017
-#     volumes:
-#       - mongodb_data_container:/data/db
-#     env_file:
-#       - .env
-
-# volumes:
-#   mongodb_data_container:
-#     driver: local
